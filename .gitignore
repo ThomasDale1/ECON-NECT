@@ -1,0 +1,81 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# ECON NECT — .gitignore
+#
+# La primera sección es la que importa. AGENTS.md §1.2 dice que este repositorio
+# no contiene ni un solo registro del sandbox ni ningún material que ECON entregó
+# bajo confidencialidad. Este archivo es lo que lo hace cierto.
+#
+# NO DEBILITAR ESTAS REGLAS. Si necesitás versionar algo que cae aquí, la
+# respuesta correcta es extraer el hecho estructural (nombre de campo, tipo,
+# valor de catálogo) y escribirlo a mano en un documento propio.
+# ─────────────────────────────────────────────────────────────────────────────
+
+# --- Material entregado por ECON bajo confidencialidad -----------------------
+*.docx
+*.xlsx
+*.xls
+*.pdf
+*.pptx
+transcribed_hackathon.txt
+kpis.txt
+econ-hackathon-openapi.json
+To Be.png
+*As Is*
+*AS-IS*
+*TO-BE*
+
+# --- Diagramas y capturas del sandbox ----------------------------------------
+# Las capturas de pantalla del sandbox muestran datos reales (placas, correos,
+# teléfonos, coordenadas). No entran. Los diagramas que dibujamos nosotros van
+# en docs/entregables/ y se nombran explícitamente ahí.
+capturas/
+screenshots/
+*.screenshot.png
+
+# --- Volcados de respuesta de las APIs ---------------------------------------
+# Un volcado de la API de conductores de Startrack contiene correos, teléfonos y
+# respuestas de seguridad de personal real de ECON.
+*.dump.json
+*.raw.json
+respuestas/
+sandbox-data/
+fixtures-reales/
+_archivo/
+
+# --- Credenciales ------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credenciales*
+
+# --- Node / Next.js ----------------------------------------------------------
+node_modules/
+.next/
+out/
+build/
+dist/
+.turbo/
+*.tsbuildinfo
+next-env.d.ts
+
+# --- Vercel ------------------------------------------------------------------
+.vercel/
+
+# --- Herramientas y sistema --------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log
+npm-debug.log*
+yarn-error.log*
+.eslintcache
+coverage/
+.vscode/
+.idea/
+
+# --- Temporales de sesión ----------------------------------------------------
+scratch/
+tmp/
+*.tmp
