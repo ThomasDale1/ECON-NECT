@@ -3,7 +3,7 @@ import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { PasosVerificacion } from '@/components/nect/pasos-verificacion'
 import { VerOrigen } from '@/components/nect/ver-origen'
-import { responsablePorRol } from '@/lib/gobernanza/responsabilidades'
+import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilidades'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen, PersonaAsignada } from '@/lib/tipos/canonico'
 import { urlFichaPrisma } from '@/lib/nect/enlaces'
@@ -65,6 +65,9 @@ export function FichaEquipo({
 }) {
   const decisiva = equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
   const agente = decisiva ? responsablePorRol(decisiva.rolResponsable) : null
+  // El paso del proceso en el que se resuelve esta incoherencia. Sin él, la
+  // ficha dice quién responde pero no en qué momento del proceso actúa.
+  const pasoProceso = decisiva ? (PASO_DE_REGLA[decisiva.regla] ?? null) : null
   const faltantes = [...new Set(equipo.reglas.flatMap((r) => r.camposFaltantes))]
 
   const dimensiones: Dimension[] = [
@@ -403,6 +406,10 @@ export function FichaEquipo({
               <div className="flex items-center justify-between gap-3 font-label text-[13px]">
                 <span className="text-muted-foreground">Responsable</span>
                 <span className="text-right font-bold">{agente ?? 'Sin asignar'}</span>
+              </div>
+              <div className="flex items-center justify-between gap-3 font-label text-[13px]">
+                <span className="text-muted-foreground">Paso del proceso</span>
+                <span className="text-right font-bold">{pasoProceso ?? 'Sin paso asociado'}</span>
               </div>
               <p className="font-label text-[11px] text-muted-foreground">
                 Sale de <code className="font-mono">lib/gobernanza/responsabilidades.ts</code>, no se
