@@ -8,6 +8,8 @@
     "typecheck": "npm --prefix apps/web run typecheck",
     "test": "npm --prefix apps/web run test",
     "leer": "npm --prefix apps/web run leer",
-    "reconciliar": "npm --prefix apps/web run reconciliar"
+    "reconciliar": "npm --prefix apps/web run reconciliar",
+    "optimizar": "npm --prefix apps/web run optimizar",
+    "test:vivo": "npm --prefix apps/web run test:vivo"
   }
 }

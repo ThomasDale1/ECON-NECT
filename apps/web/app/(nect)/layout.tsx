@@ -16,6 +16,11 @@ import { actualizarFuente, actualizarFuentes } from './acciones'
  * Exo, Lato y Roboto Condensed se declaran en `app/layout.tsx` sobre `<html>`
  * para que los diálogos portaleados hereden la misma letra que el command center.
  */
+// Nada de esto se cachea entre visitas: la salud de cada conector es una
+// medición en vivo. El caché de conectores (45 s) evita que cada navegación
+// vuelva a golpear el sandbox.
+export const dynamic = 'force-dynamic'
+
 export default async function NectLayout({ children }: { children: React.ReactNode }) {
   const { salud } = await leerEquiposUnificados()
 

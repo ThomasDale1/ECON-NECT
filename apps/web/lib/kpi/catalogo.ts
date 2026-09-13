@@ -23,13 +23,13 @@ export type Kpi = {
 export const CATALOGO_KPI: Kpi[] = [
   {
     id: 'tiempo-muerto-quetzales',
-    nombre: 'Tiempo muerto en quetzales',
+    nombre: 'Tiempo muerto en USD',
     queMide:
-      'Las horas mínimas contratadas de un equipo que no se alcanzaron, multiplicadas por su tarifa vigente.',
+      'Las horas mínimas contratadas de un equipo que no se alcanzaron, multiplicadas por su tarifa vigente. USD — moneda inferida: la operación es en El Salvador; Prisma no la declara.',
     porQueImporta:
       'Convierte el argumento de "reducción de tiempos muertos" en una cifra defendible, no en un adjetivo (01 Parte E.6, criterio de rúbrica 1.1).',
     formula:
-      '(horas mínimas contratadas − horas reales de uso) × tarifa efectiva vigente del equipo, sumado por proyecto o por flota.',
+      '(horas mínimas contratadas − horas reales de uso) × tarifa efectiva vigente del equipo, en USD, sumado por proyecto o por flota.',
     referencia:
       'Contra el mínimo contratado por equipo (histórico de tarifas y horas mínimas expuesto por la API de Prisma).',
     accionQueDispara: 'Reasignar el equipo a otro proyecto, o renegociar el mínimo contratado.',
@@ -97,6 +97,40 @@ export const CATALOGO_KPI: Kpi[] = [
       'Prisma no guarda el veredicto cruzado. Startrack guarda telemetría viva, no la serie reconciliada de ECON NECT.',
     datoFaltante:
       'Histórico de 30 días. Los conectores leen el estado actual, no una serie. No se inventa una curva ni un porcentaje de tendencia.',
+  },
+  {
+    id: 'ahorro-por-objetivo-optimizador',
+    nombre: 'Ahorro del plan frente a la peor opción válida',
+    queMide:
+      'Por cada solicitud que el plan cubre, cuánto mejor es la máquina y el operador elegidos que la peor opción que también cumplía todas las restricciones duras de esa solicitud, en tarifa efectiva (USD/h), distancia al proyecto (km), rating del operador (pts, Startrack) y horas trabajadas del operador (h con motor encendido, últimos 30 días).',
+    porQueImporta:
+      'Muestra el costo de asignar sin criterio dentro de lo que es válido: la diferencia entre la mejor y la peor decisión posible con la flota y la gente disponibles hoy. Es el argumento de costo por hora, traslado, seguridad y reparto de carga, con su cobertura a la vista.',
+    formula:
+      'Por objetivo, Σ sobre las asignaciones comparables de (peor − elegido) para tarifa, distancia y horas, y de (elegido − peor) para rating. Positivo = el plan es mejor. Comparable = valor elegido real (no nulo y sin peor caso) y peor opción con dato real. Para rating se muestra además el promedio por asignación.',
+    referencia:
+      'Contra 0 (elegir la peor opción válida). La peor opción se evalúa por separado para cada objetivo y solo entre valores reales. Cobertura verificada el 13 de septiembre de 2026: tarifa efectiva en 8 de 16 equipos; rating en 9 de 16 operadores; horas en 10 de 16 (0 h si el conductor unido no tuvo actividad); unión operador↔conductor por código en 15 de 16. Sin total en USD: el sandbox no registra horas por jornada. Moneda: USD inferido (la operación es en El Salvador; Prisma no la declara).',
+    accionQueDispara:
+      'Confirmar con Logística la asignación propuesta antes de asignar a mano. Si un objetivo tiene baja cobertura, pedir que se registre el dato faltante (tarifa efectiva en Prisma, o el código de trabajador en el nombre del conductor en Startrack).',
+    porQueNingunaPlataformaLoVeSola:
+      'Prisma tiene las solicitudes, la disponibilidad y la tarifa; Startrack tiene las geocercas, la calificación y las horas de motor de cada conductor. Ninguna une al operador con su conductor ni compara la decisión contra las alternativas válidas.',
+    datoFaltante: null,
+  },
+  {
+    id: 'cobertura-plan-optimizador',
+    nombre: 'Solicitudes cubiertas por el plan',
+    queMide:
+      'De las solicitudes con período vigente (PENDIENTE, y APROBADA cuya máquina confirmada ya no puede operar), cuántas tienen máquina y operador que cumplen todas las restricciones duras.',
+    porQueImporta:
+      'Dice cuánta demanda de maquinaria puede cubrir la flota actual sin romper la disponibilidad real, incluida la solicitud que se queda sin máquina porque la confirmada cayó. Las solicitudes que no se cubren son un faltante de flota que hoy se descubre tarde.',
+    formula:
+      'Cubiertas de evaluadas, donde evaluadas = cubiertas + sin asignación posible. Las excluidas (período vencido) se reportan aparte.',
+    referencia:
+      'Contra el total de evaluadas: todas cubiertas. Cada solicitud no cubierta trae su motivo concreto: clase, operabilidad, ventana u operador, y la lista va en orden de llegada (created_at). Si en la pila el orden de llegada va antes que la cobertura, el plan puede cubrir menos a propósito: una solicitud anterior no pierde su máquina para cubrir otras posteriores.',
+    accionQueDispara:
+      'Por cada no cubierta, según su motivo: rentar (0 máquinas de la clase), reprogramar (máquinas ocupadas en la ventana) o reasignar operador.',
+    porQueNingunaPlataformaLoVeSola:
+      'Prisma tiene la demanda y la ocupación, pero no evalúa si toda la demanda cabe a la vez respetando la disponibilidad real, que ni siquiera es un campo (01 E.2), ni propone un reemplazo cuando una máquina confirmada deja de operar. Startrack no ve la demanda.',
+    datoFaltante: null,
   },
 ]
 

@@ -36,6 +36,10 @@ export type EquipoPrismaCrudo = {
   occupied_without_project?: boolean | null
   /** Observado: el campo existe en equipos; en el sandbox viene vacío. */
   assigned_personnel?: unknown
+  // Agregados S-A7 Paso 4a — observados con `npm run leer` el 12 de septiembre
+  // de 2026, en 7/16 equipos.
+  fecha_inicio_uso: string | null
+  fecha_fin_uso: string | null
 }
 
 export type SolicitudPrismaCruda = {
@@ -52,6 +56,32 @@ export type SolicitudPrismaCruda = {
   fecha_inicio: string | null
   fecha_fin: string | null
   created_at: string | null
+  // Agregado S-A7 Paso 4a: la geocerca de destino de la solicitud se resuelve
+  // por el código PROY-### embebido en este nombre (mismo patrón que
+  // `equipo.project_name` en identidad.ts).
+  project_name: string | null
+}
+
+// Agregados S-A7 Paso 4a — observados con `npm run leer` el 12 de septiembre
+// de 2026 contra `/api/maquinaria/operadores`.
+export type OperadorPrismaCrudo = {
+  id: number | string
+  cod_trabajador: string | null
+  // ⚠ Nunca sale del servidor (AGENTS.md §12.1, decisión de planeación):
+  // "Operador en pantalla: solo cod_trabajador."
+  nombre: string | null
+  is_active: boolean | null
+  active_assignment_count: number | null
+}
+
+// Observado con `npm run leer equipo(id)` (S-A7 Paso 4a) contra
+// `/api/maquinaria/equipos/{id}`.
+export type DetalleEquipoPrismaCrudo = {
+  id: number | string
+  effective_precio_x_hora: number | null
+  associated_operators:
+    | { id: number | string; nombre: string | null; cod_trabajador: string | null; is_active: boolean | null }[]
+    | null
 }
 
 export type VehiculoStartrackCrudo = {
@@ -103,6 +133,43 @@ export type TipoTareaStartrackCrudo = {
   name: string | null
 }
 
+/** Nivel 1 de la cascada de ubicación (01 Parte E.10, corregido el 13 de
+ * septiembre de 2026): posición en vivo del vehículo, observada con
+ * `GET /api/vehicle/{id}/status`. La investigación original de S-A1 buscó
+ * telemetría bajo `ajax/*.php` y no la encontró — existe, pero en la
+ * superficie REST moderna. Los campos numéricos llegan como texto (forma
+ * real observada, no un error de tipeo); se parsean recién en
+ * `identidad.ts`/`modelo.ts`, nunca acá. */
+export type EstadoVehiculoStartrackCrudo = {
+  vehicle_id: string | null
+  x: string | null
+  y: string | null
+  speed: string | null
+  heading: string | null
+  date_time: string | null
+  placename: string | null
+  reason: string | null
+}
+
+/** Proyección de un conductor de `ajax/drivers.php?cmd=list` (S-A10 Paso 2).
+ * ⚠ `fn` trae el código de trabajador Y el nombre del conductor
+ * (`"código - nombre"`); el conector solo deja salir el código. Nunca se tipa
+ * `fn` entero, ni `ln`, ni correo, ni teléfono (AGENTS.md §1.2). */
+export type CodigoConductorStartrack = {
+  id: string // `i`, igual al `driver_id` del reporte de conductores
+  prefijoFn: string | null // texto de `fn` antes del primer " - ", recortado; null si no hay separador
+}
+
+/** Proyección del reporte de conductores (`ajax/report.php?id=32`), verificado
+ * el 13 de septiembre de 2026. `detailAlerts` se descarta entero dentro del
+ * conector: trae `driver.name` (AGENTS.md §1.2). */
+export type ReporteConductoresStartrack = {
+  scores: { driver_id: string; safety_score: number | null }[]
+  /** Una fila por conductor y día. `ignOnTime` en minutos, unidad inferida
+   * (todos los valores observados ≤ 1440). */
+  detail: { driver_id: string; date: string | null; ignOnTime: number | null }[]
+}
+
 /** Procedencia de una fuente completa (una lista), la misma forma que
  * `RespuestaConector.linaje` de lib/conectores/tipos.ts pero copiada acá en
  * vez de importada — lib/canonico no conoce HTTP ni la capa de conectores
@@ -118,6 +185,14 @@ export type FuenteCruda<T> = ProcedenciaFuente & {
   datos: T[]
 }
 
+/** Cada estado de vehículo es su propia llamada HTTP (una por vehículo, igual
+ * que `DetalleEquipoPrismaCrudo` en S-A7) — no comparte un `leidoEn` único
+ * como una lista. */
+export type EstadoVehiculoConProcedencia = {
+  datos: EstadoVehiculoStartrackCrudo
+  procedencia: ProcedenciaFuente
+}
+
 /** Lo que `reconciliar()` recibe. Deliberadamente no incluye `fallas` ni
  * `proyectos`: el prompt los menciona como fuente, pero su forma real no está
  * documentada en la sección "Formas reales observadas" de S-A2, y la
@@ -131,4 +206,9 @@ export type DatosCrudos = {
   geocercas: FuenteCruda<GeocercaStartrackCruda>
   tareas: FuenteCruda<TareaStartrackCruda>
   tiposTarea: FuenteCruda<TipoTareaStartrackCrudo>
+  /** Nivel 1 de ubicación (01 E.10, corregido), por id de vehículo de
+   * Startrack. Opcional a propósito: `reconciliar()` y sus pruebas siguen
+   * funcionando sin ella, degradando a nivel 2/3 como antes — ningún
+   * orquestador viejo se rompe por no traerla todavía. */
+  estadosVehiculoPorVehiculoId?: Record<string, EstadoVehiculoConProcedencia>
 }

@@ -48,7 +48,10 @@ export function ConsolaOdin({
   const [response, setResponse] = useState<RespuestaOdin | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
-  const [warm, setWarm] = useState<'idle' | 'warming' | 'ready' | 'cold'>('idle')
+  // Arranca en 'warming': el efecto de abajo dispara el calentamiento en el
+  // primer montaje, así que ese es el estado real desde el primer render.
+  // Ponerlo con un setState dentro del efecto encadenaría un render de más.
+  const [warm, setWarm] = useState<'idle' | 'warming' | 'ready' | 'cold'>('warming')
 
   const seleccionado = useMemo(
     () => equipos.find((e) => e.id === assetId) ?? equipos[0] ?? null,
@@ -57,9 +60,10 @@ export function ConsolaOdin({
 
   useEffect(() => {
     let cancel = false
-    setWarm('warming')
     fetch('/api/odin/warmup', { method: 'POST' })
-      .then((r) => (r.ok ? setWarm('ready') : setWarm('cold')))
+      .then((r) => {
+        if (!cancel) setWarm(r.ok ? 'ready' : 'cold')
+      })
       .catch(() => {
         if (!cancel) setWarm('cold')
       })

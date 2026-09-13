@@ -30,3 +30,20 @@ export class ErrorConector extends Error {
     this.name = 'ErrorConector'
   }
 }
+
+/** La plataforma rechazó una ESCRITURA. Separado de `SesionExpirada` a
+ * propósito: la superficie de Startrack contesta `success:false` tanto para una
+ * sesión vencida como para un rechazo de validación, y ante esa ambigüedad una
+ * escritura NUNCA se reintenta sola — un reintento a ciegas puede duplicar una
+ * tarea que en realidad sí se creó. El mensaje de la plataforma viaja tal cual
+ * para que lo lea una persona (S-A4). */
+export class ErrorEscritura extends Error {
+  constructor(
+    public readonly plataforma: Plataforma,
+    public readonly endpoint: string,
+    public readonly detalle: string,
+  ) {
+    super(`La escritura en ${plataforma} (${endpoint}) fue rechazada: ${detalle}`)
+    this.name = 'ErrorEscritura'
+  }
+}

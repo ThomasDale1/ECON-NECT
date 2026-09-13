@@ -1,15 +1,7 @@
 import { cookies } from 'next/headers'
 import { BarraSuperior } from '@/components/comando/barra-superior'
-import { COOKIE_ROL, esRolValido } from '@/lib/acceso/verificar'
+import { ETIQUETA_ROL, NOMBRE_COOKIE, verificarCookie } from '@/lib/acceso/verificar'
 import type { SaludFuente } from '@/lib/tipos/canonico'
-
-const ETIQUETA_ROL: Record<string, string> = {
-  PROYECTOS: 'Proyectos',
-  LOGISTICA: 'Logística',
-  MANTENIMIENTO: 'Mantenimiento',
-  COSTOS: 'Costos',
-  DIRECCION: 'Dirección',
-}
 
 /**
  * Área de trabajo de una pantalla: barra superior + contenido.
@@ -33,10 +25,11 @@ export async function Marco({
 }) {
   const fuenteCaida = salud.find((f) => f.estado === 'caida')
   const hora = new Date(leidoEn).toLocaleTimeString('es-SV', { hour12: false })
-  const rolCookie = (await cookies()).get(COOKIE_ROL)?.value
-  const rol = esRolValido(rolCookie) ? rolCookie : null
-  const etiqueta = rol ? ETIQUETA_ROL[rol] : 'Sala de control'
-  const iniciales = rol ? rol.slice(0, 2) : 'SC'
+  // La firma se verifica acá también: la barra superior no muestra un rol que
+  // el servidor no pueda comprobar (S-C3).
+  const sesion = await verificarCookie((await cookies()).get(NOMBRE_COOKIE)?.value)
+  const etiqueta = sesion ? ETIQUETA_ROL[sesion.rol] : 'Sala de control'
+  const iniciales = sesion ? sesion.rol.slice(0, 2) : 'SC'
 
   return (
     <div className="flex min-w-0 flex-1 flex-col">

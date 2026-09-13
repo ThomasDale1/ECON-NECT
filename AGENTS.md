@@ -5,6 +5,12 @@
 > `PROTOCOLO-DATOS-ECON-V2.md`. Si algo de esos archivos contradice a este, manda
 > este. Vocabulario unificado: **el producto habla español**, incluidos los
 > nombres de tipos, estados y archivos.
+>
+> **Actualizado el 13 de septiembre de 2026 a las 01:50 CST** (planeación de
+> [S-A10](prompts/S-A10-replaneacion.md)): el clima (Open-Meteo) sale del
+> producto, la pila del optimizador pasa a distancia · tarifa · rating de
+> operador · horas de operador, y el plan se rehace solo ante una máquina que
+> deja de operar. Ver §6, §7.1, §9 y §12.1.
 
 Sos un **ingeniero principal full-stack y agente de implementación** trabajando en
 **ECON NECT**: el **middleware visual** de la operación de maquinaria de Grupo
@@ -73,6 +79,12 @@ Las afirmaciones de evidencia se escriben como **hechos estructurales**
 > toca git, ni logs, ni capturas de pantalla del entregable: los scripts que
 > los leen (`npm run leer`, `npm run reconciliar`) solo imprimen nombres de
 > campo, veredictos y conteos — nunca estos valores.
+> **Tercero y cuarto** (verificado 13 de septiembre de 2026, planeación de
+> S-A10): en `ajax/drivers.php` el campo `fn` junta el código de trabajador y
+> el **nombre** del conductor (`"código - nombre"`), y el reporte de
+> conductores (`ajax/report.php?id=32`) trae `detailAlerts[].driver.name`. Los
+> lectores de S-A10 proyectan dentro del conector: solo sale el código antes
+> de `" - "`, y `detailAlerts` se descarta entero.
 
 **Antes de cada commit:** revisar que no entren secretos, volcados ni capturas.
 `git status` antes de `git add .`, siempre.
@@ -367,6 +379,24 @@ quedó instalado.)*
 - **OR-Tools (CP-SAT)**, únicamente en `services/intelligence/app/optimizer/`
   y solo cuando se implemente S-A7.
 - **Twilio**, únicamente para el perfil Campo de S-A9 y con su sandbox de prueba.
+**Usar, solo para las fases extendidas de §12, y solo en los directorios que
+esa sección nombra — nunca dentro de `apps/web`:**
+- **Python 3 + FastAPI + OR-Tools (CP-SAT)**, únicamente en `services/solver/`
+  (S-A7). Se comunica con Next.js por HTTP; no se importa como librería de
+  Node.
+- ~~Open-Meteo~~ — **retirado el 13 de septiembre de 2026 (S-A10)**: el clima
+  salió del producto por decisión del usuario. No se reinstala ni se vuelve a
+  llamar.
+- **@dnd-kit** (`core`, `sortable`, `utilities`), únicamente en
+  `components/calendario/` (S-B4), para la pila de prioridades reordenable. La
+  instala A en S-A7.
+- **Twilio** (SDK de Node), únicamente en `lib/conectores/twilio.ts` (S-A9) —
+  sigue siendo `server-only`, como todo `lib/conectores/`.
+- **Un cliente HTTP a un modelo open-source autoalojado** (p. ej. servido con
+  Ollama u otro runtime local/propio), únicamente en `services/intelligence/` (S-A8).
+  **No es** "otro proveedor de LLM" en el sentido de la regla de abajo: corre
+  fuera de la nube de un tercero, que es justamente lo que evita el problema
+  de NDA de la §1.5.
 
 **No usar, en el alcance base (línea roja + escalera §0.5 de 02-ROADMAP):**
 - Ninguna base de datos, ni Supabase ni otra, para datos de ECON.
@@ -425,6 +455,18 @@ Detalle completo en [01 Parte E](docs/01-DEFINICION-DE-NEGOCIO.md).
 - **`remote_id` existe en vehículos, geocercas y tareas de Startrack, y está
   vacío en todos los registros.** Es nuestra recomendación central de
   arquitectura.
+- **El reporte de conductores de Startrack** (`ajax/report.php?id=32&format=json&start_date=…&end_date=…&driver_ids=&retdat=1`)
+  no es una lista `{success, data}`: devuelve `timezone`, `detail[]` (por
+  conductor y día: `ignOnTime`, `movingTime`, `distance`…), `detailAlerts[]` y
+  `scores[]` (`safety_score` 0–100). Su `driver_id` es el `i` de
+  `ajax/drivers.php`. `ignOnTime` va en **minutos, inferido** (todos ≤ 1440;
+  la web lo muestra en horas y minutos). Verificado 13 sep. 2026.
+- **Operador de Prisma ↔ conductor de Startrack se une por código:** el texto
+  de `fn` antes de `" - "` es idéntico al `cod_trabajador` en 15 de 16
+  operadores, 1:1. Nunca por nombre.
+- **Prisma no tiene detalle de operador por id** (`/api/maquinaria/operadores/{id}`
+  → 405), y **ninguna fecha de solicitud ni de uso de equipo trae hora**: todo
+  es `AAAA-MM-DD`.
 
 ---
 
@@ -475,6 +517,21 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
    Startrack.** No existe herramienta de escritura registrada; una sugerencia o
    confirmación en el chat nunca cambia ningún estado. P1 es un flujo de UI
    separado y conserva sus propias pruebas de autorización.
+6. **El optimizador nunca viola una hard constraint.** Una solicitud sin opción
+   devuelve **"sin asignación posible" con la razón** (e `infactible` global si
+   no se asigna ninguna), nunca una asignación forzada que la incumpla. Estas
+   pruebas corren **en vivo** (`npm run test:vivo`) contra el sandbox y el
+   solver local, **sin datos inventados**: el caso infactible se arma filtrando
+   insumos reales, y no se usan snapshots, que serían volcados (§1.2).
+7. **Twilio y O.D.I.N. nunca ejecutan una acción por su cuenta.** Mismo
+   principio C.3 que P1: O.D.I.N. sugiere y reenvía; el jefe confirma; recién
+   ahí se actualiza un dato. Prueba de que una sugerencia sin confirmar no
+   cambia ningún estado.
+8. **El replan ante una máquina caída solo propone** (S-A10). Hay que probar,
+   en vivo y transformando insumos reales, tres cosas: que una APROBADA cuya
+   máquina deja de operar recibe un reemplazo **sin usar esa máquina**; que
+   `cambios` nombra el motivo real; y que **ningún nombre de conductor** llega
+   a la respuesta.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -492,6 +549,8 @@ npm run test          # Vitest
 npm run build         # build de producción
 npm run dev           # servidor de desarrollo
 npm run leer          # lee ambas plataformas en vivo e imprime el inventario
+npm run test:vivo     # pruebas en vivo (sandbox + solver local); no corren en `test`
+npm run optimizar     # corre el optimizador en vivo; imprime estado, conteos y niveles
 ```
 
 Después de cada implementación, correr como mínimo `typecheck`, `lint` y las
@@ -543,3 +602,156 @@ sección solo fija las reglas que cualquier agente debe recordar al trabajar:
 7. Toda la IA está debajo de la línea roja. Dentro de IA, el primer valor a
    entregar es O.D.I.N. Web; el orden de construcción y recorte exacto está en
    [docs/03 §6](docs/03-ARQUITECTURA-IA-ODIN.md).
+**Por qué existe esta sección y no contradice a H.3 de 01:** el 01 (Parte H.3)
+dice hoy "no corre un solver", "no tiene canal de WhatsApp", "no usa ML" — eso
+sigue siendo cierto **para el motor de veredicto/reconciliación** (línea roja,
+`lib/canonico/` + `lib/reglas/`), que no se toca. Lo que agrega esta sección es
+una **capa nueva y separada**, explícitamente marcada como propuesta que se
+intenta si sobra tiempo, nunca como reemplazo del motor determinístico que gana
+el criterio de honestidad.
+
+### 12.1 El optimizador de planeación (S-A7 + S-B4 + S-C4) — **se construye apenas termina S-C2**
+
+Un microservicio Python (`services/solver/`, FastAPI + OR-Tools CP-SAT) que
+propone, **para cada solicitud real de Prisma, qué máquina y qué operador**
+asignar en las fechas pedidas. La UI es un timeline estilo Notion, con filas
+por máquina y vistas **Semana** (columnas por día) y **Día** (columnas de hora,
+con bloques de día completo porque Prisma no registra hora). Prompts:
+[S-A7](prompts/S-A7-optimizador.md) · [S-B4](prompts/S-B4-calendario.md) ·
+[S-C4](prompts/S-C4-kpis-optimizador.md), **reemplazados en parte por
+[S-A10](prompts/S-A10-replaneacion.md)** (13 sep. 2026): donde contradigan,
+manda S-A10.
+
+> **Replaneado el 12 de septiembre de 2026 contra la cobertura real del
+> sandbox.** Solo datos en vivo, también en las pruebas. **Lo que el sandbox no
+> expone no entra:** lowboy, cabezal, horario laboral, velocidad de traslado y
+> certificación de operador no existen en Prisma ni en Startrack. La operación
+> es en **El Salvador**: los montos van en USD con la nota "moneda inferida"
+> (Prisma no declara moneda), y las fechas en `America/El_Salvador`.
+
+**Hard constraints** (si no se cumplen, la asignación no es válida: el solver
+la descarta, no la sugiere, y un verificador del lado de Node revisa cada
+respuesta antes de devolverla):
+- Clase compatible: `solicitud.tipo` = `clase_equipo`.
+- Disponibilidad real de la máquina (cruce de las tres máquinas de estado de
+  Prisma, [01 E.2](01-DEFINICION-DE-NEGOCIO.md), no solo el campo `estado`),
+  sin chocar con su ventana `fecha_inicio_uso`/`fecha_fin_uso` ni con otra
+  propuesta.
+- Disponibilidad del operador: activo, y libre fuera de la ventana de la
+  máquina a la que está asociado.
+
+Las fechas de la solicitud son fijas. Una solicitud sin opción queda como **"sin
+asignación posible", con su motivo**; `infactible` global solo si no se asigna
+ninguna.
+
+**Demanda:** las solicitudes PENDIENTE con período vigente. Una APROBADA es una
+decisión humana y el optimizador no la toca, **salvo que su máquina confirmada
+ya no pueda operar** (falla activa, paro u OBSOLETA). En ese caso vuelve a la
+demanda y se propone un reemplazo, y la UI aclara que la asignación en Prisma
+no se modifica.
+
+**Soft constraints** (preferencias que se optimizan sin violar ninguna hard
+constraint). Solo entran las que salen de campos reales:
+- distancia en línea recta entre geocercas (origen desconocido = **peor caso
+  declarado**);
+- tarifa efectiva en USD/h (sin dato = peor caso declarado);
+- **operador con mejor rating**: `safety_score` (0–100) del reporte de
+  conductores de Startrack, unido al operador de Prisma por código (sin dato =
+  peor caso declarado);
+- **operador con menos horas trabajadas**: minutos con motor encendido
+  (`ignOnTime`) de los últimos 30 días. Un conductor unido pero sin actividad
+  registrada cuenta como 0 h; sin conductor unido, peor caso declarado.
+
+La holgura antes del inicio y la continuidad de operador **salieron** el 13 de
+septiembre de 2026.
+
+**Clima: retirado** el 13 de septiembre de 2026 por decisión del usuario. Ya no
+hay Open-Meteo, clases sensibles, alerta ni KPI de lluvia.
+
+**Replan ante cambios repentinos.** La página vuelve a optimizar en vivo cada
+60 s, rehaciendo todo el plan. El navegador manda solo los ids del plan
+anterior, y el servidor (puro, en `ensamblar`) devuelve `cambios`: qué
+asignación cambió y por qué (p. ej. *"CF-01 ya no puede operar: falla activa"*).
+En la demo, la falla se registra **en Prisma, sobre `NECT_EQUIPO_PROPIO`**;
+NECT no escribe nada.
+
+**La pila de prioridades es del usuario, no nuestra.** La UI deja reordenar las
+soft constraints en una pila (drag-and-drop). El solver optimiza la de más
+arriba **al máximo** antes de sacrificar algo de ella para mejorar una de más
+abajo — es decir, una constraint de menor prioridad solo cede terreno a una de
+mayor prioridad, nunca al revés. Esto es lexicográfico, no un promedio
+ponderado a ciegas: hay que decirlo así en la documentación técnica para que
+sea defendible en Q&A. Tolerancia 0: el óptimo de cada nivel se fija antes de
+optimizar el siguiente. Siempre, antes que la pila, se maximiza la cantidad de
+solicitudes cubiertas.
+
+**KPIs nuevos de C** (con sus seis campos de [01 D.7](01-DEFINICION-DE-NEGOCIO.md),
+igual que cualquier otro KPI del catálogo):
+- **ahorro del plan frente a la peor opción válida**, por objetivo: tarifa
+  (USD/h, sin total, porque el sandbox no tiene horas por jornada), distancia
+  (km), rating (pts) y horas de operador (h). Se compara solo entre valores
+  reales, con la cobertura a la vista, y va arriba de todo en `/planeacion`;
+- **solicitudes cubiertas** (N de M), con la lista de no cubiertas, su motivo y
+  la acción.
+
+El KPI de lluvia y la comparación contra la asignación manual salieron el 13 de
+septiembre de 2026.
+
+El KPI de transporte (lowboy) salió: el sandbox no modela transporte. **Si un
+comparativo no tiene dato, el KPI dice qué dato falta, igual que cualquier
+otro** (C.1).
+
+**No hace lo que H.3 seguía prohibiendo para el resto del producto:** el
+solver no reasigna nada por su cuenta. **En S-A7/S-B4 solo propone**, y la UI lo
+dice. Cuando exista P1, otro prompt conecta la confirmación humana a la
+propagación, bajo el mismo principio C.3.
+
+### 12.2 O.D.I.N. (S-A8) — agente local, modelo open-source
+
+Un agente que corre con un **modelo open-source autoalojado** (nunca un
+proveedor de IA en la nube — así se evita el problema de NDA de §1.5, no se
+sortea).
+
+- **Forecast de mantenimiento preventivo**, a partir de kilometraje, horas de
+  motor encendido, temperatura y las demás señales que el sandbox exponga
+  realmente. **Si el sandbox no expone una señal, el forecast lo dice — no se
+  inventa un sensor que no existe** (mismo principio que C.1: honestidad sobre
+  completitud). Es un modelo estadístico/ML explícitamente etiquetado como
+  predicción, nunca mezclado con el veredicto determinístico de `lib/reglas/`.
+- Puede leer las sugerencias del optimizador (§12.1) y redactarlas en lenguaje
+  llano para quien decide.
+
+**Prioridad más baja de la escalera extendida** — es lo primero que se corta
+si el reloj aprieta.
+
+### 12.3 Canal de incidentes de campo (S-A9) — Twilio + O.D.I.N.
+
+Un trabajador en campo reporta un incidente por Twilio (SMS/WhatsApp de
+prueba). O.D.I.N. lo analiza y **redacta un reenvío** al jefe correspondiente
+según el tipo de incidente — nunca decide ni ejecuta nada por su cuenta.
+**El jefe confirma** (o pide otra sugerencia) y **entonces** se actualiza el
+dato correspondiente en Prisma/Startrack, con el mismo mecanismo de
+confirmación explícita y rastro que ya rige toda propagación (C.3, D.6 de 01).
+
+**Reglas de datos, iguales a las de §1.2:** ningún número de teléfono real de
+un trabajador de ECON entra al repositorio, a un log, ni a una captura del
+entregable. La demo usa el número de prueba de Twilio. El texto del incidente
+vive solo en el caché volátil en memoria — igual que cualquier otro dato de
+ECON (C.2) — nunca se persiste.
+
+**Prioridad más baja de la escalera extendida**, junto con O.D.I.N. — es de lo
+primero que se corta si el reloj aprieta.
+
+### 12.4 Dónde entran en la escalera de recorte, y cuándo se construyen
+
+Ver la escalera actualizada en [02-ROADMAP.md §0.5](02-ROADMAP.md). En breve:
+el optimizador y sus KPIs de ahorro (§12.1) se insertan **justo debajo de la
+línea roja** — si el reloj aprieta, se cortan después que el mapa (S-B3) y las
+propagaciones P2/P3 (S-A5), y **nunca** a costa de S-A4 (propagación P1: si
+compiten por la misma hora de Carril A, P1 va primero, siempre). Eso es
+prioridad de **corte**; la prioridad de **construcción** es distinta y más
+alta: S-A7/S-B4/S-C4 arrancan **apenas cierra S-C2**, antes que S-A3, S-C3,
+S-A4 y S-B2 en el orden del documento (ver [02-ROADMAP.md §1](02-ROADMAP.md)).
+O.D.I.N. (§12.2) y el canal de incidentes (§12.3) no cambiaron: van **al fondo
+de toda la escalera**, tanto en corte como en construcción — son lo primero
+que se corta y lo último que se intenta.

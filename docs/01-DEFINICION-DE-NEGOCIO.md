@@ -423,8 +423,9 @@ Prisma:
 - A nivel de proyecto: presupuesto total, presupuesto usado, avance porcentual y
   un desglose de costo directo, indirecto, utilidad e IVA.
 
-**Consecuencia:** el tiempo muerto se puede expresar **en quetzales**, no en
-adjetivos. *"Horas mínimas contratadas que no se alcanzaron × tarifa vigente"* es
+**Consecuencia:** el tiempo muerto se puede expresar **en dinero (USD, moneda
+inferida: la operación es en El Salvador y Prisma no declara la moneda de la
+tarifa)**, no en adjetivos. *"Horas mínimas contratadas que no se alcanzaron × tarifa vigente"* es
 dinero que ya se pagó y no se usó. Y la latencia entre que se aprueba una
 solicitud y que nace su traslado, multiplicada por la tarifa, es el costo de la
 coordinación manual.
@@ -485,22 +486,35 @@ en el sandbox, y ninguna de las dos plataformas puede verlo sola.
 
 Es la mejor demostración posible del producto, y es real.
 
-### E.10 Riesgo abierto: la ubicación en vivo
+### E.10 La ubicación en vivo — nivel 1 resuelto (corregido el 13 de septiembre de 2026)
 
-Los equipos reportan telemetría, pero la posición GPS instantánea no se obtuvo
-por REST en el reconocimiento; la plataforma la distribuye por un canal de
-mensajería en tiempo real. (Prisma también expone campos de GPS en su bitácora de
-eventos, vacíos en lo observado.)
+**Corrección de hallazgo.** El reconocimiento original (S-A1) buscó telemetría
+de posición bajo la superficie legado `ajax/*.php` y no la encontró — de ahí
+que esta sección haya llamado "riesgo abierto" al nivel 1. Verificado en vivo
+al construir el calendario de planeación (S-B4): la posición sí está expuesta
+por REST, en la superficie **moderna** (`/api/`), con `GET
+/api/vehicle/{id}/status`. Acepta la misma cookie de sesión que el resto de
+`/api/` (ver AGENTS.md §7). Devuelve, entre otros campos, `x`, `y`, `speed`,
+`heading`, `date_time` y `placename` — como texto, no como número (forma real
+observada; se parsea en `lib/canonico/modelo.ts`, nunca antes). (Prisma
+también expone campos de GPS en su bitácora de eventos, vacíos en lo
+observado — ese hallazgo sigue vigente.)
 
-**Decisión:** la ubicación se resuelve en cascada, y **la pantalla siempre dice
-cuál de los tres niveles está usando**:
+**Decisión, sin cambios en la cascada, solo en su cobertura:** la ubicación se
+resuelve en cascada, y **la pantalla siempre dice cuál de los tres niveles
+está usando**:
 
-1. Posición reportada por telemetría, si se logra obtener.
+1. Posición en vivo del vehículo (`GET /api/vehicle/{id}/status`) — **resuelto**,
+   ya implementado en `lib/canonico/modelo.ts`.
 2. Geocerca de destino de la tarea de traslado asociada.
 3. Geocerca del proyecto al que el equipo está asignado en Prisma.
 
-Los niveles 2 y 3 están garantizados. El nivel 1 es mejora, no dependencia.
-**Ninguna parte de la demo depende de resolver el nivel 1.**
+Los tres niveles están garantizados hoy: contra el sandbox real, 14 de 16
+equipos resuelven en nivel 1 (los 2 restantes son huérfanos de identidad —
+E.4 — sin vehículo vinculado, así que no tienen de dónde leer el nivel 1).
+**Ningún endpoint nuevo se llama para escribir**, y `leerEstadoVehiculo` se
+degrada por vehículo (nunca por corrida completa): si esa lectura falla para
+uno, ese equipo cae a nivel 2/3 sin tumbar el resto.
 
 ---
 
@@ -609,7 +623,7 @@ código para sistemas que no existen.
 | Criterio | Pts | Qué lo ataca |
 |---|---|---|
 | 1.1 Propuesta de valor más allá de lo obligatorio | 10 | El encuadre de las líneas punteadas (B) · la recomendación `remote_id` (E.5) |
-| 1.1 Argumento de reducción de tiempos muertos | 10 | El tiempo muerto **en quetzales** (E.6), con su fórmula a la vista |
+| 1.1 Argumento de reducción de tiempos muertos | 10 | El tiempo muerto **en USD** (E.6, moneda inferida), con su fórmula a la vista |
 | 1.2 Relevancia para las tres gerencias | 10 | Vistas y claves por rol (D.5), sobre los seis agentes del TO-BE |
 | 2.1 Matriz de mapeo completa y honesta | 10 | Principio C.1 + hallazgos E.2, E.4, E.8 |
 | 2.2 Arquitectura defendible en Q&A | 10 | C.2, C.3, el 200-en-fallo-de-auth (E.7) y la respuesta `remote_id` |

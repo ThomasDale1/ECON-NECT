@@ -38,6 +38,8 @@ function equipo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string }): 
     active_failure_is_paro: null,
     fallas_count: null,
     updated_at: null,
+    fecha_inicio_uso: null,
+    fecha_fin_uso: null,
     ...parcial,
   }
 }
@@ -153,6 +155,7 @@ describe('solicitudesDeEquipo / solicitudPrincipal', () => {
       fecha_inicio: null,
       fecha_fin: null,
       created_at: null,
+      project_name: null,
       ...parcial,
     }
   }
@@ -192,6 +195,7 @@ describe('resolverTareaPrincipal', () => {
       fecha_inicio: null,
       fecha_fin: null,
       created_at: null,
+      project_name: null,
     }
     const tareas = [
       tarea({ id: 900, remote_id: '55', assigned_vehicle_id: 999 }),

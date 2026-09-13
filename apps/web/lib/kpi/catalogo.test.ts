@@ -28,3 +28,46 @@ describe('CATALOGO_KPI — honestidad de datoFaltante (AGENTS.md §1.1)', () => 
     expect(kpi('cobertura-interpretacion').formula).toMatch(/identidadResuelta/)
   })
 })
+
+describe('CATALOGO_KPI — moneda corregida a USD (S-C4)', () => {
+  it('tiempo-muerto-quetzales ahora se presenta en USD, sin renombrar id ni función', () => {
+    const encontrado = kpi('tiempo-muerto-quetzales')
+    expect(encontrado.nombre).toBe('Tiempo muerto en USD')
+    expect(encontrado.nombre).not.toMatch(/quetzales/i)
+    expect(`${encontrado.queMide} ${encontrado.porQueImporta} ${encontrado.formula}`).toMatch(/USD.*moneda inferida/i)
+  })
+})
+
+describe('CATALOGO_KPI — los dos KPIs del optimizador (S-A10)', () => {
+  const idsOptimizador = ['ahorro-por-objetivo-optimizador', 'cobertura-plan-optimizador']
+
+  it('los ids del optimizador son exactamente dos', () => {
+    const encontrados = CATALOGO_KPI.filter((k) => k.id.endsWith('-optimizador')).map((k) => k.id)
+    expect([...encontrados].sort()).toEqual([...idsOptimizador].sort())
+  })
+
+  it.each(idsOptimizador)('%s existe con sus seis campos no vacíos y datoFaltante null (es calculable)', (id) => {
+    const encontrado = kpi(id)
+    expect(encontrado.queMide.length).toBeGreaterThan(0)
+    expect(encontrado.porQueImporta.length).toBeGreaterThan(0)
+    expect(encontrado.formula.length).toBeGreaterThan(0)
+    expect(encontrado.referencia.length).toBeGreaterThan(0)
+    expect(encontrado.accionQueDispara.length).toBeGreaterThan(0)
+    expect(encontrado.porQueNingunaPlataformaLoVeSola.length).toBeGreaterThan(0)
+    expect(encontrado.datoFaltante).toBeNull()
+  })
+
+  it('ya no existe el KPI del pronóstico del tiempo (salió el 13 de septiembre de 2026)', () => {
+    expect(
+      CATALOGO_KPI.some((k) => /precipitaci[oó]n|pron[oó]stico/i.test(`${k.id} ${k.nombre} ${k.queMide} ${k.formula}`)),
+    ).toBe(false)
+  })
+
+  it('el ahorro se mide contra la peor opción válida, no contra la asignación manual', () => {
+    expect(kpi('ahorro-por-objetivo-optimizador').nombre).toBe('Ahorro del plan frente a la peor opción válida')
+  })
+
+  it('el lowboy no entra al catálogo: el sandbox no modela transporte', () => {
+    expect(CATALOGO_KPI.some((k) => /lowboy/i.test(k.id) || /lowboy/i.test(k.nombre))).toBe(false)
+  })
+})

@@ -101,12 +101,16 @@ la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
   7.  Índice de riesgo de mantenimiento              (S-A8 — determinístico)
   6.  Propagación P3 — mantenimiento                (S-A5)
   5.  Propagación P2 — estado de vuelta a Prisma    (S-A5)
-  4.  Posición GPS en vivo                          (nivel 1 de la cascada, E.10)
+  4.  Posición GPS en vivo — ✅ resuelto 13 sep., ya no es de esta lista (E.10)
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
   0.  O.D.I.N. Web de solo lectura                   (S-A6 — primer incremento IA)
   ── LÍNEA ROJA: nada de aquí para abajo se corta ──
+  0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4, replaneado
+                                                      en S-A10 — fase extendida,
+                                                      ver AGENTS.md §12)
+  ── LÍNEA ROJA: nada de aquí para arriba se corta ──
       Conectores · mapeo de datos en vivo · reglas · ficha unificada ·
       bandeja de incoherencias · matriz de mapeo · RACI ·
       propagación P1 · los 7 entregables
@@ -367,8 +371,11 @@ que lo produjo en cada caso.
 
 ### 🟦 S-A7 — Optimizador · *fase extendida, después de O.D.I.N. Web* · Carril A
 
-**Objetivo:** dado un conjunto de tareas por asignar, proponer quién, con qué
-máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
+**Objetivo:** para cada solicitud de maquinaria real de Prisma, proponer qué
+máquina y qué operador asignar en las fechas que pidió el solicitante,
+respetando siempre las hard constraints, optimizando la pila de prioridades del
+usuario y diciendo por qué cuando una solicitud no se puede cubrir. **Solo
+propone: no escribe nada.** Prompt: [prompts/S-A7-optimizador.md](../prompts/S-A7-optimizador.md).
 
 - `services/intelligence/app/optimizer/`: módulo OR-Tools CP-SAT del único
   servicio FastAPI, fuera de `apps/web`, con endpoint `POST /optimizar`. Entrada: equipos
@@ -396,49 +403,133 @@ máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
 - Los datos de ejemplo para probar el solver son **inventados y marcados como
   tales** (igual que el objeto de ejemplo de S-A0) — nunca un volcado del
   sandbox.
+> **Replaneado el 12 de septiembre de 2026 contra la cobertura real del
+> sandbox** (medida en vivo, solo conteos). Quedó fuera todo lo que el sandbox no
+> expone: **lowboy, cabezal, horario laboral y velocidad de traslado.** Ninguno
+> existe en Prisma ni en Startrack, y un supuesto inventado se vería como dato en
+> la demo (C.1). La única fuente externa era el clima, como alerta; **salió el
+> 13 de septiembre de 2026** ([S-A10](../prompts/S-A10-replaneacion.md)).
 
-**Termina cuando:** con un conjunto de ejemplo, el servicio devuelve una
-asignación que respeta las cuatro hard constraints, y un caso imposible (p. ej.
-cero operadores disponibles en la ventana pedida) devuelve infactible con el
-motivo.
+- **Solo datos en vivo, también en las pruebas: nada inventado.** Los insumos
+  son:
+  - las solicitudes PENDIENTE y APROBADA (la demanda: clase, período y proyecto
+    → geocerca);
+  - los equipos, con su disponibilidad real;
+  - los operadores.
+
+  Planea sobre toda la flota visible, en solo lectura. Las fechas de la
+  solicitud son fijas, con granularidad de día.
+- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT) fuera de
+  `apps/web`, con `POST /optimizar`. Recibe **solo ids y enteros**, sin nombres
+  ni coordenadas. Corre en local con un Dockerfile; el hosting se decide en
+  S-TODOS.
+- **Hard constraints:**
+  - clase compatible (`solicitud.tipo` = `clase_equipo`);
+  - disponibilidad real de la máquina (estado × falla × paro,
+    [01 E.2](01-DEFINICION-DE-NEGOCIO.md)), sin chocar con su ventana
+    `fecha_inicio_uso`/`fecha_fin_uso`;
+  - operador activo y libre fuera de la ventana de la máquina a la que está
+    asociado.
+
+  El prefiltrado vive en `lib/optimizador`, el solver impide choques entre
+  propuestas, y un verificador revisa cada respuesta antes de devolverla.
+- **Infactible por solicitud:** primero se cubre la mayor cantidad posible.
+  Cada solicitud sin opción queda como "sin asignación posible", con su motivo.
+  `infactible` global solo si no se asigna ninguna.
+- **Soft constraints lexicográficas, con tolerancia 0**, en el orden que elige
+  el usuario:
+  - distancia en línea recta entre geocercas (origen desconocido = peor caso
+    declarado);
+  - tarifa efectiva, en USD/h (moneda inferida: la operación es en El Salvador);
+  - ~~continuidad de operador~~ y ~~holgura antes del inicio~~ → reemplazadas
+    en S-A10 por **operador con mejor rating** y **operador con menos horas
+    trabajadas** (Startrack, unidos a Prisma por código).
+
+  Una de menor prioridad nunca empeora a una de mayor.
+- ~~**Clima**~~: retirado en S-A10.
+- Archivos: `lib/optimizador/` (contrato, adaptador, cliente, verificador,
+  orquestador) + `app/api/optimizar/route.ts` (ruta delgada).
+
+**Termina cuando:** con el sandbox vivo, `POST /api/optimizar` devuelve una
+propuesta que el verificador aprueba. Además, `npm run test:vivo` demuestra tres
+cosas: que nunca se viola una hard constraint, que un caso armado filtrando
+datos reales devuelve "sin asignación posible" con su motivo, y que la pila es
+lexicográfica.
 
 ---
 
 ### 🟪 S-B4 — Calendario de planeación (UI estilo Notion) · *fase extendida, priorizada tras S-C2* · Carril B
 
-Contra el contrato de `lib/optimizador/tipos.ts` de A.
+Contra el contrato de `lib/optimizador/tipos.ts` de A y contra la ruta real,
+**sin datos de ejemplo**. Prompt: [prompts/S-B4-calendario.md](../prompts/S-B4-calendario.md).
 
-- `components/calendario/`: vista tipo calendario (columnas por máquina u
-  operador, filas por tiempo) con las asignaciones propuestas.
-- Panel de **pila de prioridades**: lista reordenable de soft constraints —
-  "más arriba se protege primero" tiene que ser legible sin explicación.
-- Botón de re-optimizar, que llama a `POST /api/optimizar` y refresca el
-  calendario con el resultado.
-- **Estado de infactible es un estado de UI de primera clase** (mismo espíritu
-  que `SIN_EVIDENCIA` en D.4 de 01): nunca se fuerza una tarjeta a un lugar que
-  rompe una hard constraint; se muestra el motivo que devolvió el solver.
+- `app/(nect)/planeacion` + `components/calendario/`: timeline estilo Notion,
+  con **filas por máquina y columnas por día**. La ocupación real va en gris y
+  las propuestas encima; un carril superior muestra "sin asignación posible"
+  con el motivo.
+- Panel de **pila de prioridades** reordenable (@dnd-kit + botones ↑↓): "más
+  arriba se protege primero" tiene que ser legible sin explicación.
+- ~~Casillas de clases sensibles a la lluvia~~: retiradas en S-A10, que además
+  agrega la vista **Día** (00:00–24:00), los KPIs arriba de todo y el aviso de
+  cambios del replan automático.
+- Re-optimizar llama a `POST /api/optimizar` y refresca el calendario.
+- **"Sin asignación posible" es un estado de UI de primera clase** (mismo
+  espíritu que `SIN_EVIDENCIA`): nunca se fuerza una tarjeta. Es neutro, nunca
+  rojo.
+- Aviso fijo: *"Propuesta del optimizador — no se escribe nada en Prisma ni
+  Startrack."* Sin botón de aceptar hasta que exista P1.
+- Los tiles de los KPIs de S-C4 van en la misma página.
 
-**Termina cuando:** se puede reordenar la pila, pedir una re-optimización, ver
-el resultado en el calendario y ver el motivo si el solver dice infactible.
+**Termina cuando:** se puede reordenar la pila, re-optimizar, ver el resultado
+en el calendario, ver el motivo de cada solicitud sin asignación y ver los tiles
+con su cifra o su dato faltante.
 
 ---
 
-### 🟩 S-C4 — KPIs de ahorro del optimizador · *fase extendida, priorizada tras S-C2* · Carril C
+### 🟩 S-C4 — KPIs del optimizador · *fase extendida, priorizada tras S-C2* · Carril C
 
-Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)) —
-mismos seis campos, sin excepción.
+Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)):
+mismos seis campos, sin excepción. Prompt: [prompts/S-C4-kpis-optimizador.md](../prompts/S-C4-kpis-optimizador.md).
 
-- Dos KPIs nuevos en `lib/kpi/catalogo.ts`: **ahorro proyectado por asignación
-  óptima** (costo de la asignación manual observada vs. la que propone el
-  optimizador) y **costo evitado de transporte redundante** (viajes de lowboy
-  que la asignación óptima evita).
-- Si no hay histórico suficiente para el comparativo, o el optimizador no
-  corrió en la sesión, el KPI dice qué dato falta — nunca inventa una cifra
-  (C.1).
+- Tres KPIs nuevos en `lib/kpi/catalogo.ts`, con su cálculo puro en
+  `lib/kpi/optimizador.ts`:
+  - **Ahorro proyectado por objetivo** → en S-A10 pasa a ser **ahorro frente a
+    la peor opción válida** (tarifa, distancia, rating y horas de operador),
+    porque ninguna aprobada tenía asignación manual comparable.
+  - ~~Asignaciones con lluvia probable en clases sensibles~~: retirado en S-A10.
+  - **Cobertura del plan** → en S-A10 pasa a ser **"Solicitudes cubiertas: N de
+    M"**, con las no cubiertas y su motivo.
+- El "costo evitado de transporte (lowboy)" **salió**: el sandbox no modela
+  transporte.
+- La moneda es **USD, inferida** (la operación es en El Salvador; Prisma no la
+  declara). También se corrige el texto "quetzales" del catálogo existente.
+- Si un comparativo no tiene dato, el KPI dice qué falta. Nunca inventa una
+  cifra (C.1).
 
-**Termina cuando:** el tile existe y, tras correr el optimizador al menos una
-vez, muestra la cifra con su fórmula visible en "ver origen"; si no corrió,
-dice que falta.
+**Termina cuando:** tras correr el optimizador, los tres tiles muestran su cifra
+con la fórmula visible, o dicen qué dato falta.
+
+---
+
+### 🟦🟩🟪 S-A10 — Replaneación del optimizador · *fase extendida, 13 sep. 01:50 CST* · Carriles A → C → B, una sola sesión
+
+Corrige y mejora `/planeacion` con feedback directo del usuario. Prompt:
+[prompts/S-A10-replaneacion.md](../prompts/S-A10-replaneacion.md).
+
+- **KPIs arriba de todo:** ahorro frente a la peor opción válida (USD/h, km,
+  pts, h) y solicitudes cubiertas (N de M, con motivos).
+- **Pila nueva:** distancia · tarifa · operador con mejor rating · operador con
+  menos horas trabajadas. Salen la holgura, la continuidad y el clima completo.
+- **Vista Día** con horas de 00:00 a 24:00 (bloques de día completo: Prisma no
+  registra hora). Sale el panel lateral del día.
+- **Replan automático cada 60 s:** una APROBADA cuya máquina deja de operar
+  vuelve a la demanda con un reemplazo propuesto, y el servidor devuelve
+  `cambios` con su motivo. Nada se escribe.
+
+**Termina cuando:** `/planeacion` abre con los KPIs arriba y la pila nueva; al
+registrar una falla en Prisma sobre `NECT_EQUIPO_PROPIO`, en ≤ ~105 s aparece
+el aviso *"Plan rehecho…"* con el reemplazo; y `test:vivo` pasa las pruebas de
+identidad sin fugas, APROBADA rota y cambios. Se corta primero la vista Día.
 
 ---
 
@@ -502,7 +593,8 @@ Contra el catálogo de C (`lib/kpi/catalogo.ts`). Cada tile muestra el número
 
 Los cuatro que importan:
 
-1. **Tiempo muerto en quetzales** — horas mínimas contratadas no alcanzadas ×
+1. **Tiempo muerto en USD** (moneda inferida: la operación es en El Salvador;
+   Prisma no la declara) — horas mínimas contratadas no alcanzadas ×
    tarifa vigente. Es el argumento de reducción de tiempos muertos con cifra
    (E.6). *Acción: reasignar o renegociar el mínimo.*
 2. **Latencia solicitud aprobada → tarea de traslado**, en horas. Es el puente
@@ -690,7 +782,7 @@ nuestro indicador en dinero durante el pitch.
 | El sandbox se cae o va lento (13 equipos encima) | Alta | Riesgo aceptado: sin modo respaldo. El caché alivia; si está caído, no hay demo |
 | La sesión de Startrack expira a media demo | Alta | Reautenticación por cuerpo, no por status (E.7) |
 | Conflicto de merge a las 4 a.m. | Media | Ventanas de merge fijas (§0.4) + propiedad disjunta de directorios |
-| No se logra la posición GPS en vivo | Media | Cascada de 3 niveles; la demo nunca depende del nivel 1 |
+| ~~No se logra la posición GPS en vivo~~ — resuelto 13 sep. | ~~Media~~ | `GET /api/vehicle/{id}/status` (E.10 corregido); cascada de 3 niveles sigue como respaldo si un vehículo puntual falla |
 | El wifi del evento falla durante el pitch | Media | Riesgo aceptado; la demo depende de Vercel y de ahí al sandbox |
 | Se acaba el tiempo | Media | Escalera de recorte (§0.5), aplicada sin discutir |
 | Otro equipo modifica datos compartidos del sandbox | Media | La demo se apoya en nuestros recursos; los ajenos solo se leen |

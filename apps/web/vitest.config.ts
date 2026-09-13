@@ -1,6 +1,6 @@
 import path from 'node:path'
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vitest/config'
+import { configDefaults, defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [react()],
@@ -17,5 +17,9 @@ export default defineConfig({
   test: {
     environment: 'node',
     passWithNoTests: true,
+    // Las pruebas en vivo (S-A7 Paso 7) corren contra el sandbox y el solver
+    // local — nunca en `npm run test`, para que las ventanas de merge
+    // (AGENTS.md §4.4) no dependan de que ambos estén arriba.
+    exclude: [...configDefaults.exclude, '**/*.vivo.test.ts'],
   },
 })

@@ -48,7 +48,7 @@ type Props = {
 }
 
 export function BadgeOrigen({ plataforma, corto = false, href, equipo, className }: Props) {
-  const { etiqueta, contexto, punto, hover } = PRESENTACION[plataforma]
+  const { etiqueta, contexto, hover } = PRESENTACION[plataforma]
   const [copiado, setCopiado] = useState(false)
 
   const contenido = (

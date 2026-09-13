@@ -116,7 +116,7 @@ entrenamiento.
 5  La discrepancia real que está viva en el sandbox ahora mismo
 6  El campo que no mapeamos, y por qué preferimos decirlo
 7  Arquitectura, y qué líneas punteadas quedaron hechas
-8  El tiempo muerto en quetzales — la cifra, con su fórmula a la vista
+8  El tiempo muerto en USD (moneda inferida) — la cifra, con su fórmula a la vista
 9  La recomendación: remote_id ya existe y está vacío
 10 BLOQUE DE REFLEXIÓN DE APRENDIZAJE                        ← 7.5 pts
 ```

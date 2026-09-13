@@ -7,11 +7,13 @@ import { asegurarEntornoCargado } from '../lib/conectores/entorno'
 
 asegurarEntornoCargado()
 
+import { comoFuente } from '../lib/canonico/fuentes'
 import { reconciliar } from '../lib/canonico/reconciliacion'
 import type {
   DatosCrudos,
   EquipoPrismaCrudo,
-  FuenteCruda,
+  EstadoVehiculoConProcedencia,
+  EstadoVehiculoStartrackCrudo,
   GeocercaStartrackCruda,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
@@ -20,19 +22,6 @@ import type {
 } from '../lib/canonico/tipos-crudos'
 import * as prisma from '../lib/conectores/prisma'
 import * as startrack from '../lib/conectores/startrack'
-import type { RespuestaConector } from '../lib/conectores/tipos'
-
-/** Adapta la envoltura de conector (`{ datos, linaje }`) a `FuenteCruda<T>`,
- * la forma que espera `reconciliar()` — lib/canonico no conoce esta capa
- * (AGENTS.md §4.3), así que el ensamblado vive acá, en el orquestador. */
-function comoFuente<T>(respuesta: RespuestaConector<unknown[]>): FuenteCruda<T> {
-  return {
-    datos: respuesta.datos as T[],
-    plataforma: respuesta.linaje.plataforma,
-    endpoint: respuesta.linaje.endpoint,
-    leidoEn: respuesta.linaje.leidoEn,
-  }
-}
 
 async function main() {
   console.log('ECON NECT — reconciliación en vivo\n')
@@ -46,6 +35,29 @@ async function main() {
     startrack.leerTiposTarea(),
   ])
 
+  // Nivel 1 de ubicación (01 E.10, corregido el 13 de septiembre de 2026):
+  // se degrada por vehículo, no por corrida completa.
+  const listaVehiculos = vehiculos.datos as VehiculoStartrackCrudo[]
+  const estadosVehiculoPorVehiculoId: Record<string, EstadoVehiculoConProcedencia> = {}
+  await Promise.all(
+    listaVehiculos.map(async (vehiculo) => {
+      const id = String(vehiculo.id)
+      try {
+        const respuesta = await startrack.leerEstadoVehiculo(id)
+        estadosVehiculoPorVehiculoId[id] = {
+          datos: respuesta.datos as EstadoVehiculoStartrackCrudo,
+          procedencia: {
+            plataforma: respuesta.linaje.plataforma,
+            endpoint: respuesta.linaje.endpoint,
+            leidoEn: respuesta.linaje.leidoEn,
+          },
+        }
+      } catch {
+        // Sin posición en vivo para este vehículo: cae a nivel 2/3.
+      }
+    }),
+  )
+
   const datos: DatosCrudos = {
     equipos: comoFuente<EquipoPrismaCrudo>(equipos),
     solicitudes: comoFuente<SolicitudPrismaCruda>(solicitudes),
@@ -53,6 +65,7 @@ async function main() {
     geocercas: comoFuente<GeocercaStartrackCruda>(geocercas),
     tareas: comoFuente<TareaStartrackCruda>(tareas),
     tiposTarea: comoFuente<TipoTareaStartrackCrudo>(tiposTarea),
+    estadosVehiculoPorVehiculoId,
   }
 
   const equiposUnificados = reconciliar(datos)
@@ -62,15 +75,18 @@ async function main() {
     'codigoActivo'.padEnd(18),
     'veredicto'.padEnd(16),
     'confianza'.padEnd(10),
+    'ubicNivel'.padEnd(10),
     'regla(s)',
   )
   for (const eq of equiposUnificados) {
     const codigo = eq.codigoActivo.valor ?? '(sin código)'
     const reglasDisparadas = eq.reglas.map((r) => r.regla).join(', ') || '(ninguna)'
+    const ubicNivel = eq.ubicacion ? String(eq.ubicacion.nivel) : '—'
     console.log(
       codigo.padEnd(18),
       eq.veredicto.padEnd(16),
       String(eq.confianza).padEnd(10),
+      ubicNivel.padEnd(10),
       reglasDisparadas,
     )
   }

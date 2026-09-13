@@ -3,8 +3,10 @@
 
 import { tareaFinalizada } from './catalogos'
 import type {
+  CodigoConductorStartrack,
   EquipoPrismaCrudo,
   GeocercaStartrackCruda,
+  OperadorPrismaCrudo,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
   VehiculoStartrackCrudo,
@@ -33,7 +35,7 @@ export function normalizarCodigoActivo(valorCrudo: string): string {
   return match ? match[0] : normalizado
 }
 
-function idsIguales(a: number | string | null | undefined, b: number | string | null | undefined): boolean {
+export function idsIguales(a: number | string | null | undefined, b: number | string | null | undefined): boolean {
   if (a == null || b == null) return false
   return String(a).trim() === String(b).trim()
 }
@@ -183,17 +185,82 @@ export function geocercaDeTarea(
 
 const PATRON_CODIGO_PROYECTO = /PROY-\d+/i
 
+/** El código `PROY-###` embebido en un nombre de proyecto o de geocerca, o
+ * `null` si no aparece (01 E.4). Exportado para que `SolicitudPlan.codigoProyecto`
+ * (S-A7 Paso 1/4d) use la misma extracción que la unión de identidad. */
+export function extraerCodigoProyecto(nombre: string | null): string | null {
+  if (!nombre) return null
+  return nombre.match(PATRON_CODIGO_PROYECTO)?.[0]?.toUpperCase() ?? null
+}
+
+/** Geocerca cuyo nombre trae el código `PROY-###` de un nombre de proyecto
+ * dado (01 E.4/E.10): se une por ese código, nunca por el nombre completo
+ * (frágil, 01 E.4). Extraída de `geocercaDeProyecto` en S-A7 Paso 4b para que
+ * el adaptador del optimizador (que resuelve el destino de una *solicitud*,
+ * no de un equipo) pueda reusar la misma regla de unión sin duplicarla. */
+export function geocercaPorCodigoProyecto(
+  nombreProyecto: string | null,
+  geocercas: GeocercaStartrackCruda[],
+): GeocercaStartrackCruda | null {
+  const codigo = extraerCodigoProyecto(nombreProyecto)
+  if (!codigo) return null
+  return geocercas.find((g) => g.name?.toUpperCase().includes(codigo)) ?? null
+}
+
 /** Geocerca del proyecto asignado al equipo (nivel 3 de la cascada de
- * ubicación): el nombre de geocerca trae el código `PROY-###` (01 E.4/E.10);
- * se une por ese código, nunca por el nombre completo (frágil, 01 E.4). */
+ * ubicación). Ver `geocercaPorCodigoProyecto`: el comportamiento no cambió,
+ * solo se extrajo la regla de unión (S-A7 Paso 4b). */
 export function geocercaDeProyecto(
   equipo: EquipoPrismaCrudo,
   geocercas: GeocercaStartrackCruda[],
 ): GeocercaStartrackCruda | null {
-  if (!equipo.project_name) return null
-  const codigo = equipo.project_name.match(PATRON_CODIGO_PROYECTO)?.[0]?.toUpperCase()
-  if (!codigo) return null
-  return geocercas.find((g) => g.name?.toUpperCase().includes(codigo)) ?? null
+  return geocercaPorCodigoProyecto(equipo.project_name, geocercas)
+}
+
+/** operador de Prisma ↔ conductor de Startrack (S-A10 Paso 3). Une solo si el
+ * código antes de `" - "` en `fn` es IDÉNTICO al `cod_trabajador`, después de
+ * recortar los dos, y el código es único en los dos lados. Verificado el 13 de
+ * septiembre de 2026: 15 de 16 operadores con exactamente un conductor.
+ *
+ * Nunca por nombre ni por parecido. Si un código coincide con más de un
+ * conductor, o con más de un operador, no se une ninguno de esos y cuenta un
+ * conflicto: elegir "el primero" sería inventar la equivalencia (AGENTS.md
+ * §1.1). Un operador sin coincidencia no aparece en el mapa. */
+export function resolverConductoresDeOperadores(
+  operadores: OperadorPrismaCrudo[],
+  conductores: CodigoConductorStartrack[],
+): { conductorPorOperadorId: Map<string, string>; conflictos: number } {
+  const conductoresPorCodigo = new Map<string, string[]>()
+  for (const conductor of conductores) {
+    const codigo = conductor.prefijoFn?.trim()
+    if (!codigo) continue
+    const lista = conductoresPorCodigo.get(codigo) ?? []
+    lista.push(conductor.id)
+    conductoresPorCodigo.set(codigo, lista)
+  }
+
+  const operadoresPorCodigo = new Map<string, string[]>()
+  for (const operador of operadores) {
+    const codigo = operador.cod_trabajador?.trim()
+    if (!codigo) continue
+    const lista = operadoresPorCodigo.get(codigo) ?? []
+    lista.push(String(operador.id))
+    operadoresPorCodigo.set(codigo, lista)
+  }
+
+  const conductorPorOperadorId = new Map<string, string>()
+  let conflictos = 0
+  for (const [codigo, operadorIds] of operadoresPorCodigo) {
+    const conductorIds = conductoresPorCodigo.get(codigo)
+    if (!conductorIds) continue
+    if (operadorIds.length !== 1 || conductorIds.length !== 1) {
+      conflictos++
+      continue
+    }
+    conductorPorOperadorId.set(operadorIds[0], conductorIds[0])
+  }
+
+  return { conductorPorOperadorId, conflictos }
 }
 
 /**

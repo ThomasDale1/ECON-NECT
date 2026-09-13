@@ -119,6 +119,7 @@ describe('interpretarDesfase — ventana de 5 minutos', () => {
       solicitud: {
         id: 1,
         project_id: null,
+        project_name: null,
         tipo: null,
         status: 'APROBADA',
         approved_at: prisma,
@@ -202,6 +203,8 @@ describe('reconciliar — no sobrescritura', () => {
             active_failure_is_paro: null,
             fallas_count: null,
             updated_at: null,
+            fecha_inicio_uso: null,
+            fecha_fin_uso: null,
           },
         ],
         '/api/maquinaria/equipos',

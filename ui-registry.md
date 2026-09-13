@@ -385,9 +385,100 @@ Tokens de color: los del BadgeVeredicto y la BarraConfianza; la tabla no pinta n
 por su cuenta.
 Notas: consume `EquipoUnificado[]` y solo proyecta — el veredicto, la confianza y
 las reglas vienen calculados. Ordena por severidad y, a igual severidad, por
-confianza ascendente. Ocho columnas en el orden de §3.4, incluida **Responsable**,
-que el mockup no traía y sale de `rolResponsable`. Cada valor de Prisma y Startrack
+confianza ascendente. Nueve columnas en el orden de §3.4: las ocho originales —incluida
+**Responsable**, que el mockup no traía y sale de `rolResponsable`— más
+**Propagación** (S-A4), que monta `PropagarTraslado` solo en las filas donde
+disparó R3 y en el resto escribe "Sin escritura aplicable" en vez de dejar la
+celda vacía. Cada valor de Prisma y Startrack
 lleva debajo su etiqueta de qué objeto describe: sin eso la tabla no resuelve el
 Caso de Uso 02. El dato ausente se escribe `Sin registro`, nunca celda vacía.
 Estado vacío incluido.
 Registrado: S-B1 · 12 de septiembre de 2026
+
+### VerOrigen
+File: apps/web/components/nect/ver-origen.tsx
+Tipo: overlay
+Clases: `Popover`/`PopoverContent` de shadcn (`w-80`), botón `variant="ghost" size="sm"` del baseline §2.
+Tokens de color: ninguno propio — reusa `BadgeOrigen` (§1.2) para la plataforma de cada entrada de linaje; el resto es texto muted/mono.
+Notas: no existía un componente genérico de "ver origen" (AGENTS.md principio 2.4 / §1 de este registro). Recibe un array de `Linaje` y solo lista plataforma, endpoint, campo, valor crudo y hora — no decide ni transforma nada. Si `linaje` viene vacío no renderiza nada (evita un botón que abre a un popover sin contenido).
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### Planeador
+File: apps/web/components/calendario/planeador.tsx
+Tipo: card (orquestador de página)
+Clases: `main` con `flex flex-col gap-6 p-7` (contenedor de página, §2); `Alert`/`AlertTitle`/`AlertDescription` de shadcn para el aviso compacto, los errores, el fallo de la actualización automática y los avisos; selector Semana | Día como grupo de dos botones `aria-pressed` sobre `inline-flex rounded-lg bg-muted p-0.75`; plegable de excluidas con el card baseline.
+Tokens de color: `--color-veredicto-atencion` solo para el texto "Hay cambios sin aplicar". Si la actualización automática falla, la píldora de `BarraSuperior` pasa a DATO VIEJO (§3.2): el plan en pantalla sigue siendo el último bueno, no uno en vivo.
+Notas: orden fijo de S-A10 Paso 10c — barra superior (con "se actualiza cada 60 s") · aviso compacto · fila de KPIs · aviso de cambios · pila + niveles con Re-optimizar · calendario · excluidas y avisos. El fetch a `POST /api/optimizar` vive acá; la UI no recalcula plan, KPIs ni cambios. Replan cada 60 s con `setInterval`: se salta el tick si la pestaña no está visible o hay otra petición en curso, y manda la última pila aplicada (no la editada) con los ids del plan en pantalla. Una petición manual invalida por número de secuencia a la automática en curso. La automática no muestra skeleton ni resetea vista, semana, fecha ni detalle abierto (el detalle toma los datos nuevos si la asignación sigue en el plan). La vista y el inicio de la semana viven acá para que "Volver a semana" y el replan no los pierdan. Las excluidas salieron de `TimelineMaquinas` a un plegable propio al final. `BarraSuperior` se renderiza acá porque `ultimaLectura` sale de `respuesta.generadoEn`. Se quitó el panel de clases sensibles.
+Registrado: S-B4 · 12 de septiembre de 2026 · actualizado S-A10 · 13 de septiembre de 2026
+
+### PilaPrioridades
+File: apps/web/components/calendario/pila-prioridades.tsx
+Tipo: formulario
+Clases: card baseline (`rounded-xl border border-border bg-card p-6 shadow-card`); checkboxes e íconos de lucide (`GripVertical`, `ChevronUp`, `ChevronDown`) para arrastre y reordenamiento sin mouse; línea de cobertura en `text-xs text-muted-foreground`.
+Tokens de color: ninguno de §1 — es una lista de preferencias del planificador, no un veredicto. `accent-primary` en los checkboxes, consistente con el botón primario del baseline.
+Notas: `@dnd-kit/core` + `@dnd-kit/sortable` (ya estaban en `package.json`, no se instaló nada). Cada ítem lleva `aria-label` propio en el asa de arrastre, el checkbox y los botones ↑↓ (ui-registry §5). Desmarcar "incluir" no borra el id de la lista visual — solo lo saca de la petición (`pilaAPeticion`). S-A10: los cuatro objetivos son distancia, tarifa, rating de operador y horas de operador (rótulos en `objetivos.ts`), y debajo de la lista va la cobertura real de operadores ("Rating disponible para N de M operadores · horas para N de M · sin dato = peor caso declarado"), que sale de `respuesta.coberturaOperadores` y no se muestra mientras no hay lectura. 13 sep. 2026, a pedido directo: la cobertura y el orden de llegada entraron a la pila (seis ítems, `PRIORIDADES_PILA`). La cobertura no tiene checkbox (ícono `Lock` + "siempre incluida") y `normalizarPila` la mantiene antes que distancia, tarifa, rating y horas —arriba de ella esos objetivos preferirían cubrir menos—; solo el orden de llegada puede ir antes que la cobertura. Una nota en `bg-muted` lo explica. El servidor valida la misma regla.
+Registrado: S-B4 · 12 de septiembre de 2026 · actualizado S-A10 · 13 de septiembre de 2026
+
+### ResumenNiveles
+File: apps/web/components/calendario/resumen-niveles.tsx
+Tipo: card
+Clases: card baseline (`rounded-xl border border-border bg-card p-6 shadow-card`).
+Tokens de color: ninguno de §1.1 — deliberado. El estado del solver (`optimo`/`factible`/`infactible`) no es un `Veredicto` de reconciliación y por eso no usa la escala verde/ámbar/rojo/violeta reservada a esa severidad; va en `text-foreground` neutro con ícono (`CircleCheck`/`TriangleAlert`/`Ban`) para no perder el significado sin color.
+Notas: los nombres de nivel salen de `NOMBRE_OBJETIVO` (`components/calendario/objetivos.ts`), compartido con `PilaPrioridades` y `DetalleAsignacion` para no repetir la redacción de negocio en tres lugares.
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### TimelineMaquinas
+File: apps/web/components/calendario/timeline-maquinas.tsx
+Tipo: tabla (grilla de calendario, vista Semana)
+Clases: `overflow-x-auto rounded-xl border border-border` (§2, tablas anchas); columna de etiqueta fija (`sticky left-0`); cabecera de día como `<button>` con `hover:bg-muted` y foco visible.
+Tokens de color: `bg-marca` para la barra de propuesta (identidad de marca, nunca un color de veredicto); `bg-muted` + patrón rayado (`CLASE_OCUPACION_RAYADA`, compartido con `VistaDia`) para la ocupación real de Prisma; `border-dashed` + `bg-muted` neutro para "sin asignación posible" — **nunca rojo**, y nunca violeta (exclusivo de `SIN_EVIDENCIA`).
+Notas: la posición de cada barra es presentación pura (offset/ancho en px desde el inicio de la semana) — no recalcula choques, objetivos ni candidatas. S-A10: sin íconos ni conteos del pronóstico; el inicio de la semana lo controla `Planeador` (props `inicioSemana`/`onCambiarInicioSemana`); clic en la cabecera de un día abre la vista Día (`onSeleccionarDia`) y reemplaza al panel lateral del día, que se eliminó; una propuesta con `reemplazaConfirmada` lleva ícono `ArrowRightLeft` y el texto "Reemplazo propuesto — la asignación en Prisma no se modifica" (en la variante compacta, `sr-only` + `title`). Exporta `EtiquetaMaquina`, `altoFila` y las medidas de barra para que la vista Día use la misma columna y las mismas alturas. El gap de viaje estimado a 40 km/h se conserva sin cambios. 13 sep. 2026: la barra de ocupación dice de qué es — "Confirmada en Prisma · PROY-###" si la respalda una APROBADA del mismo proyecto con esta máquina, o "Uso sin solicitud APROBADA" —, lleva tooltip con las fechas reales de uso y usa "Ver origen" solo ícono. El umbral de la variante expandida de la ocupación subió a 250 px (con 118 px el rótulo quedaba en ancho cero y una ocupación de un día se veía como "« Prisma Ver"); debajo de ese ancho muestra "Confirmada"/"Sin solicitud" y el código de proyecto en dos líneas.
+Registrado: S-B4 · 12 de septiembre de 2026 · actualizado S-A10 · 13 de septiembre de 2026
+
+### DetalleAsignacion
+File: apps/web/components/calendario/detalle-asignacion.tsx
+Tipo: overlay
+Clases: `Sheet`/`SheetContent` de shadcn (base-ui, lado derecho) ensanchado con `data-[side=right]:sm:max-w-xl!` para que entren cuatro columnas; tabla HTML con `<caption className="sr-only">`, `<th scope="col">` y `<th scope="row">` (§5); bloque de reemplazo en `rounded-lg border border-border bg-muted`.
+Tokens de color: ninguno de §1.1 — `Badge variant="outline"` neutro para "peor caso declarado", `text-muted-foreground` para "Sin registro" y "No comparable" (§1.4).
+Notas: S-A10 reemplazó la comparación contra la asignación manual por la tabla Objetivo · Plan · Peor opción válida · Mejora, con unidades. La mejora de cada fila sale de `mejoraDeAsignacion` de `lib/kpi/optimizador.ts` — la misma función que suma el KPI, así la UI no recalcula. El motivo de un valor real se muestra también (el caso "0 h — sin actividad registrada"). Rating y horas llevan su propio "Ver origen" (reporte de conductores + unión por código; el linaje nunca trae un nombre). Si la asignación reemplaza a una confirmada, muestra la máquina confirmada, su motivo y la leyenda de que Prisma no se modifica. Se quitó la sección del pronóstico. 13 sep. 2026: la sección Solicitud muestra "Pedida (orden de llegada)" con `created_at` tal como lo devuelve Prisma, y su linaje entra en "Ver origen".
+Registrado: S-B4 · 12 de septiembre de 2026 · actualizado S-A10 · 13 de septiembre de 2026
+
+### TilesKpiOptimizador
+File: apps/web/components/calendario/tiles-kpi-optimizador.tsx
+Tipo: tile
+Clases: contrato de "stat tile" de la skill `dataviz` (etiqueta · cifra · línea de cobertura, sin delta ni sparkline); card `rounded-xl border border-border bg-card p-5 shadow-card dark:border-white/6`; cifra en `font-heading text-2xl font-semibold` con la unidad aparte en `text-sm text-muted-foreground`; grilla por container query (`@container` + `@xl:grid-cols-2 @3xl:grid-cols-3 @5xl:grid-cols-5`); `Popover` para "Ver fórmula" (nombre, fórmula, referencia y acción desde `CATALOGO_KPI`); `TilesKpiSkeleton` para la carga.
+Tokens de color: ninguno de §1.1 — un KPI no es un veredicto; todo el texto en tokens de texto.
+Notas: S-A10 Paso 10d — cinco tiles arriba de todo: tarifa, distancia, rating de operador, horas de operador y solicitudes cubiertas. Cada ahorro se rotula "vs. la peor opción válida" (o "vs. el operador válido de menor rating / con más horas") con "N de M" de cobertura; tarifa agrega "moneda inferida". Si el objetivo no está en la pila, lo dice; si la cifra es `null`, se escriben los motivos de `datoFaltante`, nunca un 0. El tile de cubiertas lista hasta tres no cubiertas (código · clase · motivo) con la acción del catálogo debajo. `p-5` en vez de `p-6` del baseline: con cinco columnas, `p-6` recortaba la cifra. 13 sep. 2026: las no cubiertas llegan de `lib/kpi/optimizador.ts` en orden de llegada (`created_at`) y el tile lo rotula; el tooltip de cada una agrega cuándo se pidió. El orden de llegada no tiene tile propio: no tiene peor opción válida por asignación.
+Registrado: S-B4 · 12 de septiembre de 2026 · actualizado S-A10 · 13 de septiembre de 2026
+
+### FormularioAcceso
+File: apps/web/components/acceso/formulario-acceso.tsx
+Tipo: formulario
+Clases: card baseline (`rounded-xl bg-card p-8 shadow-card`); `Label` + envoltorio `flex flex-col gap-1.5` y `Input` de shadcn (§2); botón primario `Button` variant `default`; error inline `text-sm text-destructive` (§2, no el rojo de `EN_RIESGO` — un error de login no es un veredicto).
+Tokens de color: los de veredicto **solo** en el punto de salud de cada plataforma (`--color-veredicto-coherente` / `-atencion` / `-riesgo`), reusando el mismo idioma que `BarraLateral`. El aviso de "sin claves configuradas" va en ámbar (`--color-veredicto-atencion`), el mismo tono que la píldora DATO VIEJO de `BarraSuperior` para un estado degradado del sistema.
+Notas: una sola caja de texto y ninguna lista de roles — enumerar los roles confirmaría cuáles existen, y el servidor responde lo mismo ante cualquier clave equivocada. La clave nunca se guarda en el navegador: viaja en un POST y vuelve como cookie `HttpOnly` firmada que solo contiene el rol. El bloque de salud consume `GET /api/salud`, la única ruta sin sesión, para que un sandbox caído a las 3 de la mañana no parezca un problema del login. El estado se dice con palabra además de color (§5).
+Registrado: S-C3 · 13 de septiembre de 2026
+
+### PropagarTraslado
+File: apps/web/components/nect/propagar-traslado.tsx
+Tipo: overlay (botón de fila + diálogo de confirmación)
+Clases: disparador `Button` variant `outline` size `sm` (§2, acción de fila); `Dialog`/`DialogContent`/`DialogFooter` de shadcn; `dl` en `grid grid-cols-[auto_1fr]` para el resumen y para el rastro; `font-mono` en endpoint, hora y `remote_id` (§2, dato monoespaciado).
+Tokens de color: **ninguno de §1.1**. Una escritura confirmada no es un veredicto: el éxito va neutro con ícono `CircleCheck` (§1.4, el significado no se comunica solo por color) y el rechazo con `text-destructive` del baseline, no con el rojo de `EN_RIESGO`.
+Notas: el diálogo de confirmación es obligatorio (01 C.3) y el botón nunca se dispara solo. Todo lo que muestra —proyecto, fechas, si ya hay tarea enlazada— lo lee en vivo de `GET /api/equipos/[id]` al abrirse; si falta un dato lo dice en vez de completarlo. Mostrar el botón no autoriza nada: el servidor vuelve a verificar sesión, rol y recurso propio, así que esconderlo no protegería nada. Al terminar hace `router.refresh()` y la incoherencia desaparece porque la tarea existe, no porque se haya ocultado. El rastro visible (endpoint · hora · rol · remote_id) es el requisito 4 de 01 D.6.
+Registrado: S-A4 · 13 de septiembre de 2026
+
+### VistaDia
+File: apps/web/components/calendario/vista-dia.tsx
+Tipo: tabla (grilla de calendario, vista Día)
+Clases: `overflow-x-auto rounded-xl border border-border` (§2, tablas anchas); columna de máquina fija con `EtiquetaMaquina` (la misma de la semana); 24 columnas de hora de 64px rotuladas `00:00 … 23:00` con `24:00` al cierre, en `font-mono text-[10px]`; líneas de hora como `linear-gradient` sobre `--color-border`; navegación con `Button variant="outline" size="icon-sm"` y "Volver a semana" en `ghost`.
+Tokens de color: `bg-marca` para la propuesta; rayado gris compartido (`CLASE_OCUPACION_RAYADA`) para la ocupación real; `border-dashed bg-muted` para "sin asignación posible" (nunca rojo ni violeta); línea de la hora actual en `bg-primary` (marca, no severidad).
+Notas: S-A10 Paso 10e. Todo bloque va de 00:00 a 24:00 porque Prisma registra solicitudes y uso por fecha, sin hora — la nota fija debajo de la grilla lo dice. Filtra la misma `RespuestaOptimizar` que la semana (no calcula choques ni candidatas) y resume "N máquinas con ocupación · N propuestas · N sin asignación posible". La ocupación de una máquina que no puede operar agrega "la máquina ya no opera"; una propuesta con `reemplazaConfirmada` lleva la etiqueta "Reemplaza a {código} (confirmada en Prisma)". La hora actual (America/El_Salvador) se lee con `useSyncExternalStore` sobre un intervalo, no durante el render. 13 sep. 2026: la ocupación usa el mismo rótulo que la semana (`rotuloOcupacion`) más las fechas reales de uso `inicio → fin` en `font-mono text-[10px]`, para que un bloque de 00:00 a 24:00 no oculte que el uso empezó antes o termina ese día.
+Registrado: S-A10 · 13 de septiembre de 2026
+
+### AvisoCambios
+File: apps/web/components/calendario/aviso-cambios.tsx
+Tipo: card (alerta)
+Clases: `Alert`/`AlertTitle`/`AlertDescription` de shadcn, variante por defecto; cada cambio en `font-mono text-xs` + motivo; botón "Entendido" en `Button variant="outline" size="sm"`.
+Tokens de color: ninguno de §1.1 — un plan rehecho no es un veredicto; ícono `ArrowRightLeft` para que el significado no dependa del color.
+Notas: S-A10 Paso 10f. Título "Plan rehecho por un cambio en el sandbox · {hora}" y una línea por cambio: `PROY-### — {máquina · operador | sin asignar} → {máquina · operador | sin asignación posible} — {motivo}`. El diff y los motivos los calcula el servidor (`lib/optimizador/ensamblar.ts`); este componente solo los lista. Una actualización con cambios nuevos lo reemplaza; "Entendido" lo cierra.
+Registrado: S-A10 · 13 de septiembre de 2026

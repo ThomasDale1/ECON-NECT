@@ -74,6 +74,14 @@ export function invalidarPorPrefijo(prefijo: string): number {
   return borradas
 }
 
+/** Alias histórico de `invalidarPorPrefijo`. Lo usa la propagación P1 (S-A4):
+ * si la tarea recién creada no se ve hasta que venza el TTL, la incoherencia
+ * sigue en pantalla un minuto después de haberla resuelto — y ese instante es
+ * justamente el de la demo. */
+export function invalidarCache(prefijo: string): number {
+  return invalidarPorPrefijo(prefijo)
+}
+
 /** Solo para pruebas: vacía el caché entre casos. */
 export function limpiarCache(): void {
   almacen.clear()

@@ -1,6 +1,7 @@
 import Image from 'next/image'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { DialogoAccion } from '@/components/nect/dialogo-accion'
+import { PropagarTraslado } from '@/components/nect/propagar-traslado'
 import type { EquipoUnificado, EstadoOrigen, Plataforma, Rol } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
 
@@ -10,6 +11,11 @@ import { cn } from '@/lib/utils'
  * El veredicto es la lectura. El respaldo dice si había datos suficientes
  * para afirmarla. No son lo mismo: EN_RIESGO con todos los campos es una
  * conclusión, no un hueco.
+ *
+ * La última columna es la propagación P1 (S-A4): aparece solo en las filas
+ * donde disparó R3 — solicitud aprobada en Prisma sin tarea de traslado en
+ * Startrack. Que el botón se vea no autoriza nada: el servidor vuelve a
+ * verificar sesión, rol y recurso propio antes de escribir.
  */
 const OBJETO: Record<EstadoOrigen['objeto'], string> = {
   recurso: 'describe el recurso',
@@ -69,7 +75,7 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[980px] border-collapse text-left font-label tracking-normal">
+          <table className="w-full min-w-[1130px] border-collapse text-left font-label tracking-normal">
             <caption className="sr-only">
               Equipos con incoherencias entre Prisma y Startrack, ordenados por
               severidad. Cada fila abre la lectura, el respaldo y el siguiente paso.
@@ -91,8 +97,11 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                 <th scope="col" className="w-[260px] py-2.5 pr-3 font-bold">
                   Respaldo y paso
                 </th>
-                <th scope="col" className="py-2.5 pr-4 font-bold">
+                <th scope="col" className="w-[150px] py-2.5 pr-3 font-bold">
                   Responsable
+                </th>
+                <th scope="col" className="py-2.5 pr-4 font-bold">
+                  Propagación
                 </th>
               </tr>
             </thead>
@@ -100,6 +109,10 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
               {filas.map((equipo) => {
                 const decisiva =
                   equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
+
+                // R3 = "solicitud aprobada sin tarea de traslado": la única
+                // incoherencia que P1 resuelve escribiendo (01 D.6).
+                const puedePropagarse = equipo.reglas.some((r) => r.regla === 'R3')
 
                 return (
                   <tr
@@ -144,8 +157,20 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                     <td className="py-3.5 pr-3 align-middle">
                       <DialogoAccion equipo={equipo} />
                     </td>
-                    <td className="py-3.5 pr-4 align-middle text-[13px]">
+                    <td className="py-3.5 pr-3 align-middle text-[13px]">
                       {decisiva ? ROL[decisiva.rolResponsable] : <SinRegistro />}
+                    </td>
+                    <td className="py-3.5 pr-4 align-middle">
+                      {puedePropagarse ? (
+                        <PropagarTraslado
+                          equipoId={equipo.id}
+                          codigoActivo={equipo.codigoActivo.valor}
+                        />
+                      ) : (
+                        <span className="text-[12px] text-muted-foreground">
+                          Sin escritura aplicable
+                        </span>
+                      )}
                     </td>
                   </tr>
                 )
