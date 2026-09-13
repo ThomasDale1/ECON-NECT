@@ -90,22 +90,23 @@ Si no pasa, no mergea: arregla o revierte.
 
 La rúbrica premia explícitamente *"capacidad de recortar alcance a tiempo"*
 (7.5 pts). Por eso el recorte está planificado ahora, no improvisado a las 4 de
-la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
+la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
 
 ```
   se corta primero  ↓
-  9.  Canal de incidentes: Twilio + Betinho          (S-A9 — fase extendida)
-  8.  Forecast de mantenimiento preventivo (Betinho) (S-A8 — fase extendida)
-  7.  Copiloto de consulta en lenguaje natural      (S-A6 — estiramiento puro)
+ 11.  RAG avanzado y QLoRA                           (futuro; fuera del sprint)
+ 10.  O.D.I.N. Campo + Twilio                        (S-A9 — mismo Qwen local)
+  9.  Predictor entrenado                            (S-A8 — solo si pasa auditoría)
+  8.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4)
+  7.  Índice de riesgo de mantenimiento              (S-A8 — determinístico)
   6.  Propagación P3 — mantenimiento                (S-A5)
   5.  Propagación P2 — estado de vuelta a Prisma    (S-A5)
   4.  Posición GPS en vivo                          (nivel 1 de la cascada, E.10)
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
-  0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4 — fase
-                                                      extendida, ver AGENTS.md §12)
-  ── LÍNEA ROJA: nada de aquí para arriba se corta ──
+  0.  O.D.I.N. Web de solo lectura                   (S-A6 — primer incremento IA)
+  ── LÍNEA ROJA: nada de aquí para abajo se corta ──
       Conectores · mapeo de datos en vivo · reglas · ficha unificada ·
       bandeja de incoherencias · matriz de mapeo · RACI ·
       propagación P1 · los 7 entregables
@@ -116,23 +117,11 @@ pitch y ya está verificado contra la API. P2 y P3 están debajo porque son la
 misma idea repetida: si no dan tiempo, se explican en el diagrama y se muestran
 como propuesta.
 
-**Los ítems 0, 8 y 9 son fases extendidas (AGENTS.md §12), agregadas después de
-la definición original del roadmap.** Se reparten dentro de los cuatro carriles
-existentes — no hay carril E.
-
-**El optimizador (ítem 0) se repriorizó:** ya no espera al hueco de S-A5/S-B3;
-se ataca **justo después de S-C2** (sprints S-A7 + S-B4 + S-C4, ver §1, antes
-del Checkpoint 2), en paralelo con lo que a cada carril le toque de la línea
-roja. Que se construya antes no cambia dónde vive en esta escalera: si el
-reloj aprieta y hay que elegir, se sigue cortando recién después que el mapa
-(S-B3) y las propagaciones P2/P3 (S-A5) — y **nunca** a costa de S-A4
-(propagación P1, que va primero siempre que compitan por la misma hora de
-Carril A).
-
-Betinho y el canal de incidentes (ítems 8 y 9) siguen siendo lo último de la
-escalera: lo primero que se corta de **todo** el proyecto si el reloj aprieta
-— ni siquiera compiten con el copiloto S-A6, y siguen programados para el
-tramo final de la noche, no antes.
+**Toda la IA está debajo de la línea roja.** Dentro de ella, O.D.I.N. Web es el
+primer incremento útil; el optimizador, el entrenamiento, WhatsApp, RAG y QLoRA
+se recortan antes. El orden completo de construcción y recorte está en
+[03 §6](03-ARQUITECTURA-IA-ODIN.md). P1 nunca es una herramienta de O.D.I.N. y
+mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
 ### 0.6 Agenda del evento — lo que no es negociable
 
@@ -371,22 +360,18 @@ que lo produjo en cada caso.
 
 ---
 
-> **Reprioritizado el 12 de septiembre de 2026, con S-C2 ya cerrado.** Los tres
-> sprints que siguen (S-A7, S-B4, S-C4 — el optimizador) eran fase extendida de
-> menor urgencia; el equipo decidió subirlos de prioridad y atacarlos **apenas
-> termina S-C2**, antes que S-A3/S-C3/S-A4/S-B2. Siguen siendo fase extendida
-> (AGENTS.md §12): **no desplazan ni retrasan a S-A4 — propagación P1 sigue
-> siendo el momento que gana el pitch y va primero si hay que elegir.** Si
-> Carril A no llega a las dos cosas a la vez, P1 pasa adelante y S-A7 continúa
-> después, en el hueco que deje S-A5 o S-A6 (§0.5).
+> **Decisión vigente:** S-A7/S-B4/S-C4 siguen siendo fase extendida, pero no se
+> construyen antes del núcleo ni antes de O.D.I.N. Web. P1 mantiene prioridad
+> absoluta. La ubicación de estos sprints en el documento no implica orden de
+> ejecución; manda [03 §6](03-ARQUITECTURA-IA-ODIN.md).
 
-### 🟦 S-A7 — Optimizador: microservicio y adaptador · *fase extendida, priorizada tras S-C2* · Carril A
+### 🟦 S-A7 — Optimizador · *fase extendida, después de O.D.I.N. Web* · Carril A
 
 **Objetivo:** dado un conjunto de tareas por asignar, proponer quién, con qué
 máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
 
-- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT), fuera
-  de `apps/web`, con un único endpoint `POST /optimizar`. Entrada: equipos
+- `services/intelligence/app/optimizer/`: módulo OR-Tools CP-SAT del único
+  servicio FastAPI, fuera de `apps/web`, con endpoint `POST /optimizar`. Entrada: equipos
   disponibles, operadores disponibles, ventanas horarias, lowboys disponibles
   (si la máquina los requiere para trasladarse), tareas a asignar y la **pila
   ordenada de soft constraints** que mandó el usuario. Salida: una asignación
@@ -403,9 +388,8 @@ máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
   tolerancia explícita) como restricción, y recién ahí se optimiza la
   siguiente. Una constraint de menor prioridad nunca empeora a una de mayor
   prioridad para mejorarse a sí misma.
-- `lib/optimizador/tipos.ts`: contrato de request/response con el
-  microservicio. `lib/optimizador/cliente.ts`: cliente HTTP, `server-only`,
-  hacia `SOLVER_BASE_URL`.
+- `lib/inteligencia/`: contrato y adaptador HTTP `server-only` hacia
+  `INTELLIGENCE_BASE_URL`; no contiene lógica de optimización.
 - `app/api/optimizar/route.ts`: ruta delgada — valida con Zod, delega al
   cliente, responde. **Ninguna lógica de optimización vive en la ruta**, mismo
   principio que ya rige para la reconciliación (§4.3 de AGENTS.md).
@@ -588,76 +572,58 @@ cómo se comunique, no de una función más.
 
 ---
 
-### 🟦 S-A6 — Copiloto de consulta · *solo si sobra tiempo* · Carril A o C
+### 🟦 S-A6 — O.D.I.N. Web MVP · *primer incremento de IA* · Carril A
 
-Consulta en lenguaje natural sobre el modelo unificado, con Claude. **Regla
-innegociable si se construye:** toda cifra que produzca tiene que venir de una
-llamada a herramienta contra los datos reales, nunca generada por el modelo. Una
-cifra inventada en el pitch nos hunde justo en el criterio de honestidad que
-estamos usando como diferenciador.
+Agente local de solo lectura con Qwen3 4B Instruct (`qwen3:4b-instruct`) servido por Ollama.
+Atiende únicamente `QUERY_ASSET_STATUS`, `EXPLAIN_INCONSISTENCY` y
+`EXPLAIN_MAINTENANCE_RISK`, mediante las tres herramientas controladas definidas
+en [03 §2.1](03-ARQUITECTURA-IA-ODIN.md). Toda cifra viene de una herramienta
+y muestra fuente, fecha y datos faltantes. No existe herramienta de escritura.
 
-**Se corta sin discusión si algo obligatorio está incompleto.**
-
----
-
-## 1.1 Fases extendidas — Betinho y Twilio, solo si el reloj lo permite
-
-> **Agregadas el 12 de septiembre de 2026, después de la definición original de
-> este roadmap.** Detalle de reglas de producto, principios y por qué no
-> contradicen a 01/H.3 en [AGENTS.md §12](../AGENTS.md). Se reparten dentro de
-> los cuatro carriles existentes (§0.1) — no hay carril E — y van **debajo** de
-> la línea roja (§0.5). El optimizador (S-A7 + S-B4 + S-C4) ya no está en esta
-> sección: se repriorizó y se construye justo después de S-C2 (ver arriba,
-> antes del Checkpoint 2). Lo que sigue —Betinho y el canal de incidentes— es
-> lo último de la escalera: ninguno arranca hasta que su carril termine lo que
-> la línea roja le exige primero.
+**Termina cuando:** pasa al menos 15 preguntas de evaluación, rechaza intenciones
+fuera de alcance y funciona localmente sin enviar información a un LLM de nube.
 
 ---
 
-### 🟦 S-A8 — Betinho: forecast de mantenimiento preventivo · *fase extendida, se corta primero* · Carril A
+## 1.1 Fases extendidas de inteligencia
 
-- `lib/betinho/forecast.ts`: cliente hacia `BETINHO_MODEL_BASE_URL` (modelo
-  open-source autoalojado, nunca un proveedor de IA en la nube — §1.5 de
-  AGENTS.md). Entrada: las señales que el sandbox **realmente exponga**
-  (kilometraje, horas de motor encendido, temperatura, y lo que aparezca al
-  verificar — no se asume ninguna antes de comprobarla).
-- Si una señal no está disponible, el forecast lo dice explícitamente — mismo
-  principio de honestidad que ya rige la matriz de mapeo (C.1), aplicado acá a
-  un análisis nuevo.
-- Salida: una recomendación en lenguaje llano con su justificación ("alta
-  probabilidad de falla en los próximos N días, según estas señales") — nunca
-  una cifra sin poder señalar de dónde salió.
-
-**Termina cuando:** para un equipo con historial suficiente, Betinho produce
-una recomendación justificada; para uno sin historial, dice que no puede
-concluir.
+> Todos estos módulos comparten `services/intelligence/` y obedecen
+> [03-ARQUITECTURA-IA-ODIN.md](03-ARQUITECTURA-IA-ODIN.md). No hay un
+> segundo LLM, un segundo microservicio ni un carril E.
 
 ---
 
-### 🟦 S-A9 — Betinho + Twilio: canal de incidentes de campo · *fase extendida, se corta primero* · Carril A (+ panel de B)
+### 🟦 S-A8 — Riesgo de mantenimiento · *fase extendida* · Carril A
 
-- `lib/conectores/twilio.ts`: `server-only`, recibe el webhook de un mensaje
-  entrante (SMS o WhatsApp de prueba de Twilio) — vive en `lib/conectores/`
-  porque es exactamente eso: una puerta más al mundo exterior.
-- `app/api/incidentes/route.ts`: ruta delgada, valida el webhook, delega.
-- `lib/betinho/incidentes.ts`: clasifica el incidente (severidad, tipo, rol
-  responsable — reutiliza la RACI de C si ya existe) y redacta el reenvío.
-  **Nunca decide ni ejecuta una acción por su cuenta.**
-- `components/incidentes/` (B): panel donde el jefe ve la sugerencia de
-  Betinho y la confirma o la descarta. **Solo al confirmar** se actualiza un
-  dato — mismo mecanismo de confirmación explícita y rastro que ya rige P1
-  (C.3, D.6 de 01).
-- **Restricción dura, con prueba:** ninguna acción se ejecuta sin confirmación
-  explícita del jefe.
+- `services/intelligence/app/forecast/`: primero audita etiqueta, volumen,
+  fechas y utilidad operativa.
+- La entrega base es un `MaintenanceRiskIndex` determinístico, con factores
+  visibles, datos faltantes e `is_trained_probability: false`.
+- Solo si la auditoría supera las cuatro puertas de [03 §2.3](03-ARQUITECTURA-IA-ODIN.md),
+  se entrena un único baseline de clasificación y se valida con corte temporal.
+
+**Termina cuando:** el índice es reproducible y explicable; si existe modelo
+entrenado, también documenta etiqueta, corte, métricas y limitaciones.
+
+---
+
+### 🟦 S-A9 — O.D.I.N. Campo + Twilio · *fase extendida, se corta primero* · Carril A (+ panel de B)
+
+- Usa el mismo Qwen local que O.D.I.N. Web, con prompt y herramientas propios.
+- `services/intelligence/app/odin/` recibe el webhook validado del sandbox de
+  Twilio, clasifica el incidente y redacta un borrador de escalamiento.
+- `components/incidentes/` muestra el borrador para revisión humana.
+- **Restricción dura:** no existe una ruta desde O.D.I.N. Campo hacia una
+  mutación de Prisma o Startrack. P1 es un flujo separado de la UI.
 - **Dato del incidente:** vive solo en el caché volátil en memoria, igual que
   cualquier otro dato de ECON (C.2). Ningún número de teléfono real de un
   trabajador entra al repositorio, a un log, ni a una captura del entregable —
   la demo usa el número de prueba de Twilio (mismo cuidado que ya exige
   §1.2/H.2 con las tareas y conductores de Startrack).
 
-**Termina cuando:** un mensaje de prueba de Twilio dispara una sugerencia de
-Betinho visible en el panel, y confirmarla deja rastro de qué se confirmó,
-quién y cuándo.
+**Termina cuando:** un mensaje de prueba produce un borrador visible con su
+clasificación y evidencia, y las pruebas demuestran que no puede escribir en las
+plataformas.
 
 ---
 
@@ -679,8 +645,9 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 
 6. **El optimizador nunca viola una hard constraint** — un caso sin solución
    factible devuelve infactible con la razón, nunca una asignación forzada.
-7. **Twilio/Betinho nunca ejecutan una acción sin confirmación humana** — una
-   sugerencia sin confirmar no cambia ningún estado (mismo principio que P1).
+7. **Twilio/O.D.I.N. no tienen capacidad de escritura** — no existe herramienta
+   o ruta del agente hacia una mutación de Prisma/Startrack. P1 se prueba como
+   un flujo independiente de UI y servidor.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -729,10 +696,11 @@ nuestro indicador en dinero durante el pitch.
 | Otro equipo modifica datos compartidos del sandbox | Media | La demo se apoya en nuestros recursos; los ajenos solo se leen |
 | Los entregables se dejan para el final | **Alta** | Carril D arranca a las 15:30 y cierra a las 06:30, no a las 09:59 |
 | Dormirse y perder el pitch | Real | Alarma redundante. El pitch vale 15 pts |
-| Las fases extendidas (§1.1) le roban horas a la línea roja | Alta | Escalera §0.5 actualizada: nadie empieza S-A7/S-A8/S-A9/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
-| El microservicio Python (`services/solver/`) no despliega a tiempo o no responde desde Vercel | Media | Riesgo aceptado del stretch: si no conecta, el optimizador se explica en el diagrama como propuesta, igual que P2/P3 si no dan tiempo |
-| Verificación de número de Twilio tarda o el webhook no es alcanzable en la demo | Media | Se usa el número/sandbox de prueba de Twilio; si no queda listo, S-A9 se corta primero (es el ítem 9 de la escalera) |
-| El modelo open-source de Betinho es lento o no cabe en el hardware disponible | Media | Betinho es el ítem 8 de la escalera — se corta antes que cualquier cosa de la línea roja o de S-A5/S-A6 |
+| Las fases de IA le roban horas a la línea roja | Alta | Nadie empieza S-A6/S-A7/S-A8/S-A9/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
+| `services/intelligence/` no despliega o no responde desde la app | Media | O.D.I.N. se prueba primero en local; los módulos opcionales se explican como propuesta si no conectan a tiempo |
+| Verificación de Twilio tarda o el webhook no es alcanzable | Media | Se usa exclusivamente el sandbox de prueba; S-A9 se corta antes que el MVP Web |
+| Qwen es lento o no cabe en el hardware disponible | Media | Medir hardware y latencia antes de integrar; probar cuantización o recortar O.D.I.N. sin sustituirlo por un LLM de nube |
+| Se presenta un índice de reglas como predicción entrenada | Alta | El contrato exige `is_trained_probability: false`; entrenar solo después de superar la auditoría de datos de 03 §2.3 |
 
 ---
 

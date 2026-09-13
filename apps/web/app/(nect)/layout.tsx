@@ -1,9 +1,7 @@
 import { Exo, Lato, Roboto_Condensed } from 'next/font/google'
 import { BarraLateral } from '@/components/comando/barra-lateral'
-import { PanelOdin } from '@/components/comando/panel-odin'
 import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { actualizarFuente } from './acciones'
-import { ALERTAS, CONFLICTO, CONSULTAS_RAPIDAS, PREDICCION } from './datos-odin'
 
 /**
  * Envoltorio de las pantallas de ECON NECT.
@@ -16,9 +14,6 @@ import { ALERTAS, CONFLICTO, CONSULTAS_RAPIDAS, PREDICCION } from './datos-odin'
  * La lectura está memoizada por petición (`cache()` de React), así que que el
  * layout pida la salud y la página pida los equipos no duplica llamadas al
  * sandbox.
- *
- * O.D.I.N. también vive acá: es un asistente, así que acompaña a todas las
- * pantallas y conserva si está plegado al navegar.
  *
  * Las fuentes se declaran acá y no en `app/layout.tsx` porque ese archivo es del
  * carril A (AGENTS.md §4.2).
@@ -45,12 +40,6 @@ export default async function NectLayout({ children }: { children: React.ReactNo
     >
       <BarraLateral salud={salud} onActualizar={actualizarFuente} />
       {children}
-      <PanelOdin
-        prediccion={PREDICCION}
-        alertas={ALERTAS}
-        conflicto={CONFLICTO}
-        consultas={CONSULTAS_RAPIDAS}
-      />
     </div>
   )
 }

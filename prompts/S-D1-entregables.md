@@ -2,7 +2,7 @@
 
 **Carril D · arranca YA · cierra a las 06:30, no a las 09:59**
 
-> Leé [AGENTS.md](../AGENTS.md) y [01](../01-DEFINICION-DE-NEGOCIO.md) completo.
+> Leé [AGENTS.md](../AGENTS.md) y [01](../docs/01-DEFINICION-DE-NEGOCIO.md) completo.
 > No escribís código: escribís lo que vale ~40 de los 100 puntos.
 
 ---
@@ -20,7 +20,7 @@ los organigramas y los hallazgos ya verificados de la Parte E.
 ## 1. Ahora mismo: el Checkpoint 1
 
 Llevá **escritas** las preguntas para los mentores de proceso
-([02 §3](../02-ROADMAP.md)) y **anotá las respuestas textuales** — son la fuente
+([02 §3](../docs/02-ROADMAP.md)) y **anotá las respuestas textuales** — son la fuente
 de la RACI, y citar a un mentor en el pitch vale más que una opinión nuestra.
 
 **La pregunta de oro:**
@@ -40,7 +40,7 @@ hoy ninguna existe en software.** Hoy las camina una persona.
 > líneas punteadas son las que hoy caminan a pie. ECON NECT es exactamente las
 > líneas punteadas."*
 
-Está desarrollado en [01 Parte B](../01-DEFINICION-DE-NEGOCIO.md), con la tabla
+Está desarrollado en [01 Parte B](../docs/01-DEFINICION-DE-NEGOCIO.md), con la tabla
 de las seis líneas y dónde vive cada una en el producto. **Es la diapositiva 2
 del deck.**
 
@@ -74,7 +74,7 @@ confesión de debilidad: demuestra que sabemos exactamente qué construimos.
 ## 5. Documento de decisiones técnicas — máximo 2 páginas
 
 Los títulos, ya decididos. El contenido sale de
-[01 Parte E](../01-DEFINICION-DE-NEGOCIO.md):
+[01 Parte E](../docs/01-DEFINICION-DE-NEGOCIO.md):
 
 1. **Por qué se descartó el mapeo por nombre.** Los nombres de proyecto y geocerca
    coinciden en casi todos los casos **excepto uno**, donde los componentes
@@ -99,8 +99,12 @@ Los títulos, ya decididos. El contenido sale de
    está en ningún documento que nos entregaron.** Es una recomendación concreta
    para ECON.
 
-**Fuera de alcance, explícito:** sin ML · sin sincronización automática · sin KPIs
-que el sandbox no soporta · sin persistencia de datos de ECON.
+**Fuera de alcance del núcleo, explícito:** sin ML en el motor de
+reconciliación · sin sincronización automática · sin KPIs que el sandbox no
+soporta · sin persistencia de datos de ECON. La capa de IA separada se presenta
+según [03-ARQUITECTURA-IA-ODIN.md](../docs/03-ARQUITECTURA-IA-ODIN.md):
+Qwen local, O.D.I.N. de solo lectura e índice de riesgo antes de cualquier
+entrenamiento.
 
 ## 6. Presentación — máximo 10 diapositivas
 

@@ -280,6 +280,18 @@ Notas: siempre ícono + texto (§5). Un ícono distinto de lucide por veredicto
 dependa del color.
 Registrado: S-B1 · 12 de septiembre de 2026
 
+### ConsolaOdin
+File: apps/web/components/odin/consola-odin.tsx
+Tipo: formulario + card de resultado
+Clases: cards del baseline; resultado `rounded-xl border border-border p-5`
+Tokens de color: violeta solo para datos faltantes; ámbar no se usa para marcar
+datos reales como si fueran una alerta.
+Notas: consume la lista del orquestador canónico y envía al servidor únicamente
+`assetId` y la consulta. La ruta server-side relee Prisma/Startrack, minimiza el
+contexto y consulta el servicio local. O.D.I.N. es de solo lectura y no contiene
+controles de aprobación o escritura.
+Registrado: S-A6 · 13 de septiembre de 2026
+
 ### BadgeOrigen
 File: apps/web/components/nect/badge-origen.tsx
 Tipo: badge
