@@ -86,14 +86,23 @@ export function BarraLateral({
     <aside
       className={cn(
         'sticky top-0 flex h-screen shrink-0 flex-col justify-between self-start',
-        'overflow-y-auto bg-marina text-white',
+        // La barra nunca scrollea entera: el estado de las plataformas tiene que
+        // quedar siempre a la vista, porque es la prueba en vivo de que estamos
+        // leyendo las dos APIs. Si el alto no alcanza, cede la lista de
+        // navegación —que es recuperable— y no el bloque de abajo.
+        'overflow-hidden bg-marina text-white',
         // La contracción se anima; el estado vive en el layout, así que sobrevive
         // a la navegación y solo cambia cuando se vuelve a pulsar el botón.
         'transition-[width] duration-300 ease-in-out motion-reduce:transition-none',
         contraida ? 'w-16' : 'w-60',
       )}
     >
-      <div className={cn('flex flex-col gap-6 pb-4 pt-7', contraida ? 'px-3' : 'px-5')}>
+      <div
+        className={cn(
+          'flex min-h-0 flex-1 flex-col gap-5 pb-3 pt-6',
+          contraida ? 'px-3' : 'px-5',
+        )}
+      >
         <div className={cn('flex items-center', contraida && 'justify-center')}>
           <Image
             src={contraida ? '/econ-nect-mark.png' : '/econ-nect-logo-marina.png'}
@@ -128,7 +137,7 @@ export function BarraLateral({
           </div>
         )}
 
-        <nav className="flex flex-col gap-1">
+        <nav className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto">
           {!contraida && (
             <p className="font-label text-[9px] font-bold uppercase tracking-widest text-marina-tenue">
               Navegación
@@ -165,7 +174,12 @@ export function BarraLateral({
         </nav>
       </div>
 
-      <div className={cn('flex flex-col gap-4 bg-marina-honda pb-4 pt-5', contraida ? 'px-3' : 'px-5')}>
+      <div
+        className={cn(
+          'flex shrink-0 flex-col gap-2 bg-marina-honda pb-3 pt-3',
+          contraida ? 'px-3' : 'px-5',
+        )}
+      >
         {!contraida && (
           <p className="font-label text-[9px] font-bold uppercase tracking-widest text-marina-tenue">
             Estado de plataformas
@@ -202,31 +216,29 @@ export function BarraLateral({
                 {NOMBRE_PLATAFORMA[fuente.plataforma]}: {PALABRA_SALUD[fuente.estado]}
               </span>
             ) : (
-              <div className="flex min-w-0 flex-1 flex-col gap-px">
-                <div className="flex items-center justify-between">
-                  <span className="font-label text-[11px] font-bold text-[#b8cdd8]">
-                    {NOMBRE_PLATAFORMA[fuente.plataforma]}
-                  </span>
-                  <span className="flex items-center gap-1.5">
-                    <span
-                      className={cn('font-label text-[10px] font-bold', TEXTO_SALUD[fuente.estado])}
-                    >
-                      {PALABRA_SALUD[fuente.estado]}
-                    </span>
-                    {onActualizar && (
-                      <BotonActualizar
-                        plataforma={fuente.plataforma}
-                        nombre={NOMBRE_PLATAFORMA[fuente.plataforma]}
-                        onActualizar={onActualizar}
-                      />
-                    )}
-                  </span>
-                </div>
+              <div className="flex min-w-0 flex-1 items-center gap-1.5">
+                <span className="shrink-0 font-label text-[11px] font-bold text-[#b8cdd8]">
+                  {NOMBRE_PLATAFORMA[fuente.plataforma]}
+                </span>
                 {/* `latenciaMs` en null significa que la lectura salió del caché en
                     memoria, así que no hay medición nueva de la plataforma. Se dice
                     eso, y no un número que mediría el caché y no el sandbox. */}
-                <span className="font-mono text-[9px] text-marina-media">
+                <span className="truncate font-mono text-[9px] text-marina-media">
                   {fuente.latenciaMs === null ? 'Desde caché' : `${fuente.latenciaMs} ms`}
+                </span>
+                <span className="ml-auto flex shrink-0 items-center gap-1.5">
+                  <span
+                    className={cn('font-label text-[10px] font-bold', TEXTO_SALUD[fuente.estado])}
+                  >
+                    {PALABRA_SALUD[fuente.estado]}
+                  </span>
+                  {onActualizar && (
+                    <BotonActualizar
+                      plataforma={fuente.plataforma}
+                      nombre={NOMBRE_PLATAFORMA[fuente.plataforma]}
+                      onActualizar={onActualizar}
+                    />
+                  )}
                 </span>
               </div>
             )}
@@ -237,30 +249,36 @@ export function BarraLateral({
           <BotonActualizarAmbas onActualizar={onActualizarTodas} contraida={contraida} />
         )}
 
-        {!contraida && <p className="font-label text-[10px] text-[#2d4a60]">v2.4.1-Tactical</p>}
+        {/* La versión comparte fila con el botón: sola ocupaba un renglón entero
+            del alto que la navegación necesita en pantallas bajas. */}
+        <div className={cn('flex items-center gap-2', contraida && 'justify-center')}>
+          {!contraida && (
+            <span className="font-label text-[10px] text-[#2d4a60]">v2.4.1-Tactical</span>
+          )}
 
-        <button
-          type="button"
-          onClick={() => setContraida((c) => !c)}
-          aria-expanded={!contraida}
-          title={contraida ? 'Expandir la barra lateral' : 'Contraer la barra lateral'}
-          aria-label={contraida ? 'Expandir la barra lateral' : 'Contraer la barra lateral'}
-          className={cn(
-            'flex items-center justify-center gap-2 rounded-lg border border-marina-borde bg-marina-clara',
-            'py-2 font-label text-xs text-marina-media transition-colors hover:text-white',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara',
-            contraida ? 'px-0' : 'px-3.5',
-          )}
-        >
-          {contraida ? (
-            <PanelLeftOpen aria-hidden className="size-3.5" />
-          ) : (
-            <>
-              <PanelLeftClose aria-hidden className="size-3.5" />
-              Contraer
-            </>
-          )}
-        </button>
+          <button
+            type="button"
+            onClick={() => setContraida((c) => !c)}
+            aria-expanded={!contraida}
+            title={contraida ? 'Expandir la barra lateral' : 'Contraer la barra lateral'}
+            aria-label={contraida ? 'Expandir la barra lateral' : 'Contraer la barra lateral'}
+            className={cn(
+              'flex items-center justify-center gap-2 rounded-lg border border-marina-borde bg-marina-clara',
+              'py-1.5 font-label text-xs text-marina-media transition-colors hover:text-white',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara',
+              contraida ? 'w-full px-0' : 'ml-auto px-3',
+            )}
+          >
+            {contraida ? (
+              <PanelLeftOpen aria-hidden className="size-3.5" />
+            ) : (
+              <>
+                <PanelLeftClose aria-hidden className="size-3.5" />
+                Contraer
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </aside>
   )

@@ -3,8 +3,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   conductorDesdeStartrack,
+  estadoDelConductor,
   lecturaAsignacion,
-  pasoAsignacion,
   personalDesdePrisma,
 } from './asignacion'
 
@@ -45,7 +45,7 @@ describe('conductorDesdeStartrack', () => {
   })
 })
 
-describe('lectura y paso de asignación', () => {
+describe('lectura de asignación', () => {
   const prisma = personalDesdePrisma({ nombre: 'Operador EQ-DEMO', cod_trabajador: 'OP-DEMO-1' }, linajePrisma)
   const startrack = conductorDesdeStartrack({ i: 99, fn: 'Conductor', ln: 'EQ-DEMO', cd: 'CD-DEMO' }, linajeStartrack)
 
@@ -54,17 +54,40 @@ describe('lectura y paso de asignación', () => {
     expect(texto).toContain('conductor de la maquinaria es Conductor EQ-DEMO')
     expect(texto).toContain('Operador EQ-DEMO')
     expect(texto).toContain('otro catálogo')
-    expect(pasoAsignacion({ prisma, startrack })).toContain('conductor de Startrack')
   })
 
   it('usa el conductor de Startrack cuando Prisma no asignó operador', () => {
-    expect(pasoAsignacion({ prisma: null, startrack })).toContain('conductor de Startrack')
     expect(lecturaAsignacion({ prisma: null, startrack })).toContain('conductor de la maquinaria es Conductor EQ-DEMO')
     expect(lecturaAsignacion({ prisma: null, startrack })).not.toContain('operador')
   })
 
   it('declara el hueco si nadie figura', () => {
-    expect(pasoAsignacion({ prisma: null, startrack: null })).toContain('Nadie figura')
     expect(lecturaAsignacion(null)).toContain('no trajo el conductor')
+  })
+})
+
+describe('estadoDelConductor', () => {
+  const startrack = conductorDesdeStartrack({ i: 99, fn: 'Conductor', ln: 'EQ-DEMO', cd: 'CD-DEMO' }, linajeStartrack)
+  const vehiculo = {
+    valor: 'Almorzando',
+    objeto: 'recurso' as const,
+    linaje: { ...linajeStartrack, campo: 'status', valorCrudo: '4' },
+  }
+
+  it('devuelve la palabra del estado, sin explicar de dónde sale', () => {
+    const estado = estadoDelConductor({ prisma: null, startrack }, vehiculo)
+    expect(estado).toBe('Almorzando')
+    expect(estado).not.toMatch(/status|0–9|recurso/i)
+  })
+
+  // Sin conductor nombrado, un estado de vehículo no describe a nadie: la
+  // interfaz omite la línea en vez de atribuirle un estado a un hueco.
+  it('no atribuye estado si Startrack no nombra conductor', () => {
+    expect(estadoDelConductor({ prisma: null, startrack: null }, vehiculo)).toBeNull()
+    expect(estadoDelConductor(null, vehiculo)).toBeNull()
+  })
+
+  it('devuelve null si la lectura no trajo el estado del vehículo', () => {
+    expect(estadoDelConductor({ prisma: null, startrack }, null)).toBeNull()
   })
 })

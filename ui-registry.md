@@ -340,7 +340,13 @@ porcentaje de disponibilidad ("99.8%") que ninguna fuente reporta: se quitó.** 
 número sin endpoint detrás no se pinta (§1.4); en su lugar va el estado en palabra
 —En línea / Lenta / Caída— más la latencia cuando el contrato la trae.
 Ancho 240px y `#0B1E30` salen del Figma, no del `w-64 #0F1E3D` de §3.1.
-Registrado: S-B1 · 12 de septiembre de 2026
+**La barra nunca scrollea entera** (`overflow-hidden`): el bloque de estado de
+plataformas es `shrink-0` y queda siempre a la vista, porque es la prueba en vivo
+de que se están leyendo las dos APIs. Si el alto no alcanza cede la navegación,
+que es lo recuperable, con scroll propio. Cada plataforma ocupa **una sola línea**
+—nombre, latencia, estado y relectura— y la versión comparte fila con el botón de
+contraer: así el bloque bajó de 281px a 173px y no hay scroll hasta 620px de alto.
+Registrado: S-B1 · 12 de septiembre de 2026 · revisado 13 de septiembre de 2026
 
 ### BarraSuperior
 File: apps/web/components/comando/barra-superior.tsx
