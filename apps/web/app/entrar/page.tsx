@@ -20,7 +20,7 @@ export default async function EntrarPage({
   return (
     <main className="flex min-h-screen items-center justify-center bg-background p-6">
       <div className="flex w-full max-w-md flex-col gap-6 rounded-xl border border-border bg-card p-8 shadow-card">
-        <div className="flex flex-col items-center gap-3 text-center">
+        <div className="flex flex-col items-center text-center">
           <Image
             src="/econ-nect-logo.png"
             alt="ECON NECT"
@@ -29,14 +29,6 @@ export default async function EntrarPage({
             priority
             className="h-14 w-auto object-contain"
           />
-          <div className="flex flex-col gap-1">
-            <h1 className="font-heading text-xl font-extrabold tracking-tight text-primary">
-              ECON NECT
-            </h1>
-            <p className="font-label text-xs uppercase tracking-wide text-muted-foreground">
-              Capa de operaciones
-            </p>
-          </div>
         </div>
 
         <FormularioEntrar siguiente={siguiente ?? '/command-center'} />
