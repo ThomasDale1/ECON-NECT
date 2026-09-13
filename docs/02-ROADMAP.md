@@ -95,7 +95,7 @@ la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
 ```
   se corta primero  ↓
  11.  RAG avanzado y QLoRA                           (futuro; fuera del sprint)
- 10.  O.D.I.N. Campo + Twilio                        (S-A9 — mismo Qwen local)
+ 10.  ~~O.D.I.N. Campo + Twilio~~ — retirado 13 sep. 2026, ya no existe S-A9
   9.  Predictor entrenado                            (S-A8 — solo si pasa auditoría)
   8.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4)
   7.  Índice de riesgo de mantenimiento              (S-A8 — determinístico)
@@ -105,7 +105,7 @@ la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
-  0.  O.D.I.N. Web de solo lectura                   (S-A6 — primer incremento IA)
+  0.  O.D.I.N. — chatbot local de solo lectura       (S-A6 — primer incremento IA)
   ── LÍNEA ROJA: nada de aquí para abajo se corta ──
   0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4, replaneado
                                                       en S-A10 — fase extendida,
@@ -121,9 +121,11 @@ pitch y ya está verificado contra la API. P2 y P3 están debajo porque son la
 misma idea repetida: si no dan tiempo, se explican en el diagrama y se muestran
 como propuesta.
 
-**Toda la IA está debajo de la línea roja.** Dentro de ella, O.D.I.N. Web es el
-primer incremento útil; el optimizador, el entrenamiento, WhatsApp, RAG y QLoRA
-se recortan antes. El orden completo de construcción y recorte está en
+**Toda la IA está debajo de la línea roja.** Dentro de ella, el chatbot O.D.I.N.
+es el primer incremento útil; el optimizador, el entrenamiento, RAG y QLoRA se
+recortan antes. **Twilio, WhatsApp y el perfil O.D.I.N. Campo salieron del
+producto el 13 de septiembre de 2026** — no están en la escalera porque no se
+construyen. El orden completo de construcción y recorte está en
 [03 §6](03-ARQUITECTURA-IA-ODIN.md). P1 nunca es una herramienta de O.D.I.N. y
 mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
@@ -365,11 +367,11 @@ que lo produjo en cada caso.
 ---
 
 > **Decisión vigente:** S-A7/S-B4/S-C4 siguen siendo fase extendida, pero no se
-> construyen antes del núcleo ni antes de O.D.I.N. Web. P1 mantiene prioridad
+> construyen antes del núcleo ni antes del chatbot O.D.I.N. P1 mantiene prioridad
 > absoluta. La ubicación de estos sprints en el documento no implica orden de
 > ejecución; manda [03 §6](03-ARQUITECTURA-IA-ODIN.md).
 
-### 🟦 S-A7 — Optimizador · *fase extendida, después de O.D.I.N. Web* · Carril A
+### 🟦 S-A7 — Optimizador · *fase extendida, después del chatbot O.D.I.N.* · Carril A
 
 **Objetivo:** para cada solicitud de maquinaria real de Prisma, proponer qué
 máquina y qué operador asignar en las fechas que pidió el solicitante,
@@ -664,13 +666,31 @@ cómo se comunique, no de una función más.
 
 ---
 
-### 🟦 S-A6 — O.D.I.N. Web MVP · *primer incremento de IA* · Carril A
+### 🟦 S-A6 — O.D.I.N., chatbot de IA local · *primer incremento de IA* · Carril A
 
-Agente local de solo lectura con Qwen3 4B Instruct (`qwen3:4b-instruct`) servido por Ollama.
-Atiende únicamente `QUERY_ASSET_STATUS`, `EXPLAIN_INCONSISTENCY` y
-`EXPLAIN_MAINTENANCE_RISK`, mediante las tres herramientas controladas definidas
-en [03 §2.1](03-ARQUITECTURA-IA-ODIN.md). Toda cifra viene de una herramienta
-y muestra fuente, fecha y datos faltantes. No existe herramienta de escritura.
+**O.D.I.N.** (antes *Betinho*) es el chatbot de ECON NECT: una consola de chat
+en `/odin` donde la persona **escribe una pregunta en lenguaje natural** y
+O.D.I.N. la resuelve consultando los datos en vivo. Corre con Qwen3 4B Instruct
+(`qwen3:4b-instruct`) servido localmente por Ollama, a través del único
+servicio `services/intelligence/`; nunca un LLM de nube.
+
+- **Flujo de una pregunta:** el navegador manda solo el texto y el equipo
+  elegido → `app/api/odin/chat` arma el contexto con el orquestador canónico en
+  vivo → `services/intelligence/app/odin/` detecta la intención, llama a las
+  tres herramientas de solo lectura de [03 §2.1](03-ARQUITECTURA-IA-ODIN.md)
+  (`get_operational_snapshot`, `get_inconsistency_explanation`,
+  `get_maintenance_risk`) y redacta la respuesta.
+- **Qué resuelve hoy:** estado operativo de un equipo, explicación de una
+  incoherencia detectada por las reglas, y explicación del índice de riesgo de
+  mantenimiento (`QUERY_ASSET_STATUS`, `EXPLAIN_INCONSISTENCY`,
+  `EXPLAIN_MAINTENANCE_RISK`). Fuera de eso, rechaza con claridad.
+- **Cada respuesta trae** conclusión, evidencia, fuente y hora de lectura, datos
+  faltantes y nivel de confianza. Toda cifra viene de una herramienta; un filtro
+  descarta números no sustentados. Si falta un dato, lo dice.
+- **No existe herramienta de escritura.** Una pregunta que pida aprobar, crear,
+  actualizar o propagar se rechaza en el chat y no cambia ningún estado.
+- Si Ollama no responde: `ODIN_UNAVAILABLE` y degradación a la explicación
+  determinística; nunca cambia de proveedor.
 
 **Termina cuando:** pasa al menos 15 preguntas de evaluación, rechaza intenciones
 fuera de alcance y funciona localmente sin enviar información a un LLM de nube.
@@ -699,23 +719,12 @@ entrenado, también documenta etiqueta, corte, métricas y limitaciones.
 
 ---
 
-### 🟦 S-A9 — O.D.I.N. Campo + Twilio · *fase extendida, se corta primero* · Carril A (+ panel de B)
+### ~~S-A9 — O.D.I.N. Campo + Twilio~~ · *retirado el 13 de septiembre de 2026*
 
-- Usa el mismo Qwen local que O.D.I.N. Web, con prompt y herramientas propios.
-- `services/intelligence/app/odin/` recibe el webhook validado del sandbox de
-  Twilio, clasifica el incidente y redacta un borrador de escalamiento.
-- `components/incidentes/` muestra el borrador para revisión humana.
-- **Restricción dura:** no existe una ruta desde O.D.I.N. Campo hacia una
-  mutación de Prisma o Startrack. P1 es un flujo separado de la UI.
-- **Dato del incidente:** vive solo en el caché volátil en memoria, igual que
-  cualquier otro dato de ECON (C.2). Ningún número de teléfono real de un
-  trabajador entra al repositorio, a un log, ni a una captura del entregable —
-  la demo usa el número de prueba de Twilio (mismo cuidado que ya exige
-  §1.2/H.2 con las tareas y conductores de Startrack).
-
-**Termina cuando:** un mensaje de prueba produce un borrador visible con su
-clasificación y evidencia, y las pruebas demuestran que no puede escribir en las
-plataformas.
+Por decisión del usuario, Twilio y WhatsApp salieron del producto. No hay
+perfil de campo, canal de incidentes, webhook ni `components/incidentes/`.
+O.D.I.N. tiene un único perfil: el chatbot web de S-A6. Este sprint no se
+planea, no se construye y no se menciona en el pitch como pendiente.
 
 ---
 
@@ -737,9 +746,11 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 
 6. **El optimizador nunca viola una hard constraint** — un caso sin solución
    factible devuelve infactible con la razón, nunca una asignación forzada.
-7. **Twilio/O.D.I.N. no tienen capacidad de escritura** — no existe herramienta
-   o ruta del agente hacia una mutación de Prisma/Startrack. P1 se prueba como
-   un flujo independiente de UI y servidor.
+7. **O.D.I.N. no tiene capacidad de escritura** — no existe herramienta o ruta
+   del chatbot hacia una mutación de Prisma/Startrack; una pregunta que pida
+   aprobar, crear o propagar se rechaza y no cambia ningún estado. P1 se prueba
+   como un flujo independiente de UI y servidor. Además, ninguna cifra sale
+   del chat sin herramienta y fuente: si falta el dato, la respuesta lo dice.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -788,9 +799,8 @@ nuestro indicador en dinero durante el pitch.
 | Otro equipo modifica datos compartidos del sandbox | Media | La demo se apoya en nuestros recursos; los ajenos solo se leen |
 | Los entregables se dejan para el final | **Alta** | Carril D arranca a las 15:30 y cierra a las 06:30, no a las 09:59 |
 | Dormirse y perder el pitch | Real | Alarma redundante. El pitch vale 15 pts |
-| Las fases de IA le roban horas a la línea roja | Alta | Nadie empieza S-A6/S-A7/S-A8/S-A9/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
+| Las fases de IA le roban horas a la línea roja | Alta | Nadie empieza S-A6/S-A7/S-A8/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
 | `services/intelligence/` no despliega o no responde desde la app | Media | O.D.I.N. se prueba primero en local; los módulos opcionales se explican como propuesta si no conectan a tiempo |
-| Verificación de Twilio tarda o el webhook no es alcanzable | Media | Se usa exclusivamente el sandbox de prueba; S-A9 se corta antes que el MVP Web |
 | Qwen es lento o no cabe en el hardware disponible | Media | Medir hardware y latencia antes de integrar; probar cuantización o recortar O.D.I.N. sin sustituirlo por un LLM de nube |
 | Se presenta un índice de reglas como predicción entrenada | Alta | El contrato exige `is_trained_probability: false`; entrenar solo después de superar la auditoría de datos de 03 §2.3 |
 

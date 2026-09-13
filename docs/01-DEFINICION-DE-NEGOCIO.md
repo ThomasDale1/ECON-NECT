@@ -596,13 +596,22 @@ registros"), no pegando el dato.
 - No tiene app móvil nativa. Eso sigue siendo propuesta de escalabilidad, no
   código.
 
-> **Decisión de IA vigente:** el núcleo anterior sigue siendo determinístico.
-> Por fuera de él, el equipo implementará un único servicio FastAPI con un Qwen
-> local y dos perfiles de solo lectura: O.D.I.N. Web primero y O.D.I.N. Campo por
-> Twilio después. El riesgo de mantenimiento empieza como índice explicable y
-> solo se entrena si una auditoría demuestra que existe una etiqueta histórica
-> válida; la asignación opcional usa CP-SAT. Ningún perfil de O.D.I.N. escribe en
-> Prisma/Startrack. P1 continúa como flujo independiente de UI, con confirmación
+> **Decisión de IA vigente (actualizada el 13 de septiembre de 2026):** el
+> núcleo anterior sigue siendo determinístico. Por fuera de él, el producto
+> tiene **O.D.I.N.** (Operador de Datos e Inteligencia de Negocios; antes
+> llamado *Betinho*): un **chatbot de IA local** en el que la persona escribe
+> una pregunta en lenguaje natural —*"¿está disponible la CF-01?"*, *"¿por qué
+> este equipo tiene una incoherencia?"*, *"¿qué riesgo de mantenimiento
+> tiene?"*— y O.D.I.N. la resuelve consultando los datos en vivo mediante
+> herramientas de solo lectura, y responde con conclusión, evidencia, fuente,
+> hora de lectura y datos faltantes. Corre sobre un único servicio FastAPI con
+> un Qwen servido localmente por Ollama; nunca un LLM de nube. **No hay perfil
+> de campo ni canal de mensajería: Twilio y WhatsApp salieron del producto.**
+> El riesgo de mantenimiento empieza como índice explicable y solo se entrena
+> si una auditoría demuestra que existe una etiqueta histórica válida; la
+> asignación opcional usa CP-SAT. O.D.I.N. **nunca escribe** en
+> Prisma/Startrack: una pregunta que pida aprobar, crear o propagar se rechaza
+> en el chat. P1 continúa como flujo independiente de UI, con confirmación
 > humana y autorización del servidor. ECON autorizó el entrenamiento local de
 > un modelo propio con el dataset entregado para ese fin; artefactos de datos y
 > entrenamiento quedan fuera de git, y todo tercero requiere autorización
