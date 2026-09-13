@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers'
 import { BarraSuperior } from '@/components/comando/barra-superior'
+import { ProveedorMantenimiento } from '@/components/mantenimiento/proveedor-mantenimiento'
 import { ETIQUETA_ROL, NOMBRE_COOKIE, verificarCookie } from '@/lib/acceso/verificar'
 import type { SaludFuente } from '@/lib/tipos/canonico'
 
@@ -32,7 +33,8 @@ export async function Marco({
   const iniciales = sesion ? sesion.rol.slice(0, 2) : 'SC'
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
+    <ProveedorMantenimiento>
+      <div className="flex min-w-0 flex-1 flex-col">
         <BarraSuperior
           titulo={titulo}
           ultimaLectura={hora}
@@ -53,6 +55,7 @@ export async function Marco({
           )}
           {children}
         </main>
-    </div>
+      </div>
+    </ProveedorMantenimiento>
   )
 }

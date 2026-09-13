@@ -5,6 +5,8 @@ import {
 } from '@/lib/inteligencia/cliente'
 import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { solicitudOdinSchema } from '@/lib/inteligencia/tipos'
+import { leerSenalesOdin } from '@/lib/lectura/mantenimiento'
+import { PARAMETROS_VACIOS } from '@/lib/mantenimiento/parametros'
 
 
 export async function POST(request: Request) {
@@ -24,11 +26,17 @@ export async function POST(request: Request) {
     return Response.json({ error: 'Equipo no encontrado.' }, { status: 404 })
   }
 
+  // Señales reales de mantenimiento (S-A11 Paso 8): el pronóstico del equipo
+  // con los parámetros del navegador. Si la lectura falla, O.D.I.N. sigue con
+  // `maintenance_signals: null` y el índice responde UNKNOWN — nunca inventa.
+  const parametros = parsed.data.parametros ?? PARAMETROS_VACIOS
+  const senales = await leerSenalesOdin(equipo.id, parametros).catch(() => null)
+
   try {
     const response = await consultarOdin({
       message: parsed.data.message,
       assetId: parsed.data.assetId,
-      context: crearContextoOdin(equipo),
+      context: crearContextoOdin(equipo, senales?.senales ?? null),
     })
     return Response.json(response)
   } catch (error) {

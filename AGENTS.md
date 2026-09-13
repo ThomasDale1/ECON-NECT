@@ -150,7 +150,7 @@ Detalle completo en [01, Parte C](docs/01-DEFINICION-DE-NEGOCIO.md). Resumen ope
 4. **Todo dato muestra su origen.** Plataforma, endpoint, campo, valor crudo,
    hora de lectura. Auditable en un clic.
 5. **El prototipo y la documentación son el mismo objeto.** La matriz de mapeo,
-   la RACI y el catálogo de KPIs son estructuras tipadas que se renderizan y se
+   la matriz de responsabilidades y el catálogo de KPIs son estructuras tipadas que se renderizan y se
    exportan. No pueden contradecirse porque son la misma fuente.
 6. **Un KPI que no dispara una acción es adorno.** Ninguno entra sin sus seis
    campos ([01 D.7](docs/01-DEFINICION-DE-NEGOCIO.md)).
@@ -250,7 +250,7 @@ Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
 |---|---|---|
 | **A · Núcleo** | Backend & Integración | Conectores, mapeo de datos en vivo, reglas, rutas de API, propagación |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa |
-| **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol |
+| **C · Semántica** | Data Architect | Matriz de mapeo, matriz de responsabilidades, catálogo de KPIs, acceso por rol |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch |
 
 > **Nota de nombre:** esta capa de A (`lib/canonico/` + `lib/reglas/`) no se
@@ -284,7 +284,7 @@ apps/web/
   app/(nect)/planeacion/   B   Fase extendida (§12). Ruta de la vista de
                                 planeación
   lib/mapeo/               C   Matriz de mapeo tipada
-  lib/gobernanza/          C   Matriz RACI tipada
+  lib/gobernanza/          C   Matriz de responsabilidades tipada
   lib/kpi/                 C   Catálogo de indicadores
   lib/acceso/              C   Verificación de clave por rol
 docs/entregables/          D   Diagrama, decisiones, deck, README

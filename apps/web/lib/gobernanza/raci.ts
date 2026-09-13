@@ -137,6 +137,20 @@ export const RACI_PROCESO: FilaRaci[] = [
       '02 §3, pregunta 2: "¿Quién decide que un equipo sale de operación: Mantenimiento o Logística?"',
   },
   {
+    paso: 'Abrir la orden de taller preventiva',
+    asignaciones: {
+      Licitaciones: null,
+      'Gerencia de Proyecto': 'I',
+      'Gerencia de Logística y Equipo': 'I',
+      'Operadores de Equipos': 'C',
+      'Gerencia de Mantenimiento': 'R',
+      'Control de Costos': 'I',
+    },
+    estado: 'propuesta',
+    fuente:
+      'S-A11: la alerta preventiva por horómetro solo propone una orden de taller; la escritura P4/P3 requiere confirmación humana y el rol Mantenimiento o ADMIN. Mantenimiento es la autoridad técnica que abre/cierra la ventana; Logística queda informada porque el recurso sale de operación.',
+  },
+  {
     paso: 'Atender salida de geocerca',
     asignaciones: {
       Licitaciones: null,

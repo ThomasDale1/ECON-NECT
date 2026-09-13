@@ -1,8 +1,10 @@
 import type { Metadata } from 'next'
+import { cookies } from 'next/headers'
 import { Marco } from '@/components/comando/marco'
 import { PanelEnCurso, PanelFueraDeGeocerca } from '@/components/comando/paneles-situacion'
 import { TablaExcepciones } from '@/components/comando/tabla-excepciones'
 import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
+import { NOMBRE_COOKIE, verificarCookie } from '@/lib/acceso/verificar'
 import { ACTIVOS_EN_CURSO, VIOLACIONES_GEOCERCA } from './datos-de-ejemplo'
 
 export const metadata: Metadata = {
@@ -26,6 +28,7 @@ export const dynamic = 'force-dynamic'
  */
 export default async function CommandCenterPage() {
   const { equipos, salud, urlStartrack, leidoEn } = await leerEquiposUnificados()
+  const sesion = await verificarCookie((await cookies()).get(NOMBRE_COOKIE)?.value)
 
   return (
     <Marco
@@ -38,7 +41,7 @@ export default async function CommandCenterPage() {
         <PanelFueraDeGeocerca violaciones={VIOLACIONES_GEOCERCA} urlStartrack={urlStartrack} />
       </div>
 
-      <TablaExcepciones equipos={equipos} />
+      <TablaExcepciones equipos={equipos} rolActual={sesion?.rol ?? null} />
     </Marco>
   )
 }

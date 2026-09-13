@@ -6,6 +6,7 @@ import { ArrowRight, Bot, CircleAlert, LoaderCircle, Send } from 'lucide-react'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { IconoMaquinaria } from '@/components/nect/icono-maquinaria'
+import { leerParametrosNavegador } from '@/components/mantenimiento/parametros-navegador'
 import { TextoEnfasis } from '@/components/odin/texto-enfasis'
 import type { ClaseEquipoCatalogo } from '@/lib/canonico/catalogos'
 import type { RespuestaOdin } from '@/lib/inteligencia/tipos'
@@ -30,7 +31,7 @@ const CONSULTAS = [
   { label: 'Qué falta', message: '¿Qué datos faltan para concluir?' },
   { label: 'Siguiente paso', message: '¿Cuál es el siguiente paso y quién lo ejecuta?' },
   { label: 'Falla', message: '¿Hay una falla o paro activo en Prisma?' },
-  { label: 'Mantenimiento', message: 'Explica el riesgo de mantenimiento.' },
+  { label: 'Mantenimiento', message: '¿Cuándo le toca mantenimiento?' },
 ] as const
 
 export function ConsolaOdin({
@@ -51,7 +52,7 @@ export function ConsolaOdin({
   // Arranca en 'warming': el efecto de abajo dispara el calentamiento en el
   // primer montaje, así que ese es el estado real desde el primer render.
   // Ponerlo con un setState dentro del efecto encadenaría un render de más.
-  const [warm, setWarm] = useState<'idle' | 'warming' | 'ready' | 'cold'>('warming')
+  const [warm, setWarm] = useState<'warming' | 'ready' | 'cold'>('warming')
 
   const seleccionado = useMemo(
     () => equipos.find((e) => e.id === assetId) ?? equipos[0] ?? null,
@@ -59,16 +60,16 @@ export function ConsolaOdin({
   )
 
   useEffect(() => {
-    let cancel = false
+    let cancelado = false
     fetch('/api/odin/warmup', { method: 'POST' })
       .then((r) => {
-        if (!cancel) setWarm(r.ok ? 'ready' : 'cold')
+        if (!cancelado) setWarm(r.ok ? 'ready' : 'cold')
       })
       .catch(() => {
-        if (!cancel) setWarm('cold')
+        if (!cancelado) setWarm('cold')
       })
     return () => {
-      cancel = true
+      cancelado = true
     }
   }, [])
 
@@ -85,7 +86,11 @@ export function ConsolaOdin({
       const result = await fetch('/api/odin/chat', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ assetId: seleccionado.id, message: limpia }),
+        body: JSON.stringify({
+          assetId: seleccionado.id,
+          message: limpia,
+          parametros: leerParametrosNavegador(),
+        }),
       })
       const body = await result.json()
       if (!result.ok) {
@@ -209,7 +214,7 @@ export function ConsolaOdin({
         </div>
 
         <p className="text-[11px] leading-snug text-muted-foreground">
-          También identidad, ubicación, falla, siguiente paso o qué falta. Horómetro y km no vienen en esta lectura.
+          También identidad, ubicación, falla, siguiente paso, qué falta o mantenimiento preventivo.
         </p>
 
         <form onSubmit={enviar} className="flex items-end gap-2">

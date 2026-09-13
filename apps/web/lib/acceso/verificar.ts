@@ -79,15 +79,27 @@ export const VISTA_INICIAL: Record<RolSesion, string> = {
 /**
  * Quién puede propagar a la otra plataforma (S-A4).
  *
- * No es una preferencia nuestra: sale de la RACI de carril C
- * (`lib/gobernanza/raci.ts`, paso "Programar el traslado"), donde la Gerencia
- * de Logística y Equipo es quien **aprueba** ese paso. Dirección de
+ * No es una preferencia nuestra: sale de la matriz de responsabilidades del carril C
+ * (`lib/gobernanza/responsabilidades.ts`, paso "Programar y ejecutar el traslado"), donde la Gerencia
+ * de Logística y Equipos **valida** ese paso. Dirección de
  * Operaciones tiene vista transversal pero no un paso propio en el proceso, así
  * que no escribe. `ADMIN` escribe porque es nuestra llave de demo — y aun así
  * queda sujeto a la restricción de recurso propio de S-A4, que es de servidor.
  */
 export function puedePropagar(rol: RolSesion): boolean {
   return rol === 'LOGISTICA' || rol === 'ADMIN'
+}
+
+/**
+ * Quién puede abrir o cerrar la orden de taller preventiva (S-A11, P4 + P3).
+ *
+ * Sale de la RACI (`lib/gobernanza/raci.ts`, paso "Abrir la orden de taller
+ * preventiva"): la Gerencia de Mantenimiento es R y A. No cambia
+ * `puedePropagar`: el traslado sigue siendo de Logística. `ADMIN` escribe por
+ * ser la llave de demo, sujeto igual a la restricción de recurso propio.
+ */
+export function puedeProgramarTaller(rol: RolSesion): boolean {
+  return rol === 'MANTENIMIENTO' || rol === 'ADMIN'
 }
 
 /** Las claves, leídas uno por uno con referencia estática a `process.env` —

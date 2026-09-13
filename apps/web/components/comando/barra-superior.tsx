@@ -1,3 +1,7 @@
+'use client'
+
+import { NotificadorMantenimiento } from '@/components/mantenimiento/notificador-mantenimiento'
+import { BadgeMantenimientoPreventivo } from '@/components/mantenimiento/badge-mantenimiento'
 import { cn } from '@/lib/utils'
 
 /**
@@ -42,6 +46,11 @@ export function BarraSuperior({
           Dato viejo
         </span>
       )}
+
+      <div className="flex shrink-0 items-center gap-2">
+        <BadgeMantenimientoPreventivo />
+        <NotificadorMantenimiento />
+      </div>
 
       <time className="shrink-0 font-mono text-xs text-muted-foreground">{ultimaLectura}</time>
 

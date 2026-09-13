@@ -12,7 +12,7 @@
 import 'server-only'
 import { NextResponse } from 'next/server'
 import { asegurarEntornoCargado } from '@/lib/conectores/entorno'
-import { hayAccesoConfigurado, puedePropagar, sesionDeRequest, type Sesion } from './verificar'
+import { hayAccesoConfigurado, puedeProgramarTaller, puedePropagar, sesionDeRequest, type Sesion } from './verificar'
 
 export async function sesionActual(request: Request): Promise<Sesion | null> {
   asegurarEntornoCargado()
@@ -48,7 +48,7 @@ export async function exigirSesion(request: Request): Promise<FalloDeAcceso | Ac
   }
 }
 
-/** Exige además permiso de escritura (RACI: paso "Programar el traslado"). */
+/** Exige además permiso de escritura (responsabilidades: "Programar y ejecutar el traslado"). */
 export async function exigirSesionQuePuedaPropagar(
   request: Request,
 ): Promise<FalloDeAcceso | AccesoConcedido> {
@@ -60,7 +60,31 @@ export async function exigirSesionQuePuedaPropagar(
       respuesta: NextResponse.json(
         {
           error: 'rol_sin_permiso',
-          mensaje: `El rol ${resultado.sesion.rol} no propaga cambios a otra plataforma. Según la RACI, el paso "Programar el traslado" lo aprueba la Gerencia de Logística y Equipo.`,
+          mensaje: `El rol ${resultado.sesion.rol} no propaga cambios a otra plataforma. Según la matriz de responsabilidades, "Programar y ejecutar el traslado" corresponde a la Gerencia de Logística y Equipos.`,
+        },
+        { status: 403 },
+      ),
+      sesion: null,
+    }
+  }
+
+  return resultado
+}
+
+/** Exige además permiso para abrir la orden de taller (S-A11, RACI: "Abrir la
+ * orden de taller preventiva" la abre la Gerencia de Mantenimiento). */
+export async function exigirSesionQuePuedaProgramarTaller(
+  request: Request,
+): Promise<FalloDeAcceso | AccesoConcedido> {
+  const resultado = await exigirSesion(request)
+  if (resultado.respuesta) return resultado
+
+  if (!puedeProgramarTaller(resultado.sesion.rol)) {
+    return {
+      respuesta: NextResponse.json(
+        {
+          error: 'rol_sin_permiso',
+          mensaje: `El rol ${resultado.sesion.rol} no programa taller. Según la RACI, la orden de taller la abre la Gerencia de Mantenimiento.`,
         },
         { status: 403 },
       ),

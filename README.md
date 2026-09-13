@@ -14,8 +14,13 @@ de solo lectura.
 1. `/flota`: seleccionar cualquier equipo leído de las fuentes conectadas.
 2. `/equipo/<id>`: revisar estado, ubicación, discrepancias, faltantes y linaje.
 3. `/command-center`: revisar las excepciones prioritarias.
-4. `/mapeo`: inspeccionar y exportar las matrices de mapeo, RACI y KPI.
+<<<<<<< Updated upstream
+4. `/mapeo`: inspeccionar y exportar la matriz de mapeo, la matriz de responsabilidades y el catálogo KPI.
 5. `/odin`: consultar estado, incoherencias o riesgo de mantenimiento con Qwen
+=======
+4. `/mapeo`: inspeccionar y exportar las matrices de mapeo, RACI y KPI.
+5. `/odin`: consultar estado, incoherencias o mantenimiento preventivo con Qwen
+>>>>>>> Stashed changes
    local. O.D.I.N. recomienda, pero no aprueba ni modifica operaciones.
 
 ## Arranque local
@@ -70,5 +75,6 @@ cd ../../services/intelligence
 - [Roadmap y criterios de aceptación](docs/02-ROADMAP.md)
 - [Arquitectura de IA y alcance de O.D.I.N.](docs/03-ARQUITECTURA-IA-ODIN.md)
 - [Prompt implementado de S-A6](prompts/S-A6-odin-web.md)
+- [Prompt implementado de S-A11](prompts/S-A11-mantenimiento-preventivo.md)
 - `docs/entregables/`: PDFs, presentación y checklist requeridos para la entrega
   final; no se consideran listos hasta que existan y hayan sido revisados.

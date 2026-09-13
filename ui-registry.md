@@ -210,8 +210,9 @@ Startrack (observado) │ Confianza │ Acción sugerida │ Responsable
 - **Confianza**: barra + número (§1.3).
 - **Acción sugerida**: texto llano, en imperativo, en lenguaje de negocio.
   No `regla R02 disparada`, sino *"Validar disponibilidad antes de movilizar"*.
-- **Responsable**: sale de la RACI (`lib/gobernanza/raci.ts`), no se escribe a
-  mano. Es lo que vuelve la RACI utilizable y no decorativa.
+- **Responsable**: sale de la matriz de responsabilidades
+  (`lib/gobernanza/responsabilidades.ts`), no se escribe a mano. Eso vuelve la
+  atribución utilizable y no decorativa.
 
 Cada fila es clicable y lleva a la ficha unificada del equipo.
 
@@ -474,6 +475,62 @@ Clases: `overflow-x-auto rounded-xl border border-border` (§2, tablas anchas); 
 Tokens de color: `bg-marca` para la propuesta; rayado gris compartido (`CLASE_OCUPACION_RAYADA`) para la ocupación real; `border-dashed bg-muted` para "sin asignación posible" (nunca rojo ni violeta); línea de la hora actual en `bg-primary` (marca, no severidad).
 Notas: S-A10 Paso 10e. Todo bloque va de 00:00 a 24:00 porque Prisma registra solicitudes y uso por fecha, sin hora — la nota fija debajo de la grilla lo dice. Filtra la misma `RespuestaOptimizar` que la semana (no calcula choques ni candidatas) y resume "N máquinas con ocupación · N propuestas · N sin asignación posible". La ocupación de una máquina que no puede operar agrega "la máquina ya no opera"; una propuesta con `reemplazaConfirmada` lleva la etiqueta "Reemplaza a {código} (confirmada en Prisma)". La hora actual (America/El_Salvador) se lee con `useSyncExternalStore` sobre un intervalo, no durante el render. 13 sep. 2026: la ocupación usa el mismo rótulo que la semana (`rotuloOcupacion`) más las fechas reales de uso `inicio → fin` en `font-mono text-[10px]`, para que un bloque de 00:00 a 24:00 no oculte que el uso empezó antes o termina ese día.
 Registrado: S-A10 · 13 de septiembre de 2026
+
+### TarjetaMantenimiento
+File: apps/web/components/mantenimiento/tarjeta-mantenimiento.tsx
+Tipo: card
+Clases: card baseline `rounded-xl border border-border bg-card p-6 shadow-card`; gauge circular con `conic-gradient`; tabla de registros en `overflow-x-auto`.
+Tokens de color: `--color-veredicto-atencion` para aviso, `--color-veredicto-riesgo` para urgente/vencido, violeta solo para faltantes (`SIN_EVIDENCIA`). El mantenimiento preventivo no cambia el veredicto del motor.
+Notas: consume `GET /api/mantenimiento/[id]`, no recalcula en cliente. Todo numero visible esta respaldado por `VerOrigen` o por la tabla de registros usados. Incluye `PanelParametros` y `DialogoOrdenTaller`; los parametros viven en `localStorage`.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### PanelParametrosMantenimiento
+File: apps/web/components/mantenimiento/panel-parametros.tsx
+Tipo: formulario
+Clases: card baseline; `Input`, `Label` y `Button` de shadcn; checkbox nativo con `accent-primary`.
+Tokens de color: ninguno propio; es configuracion local, no severidad. Los textos degradados usan `text-muted-foreground`.
+Notas: escribe solo `localStorage['nect.mantenimiento.parametros']`, validado por el schema del servidor al consultar. Si el rol no puede programar taller, el panel queda de solo lectura.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### DialogoOrdenTaller
+File: apps/web/components/mantenimiento/dialogo-orden-taller.tsx
+Tipo: overlay
+Clases: `Dialog`/`DialogContent`/`DialogFooter` de shadcn; acciones con `Button`; rastro en `font-mono`.
+Tokens de color: errores en `text-destructive`; exito con icono y texto neutro, no con escala de veredicto.
+Notas: siempre exige confirmacion explicita antes de llamar `POST /api/propagar/taller`. El servidor vuelve a verificar rol, sesion y recurso propio; el boton no es autorizacion.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### BadgeMantenimientoPreventivo
+File: apps/web/components/mantenimiento/badge-mantenimiento.tsx
+Tipo: badge
+Clases: `Badge variant="outline"` + `Tooltip`; icono `Wrench` de lucide.
+Tokens de color: ambar/rojo solo para niveles de alerta preventiva; no usa verde para "todo bien" porque el badge se oculta cuando no hay alertas.
+Notas: vive en `BarraSuperior` y consume el proveedor global. Resume conteo de aviso/urgente/vencido sin exponer datos de sandbox.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### NotificadorMantenimiento
+File: apps/web/components/mantenimiento/notificador-mantenimiento.tsx
+Tipo: badge
+Clases: boton `Button variant="outline" size="icon"` con `Tooltip`.
+Tokens de color: ninguno propio; la notificacion del navegador no es severidad visual dentro de la app.
+Notas: se activa solo por clic del usuario. Deduplica alertas por equipo/nivel en `localStorage['nect.mantenimiento.notificados']`; no registra contenido de ECON.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### ProveedorMantenimiento
+File: apps/web/components/mantenimiento/proveedor-mantenimiento.tsx
+Tipo: overlay
+Clases: sin UI propia.
+Tokens de color: no aplica.
+Notas: unifica el fetch a `/api/mantenimiento` cada 60 s, pausa con pestana oculta y escucha cambios de parametros. Evita solapar requests y solo entrega el contrato calculado por servidor.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### TablaExcepciones · seccion mantenimiento
+File: apps/web/components/comando/tabla-excepciones.tsx
+Tipo: tabla
+Clases: reutiliza la tabla de excepciones y agrega un `rowgroup` visual para "Mantenimiento preventivo por horometro".
+Tokens de color: mantiene la escala de veredicto para filas del motor y usa ambar/rojo solo en el badge de alerta preventiva. La seccion no cambia `BadgeVeredicto`.
+Notas: la seccion aparece solo para `rol=MANTENIMIENTO` y enlaza a la ficha, donde vive la accion P4/P3. Evita mezclar alertas predictivas con reglas de coherencia.
+Registrado: S-A11 · 13 de septiembre de 2026
 
 ### AvisoCambios
 File: apps/web/components/calendario/aviso-cambios.tsx

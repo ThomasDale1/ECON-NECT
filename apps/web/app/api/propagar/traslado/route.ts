@@ -2,7 +2,7 @@
 //
 // Ruta delgada. Las tres guardas, en orden, antes de tocar `lib/propagacion`:
 //
-// 1. **Sesión válida y rol con permiso** (S-C3 + RACI: "Programar el traslado"
+// 1. **Sesión válida y rol con permiso** (S-C3 + matriz de responsabilidades: "Programar y ejecutar el traslado"
 //    lo aprueba Logística).
 // 2. **Confirmación explícita** — `confirmado: true` en el cuerpo. Nunca
 //    automático (01 C.3). El diálogo de la interfaz es la primera barrera; esta

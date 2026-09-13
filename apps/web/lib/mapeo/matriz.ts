@@ -17,10 +17,11 @@
 // un nombre que "suene razonable". `sin equivalencia directa` es una respuesta
 // tan válida como cualquier otra (ECON, brief).
 //
-// Esta es una v1 parcial: el diccionario compartido prioriza campos por caso
-// de uso (no es exhaustivo, lo dice su propia hoja de instrucciones) y la
-// sesión de planeación decidió no perseguir más cobertura contra el reloj del
-// hackathon. Los módulos sin fila acá quedan pendientes, no inventados.
+// La matriz es completa para el alcance declarado del MVP: maquinaria,
+// solicitudes, tareas, geocercas e información de mantenimiento necesaria
+// para los casos de uso implementados. No se presenta como una reproducción
+// exhaustiva del diccionario oficial, que prioriza campos por caso de uso.
+// Todo campo fuera de este alcance queda explícitamente fuera, no inventado.
 
 /** Vocabulario de relación entre un campo de Prisma y su contraparte de
  * Startrack. Vale tantos puntos como el contenido de la fila (AGENTS.md §1.1). */
@@ -38,11 +39,23 @@ export type TipoRelacion =
  * de datos con el nombre exacto de campo. */
 export type NivelDeConfianzaMapeo = 'alta' | 'media' | 'hipotesis'
 
+/** Cardinalidad del mapeo entre campos. Describe la estructura, no la cantidad
+ * de registros de cada plataforma. */
+export type CardinalidadMapeo = '1:1' | '1:N' | 'N:1' | 'N:N' | 'sin equivalencia'
+
+export type MetadatosCampo = {
+  tipoDato: string
+  ejemplo: string
+}
+
 /** Una fila de la matriz de mapeo. */
 export type FilaMapeo = {
   modulo: string
   campoPrisma: string | null
   campoStartrack: string | null
+  prisma: MetadatosCampo
+  startrack: MetadatosCampo
+  cardinalidad: CardinalidadMapeo
   tipoRelacion: TipoRelacion
   transformacion: string | null
   evidencia: string
@@ -50,6 +63,21 @@ export type FilaMapeo = {
   /** ¿Sin este campo el veredicto no se puede calcular? */
   critico: boolean
 }
+
+type FilaMapeoBase = Omit<FilaMapeo, 'prisma' | 'startrack' | 'cardinalidad'>
+
+export const ALCANCE_MATRIZ_MAPEO = {
+  estado: 'Completa para el alcance del MVP',
+  modulos: [
+    'Maquinaria',
+    'Solicitudes de maquinaria',
+    'Tareas',
+    'Geocercas',
+    'Mantenimiento',
+  ],
+  limite:
+    'No equivale a copiar todo el diccionario oficial. Incluye todos los campos inventariados que intervienen en los casos de uso actuales; cualquier campo adicional debe incorporarse cuando una fuente autorizada lo confirme.',
+} as const
 
 /** Entregable 1 del brief: inventario de campos/términos que ECON NECT
  * introduce y que no existen en ninguna de las dos plataformas. */
@@ -59,7 +87,7 @@ export type TerminoNuevo = {
   porQueExiste: string
 }
 
-export const MATRIZ_MAPEO: FilaMapeo[] = [
+const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
   // ── Maquinaria ───────────────────────────────────────────────────────
   {
     modulo: 'Maquinaria',
@@ -177,15 +205,26 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     confianza: 'alta',
     critico: true,
   },
-  {
+  ...(['Marca', 'Modelo', 'Año'] as const).map<FilaMapeoBase>((atributo) => ({
     modulo: 'Maquinaria',
-    campoPrisma: 'marca, modelo, año (nombres exactos de columna no confirmados)',
-    campoStartrack: 'Marca, Modelo, Año, Color (módulo Vehículos)',
+    campoPrisma: `${atributo.toLowerCase()} (nombre exacto de columna no confirmado)`,
+    campoStartrack: `${atributo} (módulo Vehículos)`,
     tipoRelacion: 'exacta',
     transformacion: null,
     evidencia:
-      '01 Parte E.8 (verificado): los atributos técnicos del equipo están vacíos en 14 de los 15 registros observados de una plataforma (poblados en 1 de 15) y completos en la otra — el mapeo existe, el dato no. Distinta de "sin equivalencia directa": el hueco es de completitud, no de correspondencia. Diccionario de datos, hoja STARTRACK (módulo Vehículos) documenta Año, Color y Marca como campos de texto simple; el diccionario de PRISMA compartido no incluyó una fila equivalente para esta v1.',
-    confianza: 'alta',
+      '01 Parte E.8 (verificado): los atributos técnicos están casi siempre vacíos en Prisma y completos en Startrack; el hueco es de completitud, no de correspondencia. El nombre exacto de la columna Prisma no fue confirmado y permanece explícito como pendiente.',
+    confianza: 'media',
+    critico: false,
+  })),
+  {
+    modulo: 'Maquinaria',
+    campoPrisma: null,
+    campoStartrack: 'Color (módulo Vehículos)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion: null,
+    evidencia:
+      'Diccionario de datos, hoja STARTRACK, módulo Vehículos. No se confirmó una columna equivalente en Prisma dentro del alcance permitido.',
+    confianza: 'media',
     critico: false,
   },
 
@@ -220,7 +259,7 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     tipoRelacion: 'solo en Prisma',
     transformacion: null,
     evidencia:
-      'Diccionario de datos, hoja PRISMA (módulo Solicitudes de maquinaria, campo "Solicita" — "Solicitante del equipo (Gerente de Proyecto)", tipo "Catálogo", valores posibles "Usuario"). El rol entre paréntesis en la descripción confirma documentalmente que la Gerencia de Proyecto es quien origina la solicitud (01 Parte D.5; ver lib/gobernanza/raci.ts, paso "Originar la solicitud"). El valor de ejemplo del diccionario es un nombre fabricado para el ejercicio; no se transcribe acá (AGENTS.md §1.2).',
+      'Diccionario de datos, hoja PRISMA (módulo Solicitudes de maquinaria, campo "Solicita" — "Solicitante del equipo (Gerente de Proyecto)", tipo "Catálogo", valores posibles "Usuario"). El rol entre paréntesis en la descripción confirma documentalmente que la Gerencia Técnica de Proyectos es quien origina la solicitud (01 Parte D.5; ver lib/gobernanza/responsabilidades.ts, paso "Originar la solicitud de maquinaria"). El valor de ejemplo del diccionario es un nombre fabricado para el ejercicio; no se transcribe acá (AGENTS.md §1.2).',
     confianza: 'alta',
     critico: false,
   },
@@ -377,6 +416,56 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     critico: true,
   },
 
+  // Mantenimiento preventivo por horómetro (S-A11)
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: 'mantenimiento_fecha_inicio, mantenimiento_fecha_fin, mantenimiento_notas (GET/PATCH /api/maquinaria/equipos/{id})',
+    campoStartrack: 'status = 1 (PUT api/vehicle/{id})',
+    tipoRelacion: 'con transformación',
+    transformacion:
+      'La orden de taller de ECON NECT escribe una ventana de mantenimiento en Prisma y marca el vehículo como Mantenimiento en Startrack. No fusiona estados: Prisma guarda la ventana del recurso; Startrack guarda el estado publicado por el vehículo. Siempre requiere confirmación humana y recurso propio.',
+    evidencia:
+      'Verificado en planeación S-A11 el 13 de septiembre de 2026: el detalle de equipo de Prisma expone `mantenimiento_fecha_inicio`, `mantenimiento_fecha_fin` y `mantenimiento_notas`; Startrack acepta el estado 1 como Mantenimiento en `api/vehicle/{id}`. No se usa tarea de Startrack: no hay tipo Mantenimiento ni geocerca de taller en el sandbox autorizado.',
+    confianza: 'alta',
+    critico: true,
+  },
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: null,
+    campoStartrack: 'curOperatingHours (ajax/report.php?id=22, reporte Estado de flota)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion:
+      'Horas de motor acumuladas del GPS, en horas. Sirve como contador vivo y como linaje del horómetro. No se compara contra `hour_meter` de Prisma porque son fuentes y escalas operativas distintas.',
+    evidencia:
+      'Verificado contra el sandbox el 13 de septiembre de 2026: el reporte 22 expone `curOperatingHours` y coincide con `ign_on_time` del status del vehículo en la muestra observada. La afirmación se guarda como hecho estructural, sin transcribir valores de registro.',
+    confianza: 'alta',
+    critico: true,
+  },
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: null,
+    campoStartrack: 'detail[].ignOnTime (ajax/report.php?id=3, Resumen Diario)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion:
+      'Segundos por vehículo y día. ECON NECT suma las filas del vehículo posteriores al ancla y divide entre 3600 para obtener horas desde la última salida de taller.',
+    evidencia:
+      'Verificado contra el sandbox el 13 de septiembre de 2026: `ignOnTime` del reporte diario está en segundos y la suma por vehículo reproduce el horómetro vivo. El campo `driver` de ese reporte es nombre de persona y se descarta en el conector.',
+    confianza: 'alta',
+    critico: true,
+  },
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: 'hour_meter (GET /api/maquinaria/fallas)',
+    campoStartrack: null,
+    tipoRelacion: 'solo en Prisma',
+    transformacion:
+      'Solo se usa para aprender un intervalo interno mediante la mediana de diferencias entre reportes FINALIZADO consecutivos del mismo equipo. Nunca se compara con el horómetro GPS vivo.',
+    evidencia:
+      'Planeación S-A11: Prisma guarda el horómetro humano dentro de reportes de falla; el usuario lo teclea cuando el equipo ya está en taller. Por honestidad de datos, se usa solo como serie interna de Prisma y no como equivalencia de Startrack.',
+    confianza: 'alta',
+    critico: false,
+  },
+
   {
     modulo: 'Solicitudes',
     campoPrisma: 'created_at (solicitudes de maquinaria de Prisma)',
@@ -391,19 +480,237 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
   },
 
   // ── Mantenimiento (Startrack) ────────────────────────────────────────
-  {
-    modulo: 'Mantenimiento',
-    campoPrisma: null,
-    campoStartrack:
-      'Proveedor, Mecánico, Motivo de reparación, Odómetro, Horómetro (módulo Mantenimiento)',
-    tipoRelacion: 'solo en Startrack',
-    transformacion: null,
-    evidencia:
-      'Diccionario de datos, hoja STARTRACK (módulo Mantenimiento, filas 35-45): registra la ejecución del mantenimiento (proveedor, mecánico, kilometraje, horas de uso). Prisma modela la falla como máquina de estados (01 E.2), pero no se confirmó un equivalente a este nivel de detalle en el diccionario compartido.',
-    confianza: 'media',
-    critico: false,
-  },
+  ...(['Proveedor', 'Mecánico', 'Motivo de reparación', 'Odómetro', 'Horómetro'] as const).map<FilaMapeoBase>(
+    (campo) => ({
+      modulo: 'Mantenimiento',
+      campoPrisma: null,
+      campoStartrack: `${campo} (módulo Mantenimiento)`,
+      tipoRelacion: 'solo en Startrack',
+      transformacion: null,
+      evidencia:
+        'Diccionario de datos, hoja STARTRACK (módulo Mantenimiento, filas 35-45): registra la ejecución del mantenimiento. Prisma modela la falla como máquina de estados, pero no se confirmó un equivalente a este nivel de detalle.',
+      confianza: 'media',
+      critico: false,
+    }),
+  ),
 ]
+
+const NO_APLICA: MetadatosCampo = {
+  tipoDato: 'No aplica',
+  ejemplo: 'Sin campo en esta plataforma',
+}
+
+const NO_CONFIRMADO: MetadatosCampo = {
+  tipoDato: 'No confirmado en fuentes permitidas',
+  ejemplo: 'Pendiente de confirmar; no se inventa un valor',
+}
+
+const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
+  Empresa: { tipoDato: 'Catálogo / texto', ejemplo: 'Nombre de la empresa propietaria (forma del valor)' },
+  'No. de activo': {
+    tipoDato: 'Texto compuesto',
+    ejemplo: '«código de activo - nombre del equipo» (forma del valor)',
+  },
+  'Nombre del equipo': {
+    tipoDato: 'Texto',
+    ejemplo: 'Nombre descriptivo del equipo (forma del valor)',
+  },
+  'Clase de equipo (`clase_equipo`)': {
+    tipoDato: 'Catálogo',
+    ejemplo: 'Clase de equipo (valor de catálogo)',
+  },
+  'Estado (módulo Maquinaria — el recurso)': {
+    tipoDato: 'Catálogo',
+    ejemplo: 'DISPONIBLE (valor de catálogo)',
+  },
+  'Estado (módulo Mantenimiento, diccionario de datos)': {
+    tipoDato: 'Catálogo / texto compuesto',
+    ejemplo: '«código de activo - estado» (forma del valor)',
+  },
+  'estado (objeto Falla — no aparece como módulo propio en el diccionario compartido)': {
+    tipoDato: 'Catálogo',
+    ejemplo: 'SIN_REVISAR (valor de catálogo)',
+  },
+  'estado = TRASLADO_STD (objeto Falla)': {
+    tipoDato: 'Catálogo',
+    ejemplo: 'TRASLADO_STD (valor de catálogo)',
+  },
+  'bandera de paro (`active_failure_is_paro`)': {
+    tipoDato: 'Booleano',
+    ejemplo: 'true (ejemplo de estructura)',
+  },
+  'No. de activo + Clase de equipo': {
+    tipoDato: 'Texto compuesto + catálogo',
+    ejemplo: '«código de activo» + «clase de equipo» (forma del valor)',
+  },
+  Proyecto: {
+    tipoDato: 'Referencia / texto compuesto',
+    ejemplo: '«código de proyecto - empresa - obra - zona» (forma del valor)',
+  },
+  Tipo: { tipoDato: 'Catálogo', ejemplo: 'Clase de equipo (valor de catálogo)' },
+  Solicita: { tipoDato: 'Usuario / referencia', ejemplo: 'Usuario autorizado (ejemplo genérico)' },
+  Período: { tipoDato: 'Fecha o rango de fechas', ejemplo: 'Fecha requerida (ejemplo genérico)' },
+  'Estado de solicitud': { tipoDato: 'Catálogo', ejemplo: 'APROBADA (valor de catálogo)' },
+  Maquinaria: {
+    tipoDato: 'Catálogo / texto compuesto',
+    ejemplo: '«código de activo - nombre del equipo» (forma del valor)',
+  },
+  'cod_trabajador (/api/maquinaria/operadores)': {
+    tipoDato: 'Texto (código de trabajador)',
+    ejemplo: 'Código de trabajador (forma del valor)',
+  },
+  'created_at (solicitudes de maquinaria de Prisma)': {
+    tipoDato: 'Fecha AAAA-MM-DD (sin hora)',
+    ejemplo: 'Fecha de creación de la solicitud (forma del valor)',
+  },
+}
+
+const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
+  'Grupo, Etiquetas (módulo Vehículos)': {
+    tipoDato: 'Grupo + lista de etiquetas',
+    ejemplo: '«grupo» + «etiqueta de equipo» (forma del valor)',
+  },
+  'Descripción (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Código de activo del equipo (forma del valor)' },
+  'Tipo (módulo Vehículos) — `veh_type`': {
+    tipoDato: 'Entero en API / catálogo nominal en diccionario',
+    ejemplo: '8 (valor estructural observado)',
+  },
+  'Estado (módulo Vehículos)': { tipoDato: 'Código / texto', ejemplo: '0 (valor estructural observado)' },
+  'Tipo (módulo Tareas), valor de catálogo "Traslado" (el diccionario lo escribe "Trasalado" [sic]; la API real lo devuelve bien escrito — ver fila "Tipo (módulo Tareas)")': {
+    tipoDato: 'Catálogo personalizable',
+    ejemplo: 'Traslado (valor de catálogo)',
+  },
+  'Marca (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Marca del vehículo (forma del valor)' },
+  'Modelo (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Modelo del vehículo (forma del valor)' },
+  'Año (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Año de fabricación, cuatro dígitos (forma del valor)' },
+  'Color (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Color del vehículo (forma del valor)' },
+  'Marca, Modelo, Año, Color (módulo Vehículos)': {
+    tipoDato: 'Texto por atributo',
+    ejemplo: 'Valores descriptivos por atributo (ejemplo genérico)',
+  },
+  'Nombre (módulo Geocercas)': {
+    tipoDato: 'Texto compuesto',
+    ejemplo: '«código de proyecto - empresa - obra - zona» (forma del valor)',
+  },
+  'Tipo (módulo Vehículos)': { tipoDato: 'Catálogo', ejemplo: 'Clase de equipo (valor de catálogo)' },
+  'Estado (módulo Tareas)': { tipoDato: 'Catálogo', ejemplo: 'Pendiente (valor de catálogo)' },
+  'Tipo (módulo Tareas)': { tipoDato: 'Catálogo personalizable', ejemplo: 'Traslado (valor de catálogo)' },
+  'Origen, Destino (módulo Tareas)': {
+    tipoDato: 'Dos referencias a geocerca o punto',
+    ejemplo: 'Geocerca origen + geocerca destino (ejemplo genérico)',
+  },
+  'Asignar (módulo Tareas), Conductor (módulo Vehículos)': {
+    tipoDato: 'Usuario / referencia',
+    ejemplo: '«código - nombre»; solo se lee el código (forma del valor)',
+  },
+  'Latitud, Longitud (módulos Geocercas y Tareas)': {
+    tipoDato: 'Dos coordenadas decimales',
+    ejemplo: 'Par de grados decimales (forma del valor)',
+  },
+  'ID remoto (módulo Vehículos)': {
+    tipoDato: 'Identificador / texto',
+    ejemplo: 'Identificador del equipo en Prisma (forma del valor)',
+  },
+  'remote_id (módulo Geocercas)': {
+    tipoDato: 'Identificador / texto',
+    ejemplo: 'Identificador del proyecto (forma del valor)',
+  },
+  'remote_id (módulo Tareas)': {
+    tipoDato: 'Identificador / texto',
+    ejemplo: 'Identificador de la solicitud (forma del valor)',
+  },
+  'Proveedor (módulo Mantenimiento)': {
+    tipoDato: 'Texto / referencia',
+    ejemplo: 'Nombre del proveedor del servicio (forma del valor)',
+  },
+  'Mecánico (módulo Mantenimiento)': {
+    tipoDato: 'Texto / referencia',
+    ejemplo: 'Nombre del mecánico que atendió (forma del valor)',
+  },
+  'Motivo de reparación (módulo Mantenimiento)': {
+    tipoDato: 'Texto',
+    ejemplo: 'Motivo de la reparación (forma del valor)',
+  },
+  'Odómetro (módulo Mantenimiento)': {
+    tipoDato: 'Numérico',
+    ejemplo: 'Kilometraje acumulado (forma del valor)',
+  },
+  'Horómetro (módulo Mantenimiento)': {
+    tipoDato: 'Numérico',
+    ejemplo: 'Horas de uso acumuladas (forma del valor)',
+  },
+  'Estado (módulo Vehículos — status 0–9 del conductor)': {
+    tipoDato: 'Entero 0–9 (catálogo del conductor, no del recurso)',
+    ejemplo: 'Código de estado del conductor (valor de catálogo)',
+  },
+  'fn (ajax/drivers.php, módulo Conductores)': {
+    tipoDato: 'Texto compuesto «código - nombre»',
+    ejemplo: 'Solo se lee el código antes de " - "; el nombre se descarta (§1.2)',
+  },
+  'Calificación de seguridad del conductor — scores[].safety_score (ajax/report.php?id=32, reporte de conductores)':
+    {
+      tipoDato: 'Numérico 0–100',
+      ejemplo: 'Puntaje de seguridad del conductor (forma del valor)',
+    },
+  'Horas con motor encendido por conductor y día — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)':
+    {
+      tipoDato: 'Numérico en minutos (unidad inferida, no declarada)',
+      ejemplo: 'Minutos con motor encendido en el día (forma del valor)',
+    },
+}
+
+/**
+ * Campos cuyo tipo de dato **de verdad** no se pudo confirmar en una fuente
+ * permitida. Es una lista explícita, no el resultado de que un lookup falle:
+ * "no confirmado" es una afirmación sobre la evidencia y tiene que declararse
+ * a mano, igual que `sin equivalencia directa` (AGENTS.md §1.1).
+ *
+ * Hasta que este catálogo estaba incompleto, un nombre de campo sin entrada
+ * caía acá en silencio y la matriz declaraba "pendiente de confirmar" sobre
+ * hallazgos que el equipo sí había verificado. `metadatosCampo` ahora exige
+ * que el hueco sea deliberado; `matriz.test.ts` verifica que ninguna fila
+ * quede sin metadato por olvido.
+ */
+const SIN_TIPO_CONFIRMADO: ReadonlySet<string> = new Set([
+  'marca (nombre exacto de columna no confirmado)',
+  'modelo (nombre exacto de columna no confirmado)',
+  'año (nombre exacto de columna no confirmado)',
+])
+
+export function metadatosCampo(
+  plataforma: 'Prisma' | 'Startrack',
+  nombre: string | null,
+): MetadatosCampo | null {
+  if (!nombre) return NO_APLICA
+  if (SIN_TIPO_CONFIRMADO.has(nombre)) return NO_CONFIRMADO
+  const catalogo = plataforma === 'Prisma' ? METADATOS_PRISMA : METADATOS_STARTRACK
+  // `null` = falta la entrada en el catálogo. No es lo mismo que "no
+  // confirmado", y la prueba lo trata como error en vez de mostrarlo.
+  return catalogo[nombre] ?? null
+}
+
+function cardinalidadDe(fila: FilaMapeoBase): CardinalidadMapeo {
+  if (
+    fila.tipoRelacion === 'solo en Prisma' ||
+    fila.tipoRelacion === 'solo en Startrack' ||
+    fila.tipoRelacion === 'sin equivalencia directa' ||
+    fila.tipoRelacion === 'mismo nombre, distinto significado'
+  ) {
+    return 'sin equivalencia'
+  }
+  if (fila.campoPrisma === 'Empresa' || fila.campoPrisma?.startsWith('operador asignado')) {
+    return '1:N'
+  }
+  if (!fila.campoPrisma || !fila.campoStartrack) return 'sin equivalencia'
+  return '1:1'
+}
+
+export const MATRIZ_MAPEO: FilaMapeo[] = MATRIZ_MAPEO_BASE.map((fila) => ({
+  ...fila,
+  prisma: metadatosCampo('Prisma', fila.campoPrisma) ?? NO_CONFIRMADO,
+  startrack: metadatosCampo('Startrack', fila.campoStartrack) ?? NO_CONFIRMADO,
+  cardinalidad: cardinalidadDe(fila),
+}))
 
 /** Entregable 1 del brief: los campos que ECON NECT introduce y que no
  * existen en ninguna de las dos plataformas. */
@@ -463,7 +770,12 @@ export function matrizACsv(filas: FilaMapeo[]): string {
   const encabezado = [
     'modulo',
     'campoPrisma',
+    'tipoDatoPrisma',
+    'ejemploPrisma',
     'campoStartrack',
+    'tipoDatoStartrack',
+    'ejemploStartrack',
+    'cardinalidad',
     'tipoRelacion',
     'transformacion',
     'evidencia',
@@ -474,7 +786,12 @@ export function matrizACsv(filas: FilaMapeo[]): string {
     [
       fila.modulo,
       fila.campoPrisma ?? '',
+      fila.prisma.tipoDato,
+      fila.prisma.ejemplo,
       fila.campoStartrack ?? '',
+      fila.startrack.tipoDato,
+      fila.startrack.ejemplo,
+      fila.cardinalidad,
       fila.tipoRelacion,
       fila.transformacion ?? '',
       fila.evidencia,

@@ -1,4 +1,4 @@
-# S-C2 — Matriz tipada, RACI y catálogo de KPIs
+# S-C2 — Matriz tipada, responsabilidades y catálogo de KPIs
 
 **Carril C · 17:45–01:00 · Después de S-C1**
 
@@ -20,7 +20,7 @@ después). **No toques** `lib/tipos/`, `lib/canonico/`, `lib/reglas/`,
 `lib/conectores/`, `components/` ni otras rutas.
 
 **Punto de partida:** [matriz.ts](../apps/web/lib/mapeo/matriz.ts),
-[raci.ts](../apps/web/lib/gobernanza/raci.ts) y
+[responsabilidades.ts](../apps/web/lib/gobernanza/responsabilidades.ts) y
 [catalogo.ts](../apps/web/lib/kpi/catalogo.ts) **ya existen** de S-C1. Esto es
 refinar, no reescribir.
 
@@ -93,14 +93,14 @@ pero **no** son calculables. Corregí:
   `EquipoUnificado[]`. Se quedan como están (revisá que la fórmula cite el campo
   `identidadResuelta` y `veredicto`).
 
-## Tarea 3 — RACI: enlace con las reglas y refuerzo con los organigramas
+## Tarea 3 — Responsabilidades: enlace con las reglas y refuerzo con los organigramas
 
-- **Enlace RACI ↔ reglas de A.** Cada regla de A expone un `rolResponsable`
-  (enum `Rol`). Agregá en `raci.ts` un mapa **`PASO_DE_REGLA: Record<string,
+- **Enlace responsabilidades ↔ reglas de A.** Cada regla de A expone un `rolResponsable`
+  (enum `Rol`). Agregá en `responsabilidades.ts` un mapa **`PASO_DE_REGLA: Record<string,
   string>`** que asocia cada id de regla (`R1`…`R8`) al `paso` del proceso que la
   resuelve (p. ej. `R3 → "Programar el traslado"`, `R4 → "Reasignar por
   mantenimiento"`, `R7 → "Asignar equipo y operador"`). Con eso y el
-  `ROL_A_AGENTE` que ya existe, la bandeja de incoherencias puede decir, para cada
+  `ROL_A_UNIDAD` que ya existe, la bandeja de incoherencias puede decir, para cada
   incoherencia, **qué paso y qué agente la resuelve**. Ese enlace es lo que la
   vuelve utilizable y no decorativa (criterio 3.4). **No dupliques** los ids ni
   los roles de A; leelos.
@@ -153,12 +153,12 @@ real.**
   equivalencia directa" es una respuesta válida.
 - ❌ No transcribas los organigramas ni pegues nombres de personas (§1.2, §1.5).
 - ❌ No muestres un número de KPI que no sea calculable con lo que hay.
-- ❌ No pases una fila de RACI a `validada` sin respuesta de un mentor.
+- ❌ No pases una fila de responsabilidades a `validada` sin respuesta de un mentor.
 - ❌ No toques `lib/canonico/`, `lib/reglas/` ni el contrato de tipos.
 
 ## Terminado cuando
 
-La matriz, la RACI y el catálogo de KPIs renderizan en `/mapeo` sin afirmar nada
-que la API en vivo contradiga, la RACI enlaza cada regla con su paso y agente, y
+La matriz de mapeo, la matriz de responsabilidades y el catálogo de KPIs renderizan en `/mapeo` sin afirmar nada
+que la API en vivo contradiga, las responsabilidades enlazan cada regla con su paso y unidad, y
 los KPIs calculables se calculan mientras los no calculables declaran su hueco.
 Reportá archivos tocados, resultado real de typecheck/lint/test, y desviaciones.

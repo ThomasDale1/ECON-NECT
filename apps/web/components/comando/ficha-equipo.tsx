@@ -1,9 +1,16 @@
+import { cookies } from 'next/headers'
 import { Box, ExternalLink, MapPin } from 'lucide-react'
+import { TarjetaMantenimiento } from '@/components/mantenimiento/tarjeta-mantenimiento'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { PasosVerificacion } from '@/components/nect/pasos-verificacion'
 import { VerOrigen } from '@/components/nect/ver-origen'
+<<<<<<< Updated upstream
+import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilidades'
+=======
+import { NOMBRE_COOKIE, puedeProgramarTaller, verificarCookie } from '@/lib/acceso/verificar'
 import { agenteResponsablePorRol } from '@/lib/gobernanza/raci'
+>>>>>>> Stashed changes
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen, PersonaAsignada } from '@/lib/tipos/canonico'
 import { urlFichaPrisma } from '@/lib/nect/enlaces'
@@ -54,7 +61,7 @@ const NIVEL_IDENTIDAD: Record<1 | 2 | 3, string> = {
   3: 'enlace por clave',
 }
 
-export function FichaEquipo({
+export async function FichaEquipo({
   equipo,
   urlStartrack,
   urlPrisma,
@@ -64,8 +71,14 @@ export function FichaEquipo({
   urlPrisma: string | null
 }) {
   const decisiva = equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
-  const agente = decisiva ? agenteResponsablePorRol(decisiva.rolResponsable) : null
+  const agente = decisiva ? responsablePorRol(decisiva.rolResponsable) : null
+  // El paso del proceso en el que se resuelve esta incoherencia. Sin él, la
+  // ficha dice quién responde pero no en qué momento del proceso actúa.
+  const pasoProceso = decisiva ? (PASO_DE_REGLA[decisiva.regla] ?? null) : null
   const faltantes = [...new Set(equipo.reglas.flatMap((r) => r.camposFaltantes))]
+  const sesion = await verificarCookie((await cookies()).get(NOMBRE_COOKIE)?.value)
+  const puedeProgramar = sesion ? puedeProgramarTaller(sesion.rol) : false
+  const equipoObsoleto = (equipo.equipo?.valor ?? '').toUpperCase() === 'OBSOLETA'
 
   const dimensiones: Dimension[] = [
     {
@@ -208,6 +221,12 @@ export function FichaEquipo({
               </table>
             </div>
           </section>
+
+          <TarjetaMantenimiento
+            equipoId={equipo.id}
+            puedeProgramar={puedeProgramar}
+            equipoObsoleto={equipoObsoleto}
+          />
 
           {/* 3. Interpretación del motor */}
           <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-7 shadow-card">
@@ -385,7 +404,7 @@ export function FichaEquipo({
             )}
           </section>
 
-          {/* 5. Acción sugerida + RACI */}
+          {/* 5. Acción sugerida + matriz de responsabilidades */}
           <section className="flex flex-col gap-5 rounded-xl border border-border bg-card p-6 shadow-card">
             <h3 className="font-heading text-base font-bold tracking-tight text-primary">
               Acción sugerida
@@ -398,15 +417,19 @@ export function FichaEquipo({
             </p>
             <div className="flex flex-col gap-2">
               <p className="font-label text-xs uppercase tracking-wide text-muted-foreground">
-                Responsable según la RACI
+                Unidad responsable según la matriz
               </p>
               <div className="flex items-center justify-between gap-3 font-label text-[13px]">
                 <span className="text-muted-foreground">Responsable</span>
                 <span className="text-right font-bold">{agente ?? 'Sin asignar'}</span>
               </div>
+              <div className="flex items-center justify-between gap-3 font-label text-[13px]">
+                <span className="text-muted-foreground">Paso del proceso</span>
+                <span className="text-right font-bold">{pasoProceso ?? 'Sin paso asociado'}</span>
+              </div>
               <p className="font-label text-[11px] text-muted-foreground">
-                Sale de <code className="font-mono">lib/gobernanza/raci.ts</code>, no se escribe a
-                mano.
+                Sale de <code className="font-mono">lib/gobernanza/responsabilidades.ts</code>, no se
+                escribe a mano.
               </p>
             </div>
           </section>

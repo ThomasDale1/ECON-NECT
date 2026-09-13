@@ -22,7 +22,7 @@ export type Veredicto = 'COHERENTE' | 'ATENCION' | 'EN_RIESGO' | 'SIN_EVIDENCIA'
  * con el mismo veredicto pueden tener distinta urgencia. */
 export type Severidad = 'alta' | 'media' | 'baja'
 
-/** Vocabulario de gerencias compartido entre reglas (A), RACI (C) y acceso (C). */
+/** Vocabulario de gerencias compartido entre reglas, responsabilidades y acceso. */
 export type Rol =
   | 'PROYECTOS'
   | 'LOGISTICA'

@@ -12,9 +12,12 @@ function kpi(id: string) {
 }
 
 describe('CATALOGO_KPI — honestidad de datoFaltante (AGENTS.md §1.1)', () => {
-  it('tiempo-muerto-quetzales declara su hueco: no hay horas reales de uso', () => {
-    expect(kpi('tiempo-muerto-quetzales').datoFaltante).not.toBeNull()
-    expect(kpi('tiempo-muerto-quetzales').datoFaltante).toMatch(/horas reales de uso/i)
+  it('tiempo-muerto-quetzales sigue sin ser calculable, pero por tarifa y mínimo — las horas reales de uso sí existen (S-A11)', () => {
+    const faltante = kpi('tiempo-muerto-quetzales').datoFaltante
+    expect(faltante).not.toBeNull()
+    expect(faltante).toMatch(/horas reales de uso/i)
+    expect(faltante).toMatch(/tarifa y m[ií]nimo/i)
+    expect(faltante).toMatch(/curOperatingHours|reporte 22/)
   })
 
   it('latencia-solicitud-traslado es calculable: datoFaltante null, cobertura documentada en referencia', () => {
@@ -69,5 +72,24 @@ describe('CATALOGO_KPI — los dos KPIs del optimizador (S-A10)', () => {
 
   it('el lowboy no entra al catálogo: el sandbox no modela transporte', () => {
     expect(CATALOGO_KPI.some((k) => /lowboy/i.test(k.id) || /lowboy/i.test(k.nombre))).toBe(false)
+  })
+})
+
+describe('CATALOGO_KPI — mantenimiento preventivo (S-A11)', () => {
+  it('avance-intervalo-mantenimiento declara qué falta (intervalo OEM, sin sensores) y cita los dos horómetros', () => {
+    const k = kpi('avance-intervalo-mantenimiento')
+    expect(k.datoFaltante).toMatch(/OEM/)
+    expect(k.datoFaltante).toMatch(/sensor/i)
+    expect(k.formula).toMatch(/ignOnTime/)
+    expect(k.formula).toMatch(/hour_meter/)
+    expect(k.referencia).toMatch(/80 %/)
+    expect(k.accionQueDispara).toMatch(/orden de taller/i)
+  })
+
+  it('equipos-en-alerta-preventiva es calculable (datoFaltante null) con la cobertura a la vista', () => {
+    const k = kpi('equipos-en-alerta-preventiva')
+    expect(k.datoFaltante).toBeNull()
+    expect(k.nombre).toMatch(/N de M/)
+    expect(k.referencia).toMatch(/14 de 17/)
   })
 })
