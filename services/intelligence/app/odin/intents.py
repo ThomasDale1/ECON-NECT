@@ -42,7 +42,7 @@ def detect_intent(message: str) -> Intent:
     if any(word in text for word in ("incoherencia", "discrepancia", "diferencia", "no coincide", "conflicto")):
         return Intent.EXPLAIN_INCONSISTENCY
 
-    if any(word in text for word in ("estado", "disponible", "situacion", "snapshot", "equipo", "activo")):
+    if any(word in text for word in ("estado", "disponible", "situacion", "snapshot", "equipo", "activo", "identidad", "contraparte", "ubicacion", "proyecto", "geocerca", "falta", "paso", "responsable", "falla", "paro")):
         return Intent.QUERY_ASSET_STATUS
 
     return Intent.QUERY_ASSET_STATUS

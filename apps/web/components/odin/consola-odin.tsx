@@ -24,7 +24,12 @@ type EquipoOdin = {
 
 const CONSULTAS = [
   { label: 'Estado', message: '¿Cuál es el estado operativo del equipo?' },
+  { label: 'Identidad', message: '¿Prisma y Startrack apuntan al mismo equipo?' },
+  { label: 'Ubicación', message: '¿Dónde está el equipo y qué proyecto tiene?' },
   { label: 'Incoherencia', message: 'Explica la incoherencia detectada.' },
+  { label: 'Qué falta', message: '¿Qué datos faltan para concluir?' },
+  { label: 'Siguiente paso', message: '¿Cuál es el siguiente paso y quién lo ejecuta?' },
+  { label: 'Falla', message: '¿Hay una falla o paro activo en Prisma?' },
   { label: 'Mantenimiento', message: 'Explica el riesgo de mantenimiento.' },
 ] as const
 
@@ -198,6 +203,10 @@ export function ConsolaOdin({
             </button>
           ))}
         </div>
+
+        <p className="text-[11px] leading-snug text-muted-foreground">
+          También identidad, ubicación, falla, siguiente paso o qué falta. Horómetro y km no vienen en esta lectura.
+        </p>
 
         <form onSubmit={enviar} className="flex items-end gap-2">
           <label className="min-w-0 flex-1">

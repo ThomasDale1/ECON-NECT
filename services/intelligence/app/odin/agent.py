@@ -43,9 +43,45 @@ def _sources(evidence: list[Evidence]) -> list[str]:
     )
 
 
-def _fallback_answer(intent: Intent, result: dict[str, Any]) -> str:
+def _fallback_answer(intent: Intent, result: dict[str, Any], message: str = "") -> str:
     if intent is Intent.QUERY_ASSET_STATUS:
         code = result.get("asset_code") or result["asset_id"]
+        asked = message.lower()
+        if any(word in asked for word in ("kilometraje", "kilometro", "odometro", "horometro", "horas de uso")):
+            return (
+                f"{code} no trae kilometraje ni horómetro en esta lectura. "
+                "Prisma solo lo documenta en fallas; Startrack no expone la lectura. "
+                f"Veredicto {result['verdict']}."
+            )
+        if any(word in asked for word in ("identidad", "contraparte", "mismo equipo")):
+            linked = "sí" if result.get("identity_resolved") else "no"
+            return (
+                f"{code}: la contraparte Prisma↔Startrack {linked} está resuelta. "
+                f"Veredicto {result['verdict']}."
+            )
+        if any(word in asked for word in ("ubicacion", "donde esta", "proyecto", "geocerca")):
+            lugar = result.get("location_description") or "sin ubicación en esta lectura"
+            desfase = result.get("lag_interpretation")
+            extra = f" {desfase}" if desfase else ""
+            return f"{code} está en {lugar}.{extra}"
+        rules = result.get("rules", [])
+        if any(word in asked for word in ("falta", "faltan", "evidencia")):
+            missing = list(dict.fromkeys(field for rule in rules for field in rule.get("missing_fields", [])))
+            if not missing:
+                return f"{code}: no faltan campos para concluir. Veredicto {result['verdict']}."
+            return f"{code}: faltan {', '.join(missing)} para poder concluir."
+        if any(word in asked for word in ("siguiente paso", "responsable")):
+            if not rules:
+                return f"{code}: no hay un paso sugerido en esta lectura."
+            primary = rules[0]
+            return (
+                f"{primary.get('suggested_action')} Responsable: {primary.get('responsible_role')}."
+            )
+        if "falla" in asked or "paro" in asked:
+            falla = next((s for s in result.get("source_states", []) if s.get("object_type") == "falla"), None)
+            if not falla:
+                return f"{code}: Prisma no reporta una falla activa en esta lectura."
+            return f"{code}: Prisma reporta falla en {falla['value']}."
         states = result.get("source_states", [])
         state_text = "; ".join(
             f"{state['source']} reporta {state['object_type']} en {state['value']}"
@@ -135,7 +171,7 @@ class OdinAgent:
         result = tool.execute(request.context)
         evidence = _evidence_for(intent, request)
         missing, confidence, action = _response_metadata(intent, request, result)
-        fallback = _fallback_answer(intent, result)
+        fallback = _fallback_answer(intent, result, request.message)
 
         generated = await self._model.explain(request.message, result)
         use_model = bool(

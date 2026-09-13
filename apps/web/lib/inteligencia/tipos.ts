@@ -44,6 +44,8 @@ export const contextoOdinSchema = z
         source_states: z.array(estadoFuenteSchema),
         rules: z.array(reglaSchema),
         as_of: z.iso.datetime(),
+        location_description: z.string().nullable().optional(),
+        lag_interpretation: z.string().nullable().optional(),
       })
       .strict(),
     maintenance_signals: z.null(),

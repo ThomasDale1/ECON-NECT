@@ -51,6 +51,8 @@ class OperationalSnapshot(StrictModel):
     source_states: list[SourceState]
     rules: list[RuleSummary]
     as_of: datetime
+    location_description: str | None = None
+    lag_interpretation: str | None = None
 
 
 class MaintenanceSignals(StrictModel):
