@@ -73,3 +73,35 @@ export function tareaFinalizada(valorEstadoTarea: string | null): boolean {
   if (!valorEstadoTarea) return false
   return ESTADOS_TAREA_FINALIZADA.includes(valorEstadoTarea.trim().toLowerCase())
 }
+
+
+/** Código `status` en el registro de vehículo de Startrack (`ajax/vehicles.php`).
+ * Confirmado por operación el 13-sep-2026: describe el **estado del conductor**,
+ * no el del recurso. 0 / vacío / null = Normal.
+ * No se fusiona con DISPONIBLE / OCUPADA / OBSOLETA de Prisma. */
+export const ESTADO_VEHICULO_STARTRACK = {
+  '0': 'Normal',
+  '1': 'Mantenimiento',
+  '2': 'Fuera de servicio',
+  '3': 'Dispositivo de rastreo en reparación',
+  '4': 'Se usa de vez en cuando',
+  '5': 'En línea',
+  '6': 'Fuera de línea',
+  '7': 'Almorzando',
+  '8': 'Reunión',
+  '9': 'Vacaciones',
+} as const
+
+export type CodigoEstadoVehiculoStartrack = keyof typeof ESTADO_VEHICULO_STARTRACK
+
+export function interpretarEstadoVehiculoStartrack(
+  status: string | number | null | undefined,
+): { codigo: string | null; etiqueta: string; enCatalogo: boolean } {
+  if (status == null || String(status).trim() === '') {
+    return { codigo: null, etiqueta: 'Normal', enCatalogo: true }
+  }
+  const codigo = String(status).trim()
+  const etiqueta = ESTADO_VEHICULO_STARTRACK[codigo as CodigoEstadoVehiculoStartrack]
+  if (etiqueta) return { codigo, etiqueta, enCatalogo: true }
+  return { codigo, etiqueta: codigo, enCatalogo: false }
+}

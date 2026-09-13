@@ -280,6 +280,18 @@ Notas: siempre ícono + texto (§5). Un ícono distinto de lucide por veredicto
 dependa del color.
 Registrado: S-B1 · 12 de septiembre de 2026
 
+### ConsolaOdin
+File: apps/web/components/odin/consola-odin.tsx
+Tipo: formulario + card de resultado
+Clases: cards del baseline; resultado `rounded-xl border border-border p-5`
+Tokens de color: violeta solo para datos faltantes; ámbar no se usa para marcar
+datos reales como si fueran una alerta.
+Notas: consume la lista del orquestador canónico y envía al servidor únicamente
+`assetId` y la consulta. La ruta server-side relee Prisma/Startrack, minimiza el
+contexto y consulta el servicio local. O.D.I.N. es de solo lectura y no contiene
+controles de aprobación o escritura.
+Registrado: S-A6 · 13 de septiembre de 2026
+
 ### BadgeOrigen
 File: apps/web/components/nect/badge-origen.tsx
 Tipo: badge
@@ -294,9 +306,26 @@ File: apps/web/components/nect/barra-confianza.tsx
 Tipo: tile
 Clases: pista `h-1.5 w-12 rounded-full bg-muted` + `font-mono text-xs`
 Tokens de color: escala de §1.3 — verde ≥85, ámbar 65–84, naranja 45–64, gris <45.
-Notas: `role="meter"` con `aria-valuenow` y una etiqueta que dice la lectura en
-palabras. Por debajo de 45 va en gris y no en rojo: un dato insuficiente es un
-hueco, no una alarma.
+Notas: construida según §1.3, pero **hoy no se usa en ninguna pantalla**. Se
+retiró de la bandeja, de la flota y de la ficha por decisión de producto: un
+porcentaje al lado del veredicto invita a decidir a ojo —*"tiene 54 %, no lo
+reviso"*— cuando lo accionable es **qué evidencia falta y a quién llamar**. En su
+lugar va la columna **Qué falta** con el diccionario de
+`components/nect/faltantes.ts`, y el motor convierte a `SIN_EVIDENCIA` por debajo
+del umbral (plan maestro §3.5) en vez de emitir un veredicto a medias.
+Se conserva el componente para agregados —donde un continuo sí informa, como la
+confianza media de la flota— pero no para decisiones fila a fila.
+Registrado: S-B1 · 12 de septiembre de 2026 · revisado tras la crítica de diseño
+
+### QueFalta (columna) · faltantes.ts
+File: apps/web/components/nect/faltantes.ts
+Tipo: tabla
+Clases: lista `font-label text-[12px] leading-snug text-muted-foreground`
+Tokens de color: verde de coherente para "Evidencia completa"; el resto en muted.
+Notas: traduce `camposFaltantes` a lenguaje operativo — *"La telemetría de
+Startrack está desconectada y la posición puede estar vieja"*, no
+`startrack.posicion.vigencia` (§3.5). Módulo plano sin `server-only` porque lo
+importan tanto componentes de cliente como el motor de reglas.
 Registrado: S-B1 · 12 de septiembre de 2026
 
 ### BarraLateral

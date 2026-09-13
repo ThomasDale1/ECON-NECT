@@ -262,3 +262,26 @@ export function resolverConductoresDeOperadores(
 
   return { conductorPorOperadorId, conflictos }
 }
+
+/**
+ * Distancia en metros entre dos puntos (fórmula del semiverseno).
+ *
+ * `ajax/namedPlaces.php` publica el centro de la geocerca pero **no su radio**,
+ * verificado campo por campo. Sin radio no se puede afirmar "dentro" ni "fuera":
+ * esta distancia es lo único afirmable sobre la relación entre el equipo y su
+ * geocerca, y así se presenta en pantalla.
+ */
+export function distanciaEnMetros(
+  latA: number,
+  lonA: number,
+  latB: number,
+  lonB: number,
+): number {
+  const R = 6_371_000
+  const rad = (g: number) => (g * Math.PI) / 180
+  const dLat = rad(latB - latA)
+  const dLon = rad(lonB - lonA)
+  const a =
+    Math.sin(dLat / 2) ** 2 + Math.cos(rad(latA)) * Math.cos(rad(latB)) * Math.sin(dLon / 2) ** 2
+  return Math.round(2 * R * Math.asin(Math.sqrt(a)))
+}

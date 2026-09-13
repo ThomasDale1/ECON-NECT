@@ -39,7 +39,7 @@ export async function exigirSesion(request: Request): Promise<FalloDeAcceso | Ac
   if (sesion) return { respuesta: null, sesion }
 
   const mensaje = accesoConfigurado()
-    ? 'Sesión ausente, vencida o inválida. Entrá de nuevo en /acceso.'
+    ? 'Sesión ausente, vencida o inválida. Entrá de nuevo en /entrar.'
     : 'No hay ninguna clave de rol configurada en el servidor (NECT_CLAVE_*). Nadie puede entrar hasta que existan.'
 
   return {

@@ -1,8 +1,8 @@
 // Datos fabricados para la prueba — no provienen del sandbox (AGENTS.md §1.2).
 
 import { describe, expect, it } from 'vitest'
-import { estadoDesdeFalla, puedeOperar } from './estados'
-import type { EquipoPrismaCrudo } from './tipos-crudos'
+import { estadoDesdeFalla, estadoDesdeVehiculo, puedeOperar } from './estados'
+import type { EquipoPrismaCrudo, VehiculoStartrackCrudo } from './tipos-crudos'
 
 function equipo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string }): EquipoPrismaCrudo {
   return {
@@ -23,6 +23,7 @@ function equipo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string }): 
     active_failure_status: null,
     active_failure_is_paro: null,
     fallas_count: null,
+    updated_at: null,
     fecha_inicio_uso: null,
     fecha_fin_uso: null,
     ...parcial,
@@ -71,5 +72,49 @@ describe('estadoDesdeFalla', () => {
   it('se etiqueta objeto:"falla" cuando sí hay una falla activa', () => {
     const estado = estadoDesdeFalla(equipo({ id: 1, active_failure_status: 'TRASLADO_STD' }), procedencia)
     expect(estado).toMatchObject({ valor: 'TRASLADO_STD', objeto: 'falla' })
+  })
+})
+
+
+
+describe('estadoDesdeVehiculo — estado del conductor 0-9', () => {
+  const procedencia = {
+    plataforma: 'startrack' as const,
+    endpoint: 'ajax/vehicles.php?cmd=list',
+    leidoEn: '2026-09-13T08:00:00.000Z',
+  }
+
+  function vehiculo(status: string | null): VehiculoStartrackCrudo {
+    return {
+      id: 1,
+      description: 'CF-01',
+      veh_type: 8,
+      make: null,
+      model: null,
+      status,
+      tags: null,
+      unit_id: null,
+      driver_id: null,
+      license_plate: null,
+      last_contact_date: null,
+    }
+  }
+
+  it('traduce 0 y null a Normal, y conserva el código en el linaje', () => {
+    const cero = estadoDesdeVehiculo(vehiculo('0'), procedencia)
+    expect(cero?.valor).toBe('Normal')
+    expect(cero?.linaje.valorCrudo).toBe('0')
+    const vacio = estadoDesdeVehiculo(vehiculo(null), procedencia)
+    expect(vacio?.valor).toBe('Normal')
+    expect(vacio?.linaje.valorCrudo).toBeNull()
+  })
+
+  it('traduce 1 y 2 a mantenimiento y fuera de servicio', () => {
+    expect(estadoDesdeVehiculo(vehiculo('1'), procedencia)?.valor).toBe('Mantenimiento')
+    expect(estadoDesdeVehiculo(vehiculo('2'), procedencia)?.valor).toBe('Fuera de servicio')
+  })
+
+  it('es null si no hay vehículo, no un Normal inventado', () => {
+    expect(estadoDesdeVehiculo(null, procedencia)).toBeNull()
   })
 })

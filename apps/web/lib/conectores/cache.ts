@@ -42,19 +42,44 @@ export async function conCache<T>(
   return valor
 }
 
-/** Olvida toda entrada cuya clave empiece con `prefijo`. Se usa después de una
- * escritura (S-A4): si la tarea recién creada no se ve hasta que venza el TTL,
- * la incoherencia sigue en pantalla un minuto después de haberla resuelto — y
- * ese instante es justamente el de la demo. Devuelve cuántas entradas olvidó. */
-export function invalidarCache(prefijo: string): number {
-  let olvidadas = 0
+/**
+ * ¿Hay una entrada vigente para esta clave?
+ *
+ * Sirve para saber, **antes** de leer, si la respuesta va a salir de memoria.
+ * Sin esto no se puede reportar latencia honesta: un acierto de caché resuelve
+ * en un milisegundo y presentarlo como "latencia de la plataforma" diría que el
+ * sandbox responde instantáneamente, que es falso.
+ */
+export function estaVigente(clave: string): boolean {
+  const entrada = almacen.get(clave)
+  return entrada !== undefined && entrada.expiraEn > Date.now()
+}
+
+/**
+ * Invalida las entradas de una plataforma sin tocar las de la otra.
+ *
+ * Las claves llevan la plataforma como prefijo (`prisma:equipos`,
+ * `startrack:ajax/...`), así que basta con el prefijo. Lo usa el botón de
+ * relectura manual del Command Center: forzar una lectura de Prisma no debería
+ * tirar también el caché de Startrack, que es la fuente lenta.
+ */
+export function invalidarPorPrefijo(prefijo: string): number {
+  let borradas = 0
   for (const clave of [...almacen.keys()]) {
     if (clave.startsWith(prefijo)) {
       almacen.delete(clave)
-      olvidadas++
+      borradas += 1
     }
   }
-  return olvidadas
+  return borradas
+}
+
+/** Alias histórico de `invalidarPorPrefijo`. Lo usa la propagación P1 (S-A4):
+ * si la tarea recién creada no se ve hasta que venza el TTL, la incoherencia
+ * sigue en pantalla un minuto después de haberla resuelto — y ese instante es
+ * justamente el de la demo. */
+export function invalidarCache(prefijo: string): number {
+  return invalidarPorPrefijo(prefijo)
 }
 
 /** Solo para pruebas: vacía el caché entre casos. */

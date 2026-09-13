@@ -2,7 +2,7 @@
 
 **Carril A · 17:00–20:00 · Después de S-A0**
 
-> Leé [AGENTS.md](../AGENTS.md) y [01 Parte E](../01-DEFINICION-DE-NEGOCIO.md)
+> Leé [AGENTS.md](../AGENTS.md) y [01 Parte E](../docs/01-DEFINICION-DE-NEGOCIO.md)
 > antes de empezar. La Parte E tiene los hallazgos verificados que te evitan
 > tropezar dos veces.
 

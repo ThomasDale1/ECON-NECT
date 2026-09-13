@@ -1,35 +1,31 @@
+import Image from 'next/image'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
+import { DialogoAccion } from '@/components/nect/dialogo-accion'
 import { PropagarTraslado } from '@/components/nect/propagar-traslado'
-import { BarraConfianza } from '@/components/nect/barra-confianza'
-import { Button } from '@/components/ui/button'
-import type { EquipoUnificado, EstadoOrigen, ResultadoRegla, Rol } from '@/lib/tipos/canonico'
+import type { EquipoUnificado, EstadoOrigen, Plataforma, Rol } from '@/lib/tipos/canonico'
+import { cn } from '@/lib/utils'
 
 /**
- * Excepciones prioritarias — ui-registry.md §3.4.
+ * Excepciones prioritarias — cola de trabajo, no lista de errores.
  *
- * No es una lista de errores: es una cola de trabajo, ordenada por severidad y
- * con el responsable de cada fila.
- *
- * Consume `EquipoUnificado` directamente: el veredicto, la confianza y las
- * reglas vienen ya calculados. Acá no se reconcilia nada, solo se proyecta —
- * la UI solo muestra (S-B1).
+ * El veredicto es la lectura. El respaldo dice si había datos suficientes
+ * para afirmarla. No son lo mismo: EN_RIESGO con todos los campos es una
+ * conclusión, no un hueco.
  *
  * La última columna es la propagación P1 (S-A4): aparece solo en las filas
  * donde disparó R3 — solicitud aprobada en Prisma sin tarea de traslado en
- * Startrack. No es un botón decorativo: escribe la tarea real, con
- * confirmación, y al refrescarse la fila desaparece porque la incoherencia
- * dejó de existir. Que el botón se vea no autoriza nada: el servidor vuelve a
- * verificar sesión, rol y recurso propio.
- *
- * Las dos columnas del medio son el corazón del Caso de Uso 02 de ECON: cada
- * valor lleva debajo la etiqueta de **qué objeto describe**. Un recurso ocupado
- * y una tarea completada pueden ser ambos correctos porque describen objetos
- * distintos; sin esa etiqueta la tabla no resuelve el caso.
+ * Startrack. Que el botón se vea no autoriza nada: el servidor vuelve a
+ * verificar sesión, rol y recurso propio antes de escribir.
  */
 const OBJETO: Record<EstadoOrigen['objeto'], string> = {
   recurso: 'describe el recurso',
   tarea: 'describe la tarea',
   falla: 'describe la falla',
+}
+
+const PUNTO_ORIGEN: Record<Plataforma, string> = {
+  prisma: 'bg-origen-prisma',
+  startrack: 'bg-origen-startrack',
 }
 
 const ROL: Record<Rol, string> = {
@@ -40,7 +36,6 @@ const ROL: Record<Rol, string> = {
   DIRECCION: 'Dirección',
 }
 
-/** Orden de la cola: primero lo que puede incumplirse, al final lo coherente. */
 const PRIORIDAD: Record<EquipoUnificado['veredicto'], number> = {
   EN_RIESGO: 0,
   ATENCION: 1,
@@ -55,43 +50,64 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
 
   return (
     <section className="flex flex-col gap-5 rounded-xl bg-card p-7 shadow-card">
-      <div className="flex items-center justify-between">
-        <div className="flex flex-col gap-0.5">
-          <h2 className="font-heading text-base font-bold tracking-tight text-primary">
-            Excepciones prioritarias
-          </h2>
-          <p className="font-label text-xs text-muted-foreground">Cola de resolución de conflictos</p>
-        </div>
-        <Button size="sm">Resolver seleccionadas</Button>
+      <div className="flex flex-col gap-0.5">
+        <h2 className="font-heading text-base font-bold tracking-tight text-primary">
+          Excepciones prioritarias
+        </h2>
+        <p className="font-label text-xs tracking-normal text-muted-foreground">
+          Cola de resolución. El color es el veredicto; el respaldo dice si se
+          pudo concluir.
+        </p>
       </div>
 
+      <p className="rounded-lg border border-dashed border-border px-3 py-2 font-label text-[11px] leading-relaxed tracking-normal text-muted-foreground">
+        <strong className="font-bold">Cómo leer la bandeja:</strong> “Conclusión
+        respaldada” significa que Prisma y Startrack respondieron lo que la
+        regla necesita. Si el semáforo está en riesgo, el conflicto está en esos
+        datos, no en un faltante. Startrack publica el centro de sus geocercas
+        pero no el radio, así que la distancia al proyecto no se traduce a
+        dentro o fuera.
+      </p>
+
       {filas.length === 0 ? (
-        <p className="py-8 text-center font-label text-sm text-muted-foreground">
+        <p className="py-8 text-center font-label text-sm tracking-normal text-muted-foreground">
           No hay incoherencias detectadas con la evidencia disponible.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[1210px] border-collapse text-left">
+          <table className="w-full min-w-[1130px] border-collapse text-left font-label tracking-normal">
             <caption className="sr-only">
-              Equipos con incoherencias entre Prisma y Startrack, ordenados por severidad.
+              Equipos con incoherencias entre Prisma y Startrack, ordenados por
+              severidad. Cada fila abre la lectura, el respaldo y el siguiente paso.
             </caption>
             <thead>
-              <tr className="border-y border-border font-label text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th scope="col" className="w-[108px] py-2.5 pl-4 font-bold">Severidad</th>
-                <th scope="col" className="w-[172px] py-2.5 pr-3 font-bold">Activo / clase</th>
-                <th scope="col" className="w-[120px] py-2.5 pr-3 font-bold">Proyecto</th>
-                <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Prisma (esperado)</th>
-                <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Startrack (observado)</th>
-                <th scope="col" className="w-[96px] py-2.5 pr-3 font-bold">Confianza</th>
-                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Acción sugerida</th>
-                <th scope="col" className="w-[112px] py-2.5 pr-3 font-bold">Responsable</th>
-                <th scope="col" className="w-[150px] py-2.5 pr-4 font-bold">Propagación</th>
+              <tr className="border-y border-border text-[11px] uppercase tracking-wide text-muted-foreground">
+                <th scope="col" className="w-[118px] py-2.5 pl-4 pr-3 font-bold">
+                  Severidad
+                </th>
+                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">
+                  Activo / clase
+                </th>
+                <th scope="col" className="w-[250px] py-2.5 pr-3 font-bold">
+                  Prisma ↔ Startrack
+                </th>
+                <th scope="col" className="w-[220px] py-2.5 pr-3 font-bold">
+                  Lectura
+                </th>
+                <th scope="col" className="w-[260px] py-2.5 pr-3 font-bold">
+                  Respaldo y paso
+                </th>
+                <th scope="col" className="w-[150px] py-2.5 pr-3 font-bold">
+                  Responsable
+                </th>
+                <th scope="col" className="py-2.5 pr-4 font-bold">
+                  Propagación
+                </th>
               </tr>
             </thead>
             <tbody>
               {filas.map((equipo) => {
-                // La regla que produjo el veredicto es la primera que lo comparte.
-                const regla: ResultadoRegla | undefined =
+                const decisiva =
                   equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
 
                 // R3 = "solicitud aprobada sin tarea de traslado": la única
@@ -103,44 +119,46 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                     key={equipo.id}
                     className="border-b border-muted transition-colors last:border-0 hover:bg-muted/60"
                   >
-                    <td className="py-3.5 pl-4 align-middle">
+                    <td className="py-3.5 pl-4 pr-3 align-middle">
                       <BadgeVeredicto veredicto={equipo.veredicto} />
                     </td>
                     <td className="py-3.5 pr-3 align-middle">
-                      <span className="block font-heading text-[13px] font-bold">
+                      <span className="block font-heading text-[13px] font-bold tracking-tight">
                         {equipo.codigoActivo.valor ?? 'Sin código'}
                       </span>
-                      <span className="block font-label text-[11px] text-muted-foreground">
+                      <span className="block text-[11px] text-muted-foreground">
                         {equipo.nombre.valor ?? 'Sin registro'}
                         {!equipo.identidadResuelta && ' · sin contraparte'}
                       </span>
+                      {equipo.ubicacion?.descripcion.valor ? (
+                        <span className="mt-1 block text-[10px] text-muted-foreground">
+                          {equipo.ubicacion.descripcion.valor}
+                        </span>
+                      ) : null}
                     </td>
                     <td className="py-3.5 pr-3 align-middle">
-                      {equipo.ubicacion?.descripcion.valor ? (
-                        <>
-                          <span className="block font-label text-[13px]">
-                            {equipo.ubicacion.descripcion.valor}
-                          </span>
-                          <span className="block font-label text-[10px] text-muted-foreground">
-                            ubicación nivel {equipo.ubicacion.nivel} de 3
-                          </span>
-                        </>
+                      <div className="flex flex-col gap-1.5">
+                        <Lado
+                          plataforma="prisma"
+                          estado={equipo.falla ?? equipo.solicitud ?? equipo.equipo}
+                        />
+                        <Lado plataforma="startrack" estado={equipo.tarea ?? equipo.vehiculo} />
+                      </div>
+                    </td>
+                    <td className="py-3.5 pr-3 align-middle">
+                      {decisiva ? (
+                        <span className="block text-[13px] leading-snug font-bold text-foreground">
+                          {decisiva.nombre}
+                        </span>
                       ) : (
                         <SinRegistro />
                       )}
                     </td>
-                    {/* Prisma describe el recurso; si hay falla activa, manda la falla. */}
-                    <Celda estado={equipo.falla ?? equipo.solicitud ?? equipo.equipo} />
-                    {/* Startrack describe la tarea de traslado; si no hay, el vehículo. */}
-                    <Celda estado={equipo.tarea ?? equipo.vehiculo} />
                     <td className="py-3.5 pr-3 align-middle">
-                      <BarraConfianza porcentaje={equipo.confianza} />
+                      <DialogoAccion equipo={equipo} />
                     </td>
-                    <td className="py-3.5 pr-3 align-middle font-label text-[13px] text-muted-foreground">
-                      {regla ? regla.accionSugerida : <SinRegistro />}
-                    </td>
-                    <td className="py-3.5 pr-3 align-middle font-label text-[13px]">
-                      {regla ? ROL[regla.rolResponsable] : <SinRegistro />}
+                    <td className="py-3.5 pr-3 align-middle text-[13px]">
+                      {decisiva ? ROL[decisiva.rolResponsable] : <SinRegistro />}
                     </td>
                     <td className="py-3.5 pr-4 align-middle">
                       {puedePropagarse ? (
@@ -149,7 +167,7 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                           codigoActivo={equipo.codigoActivo.valor}
                         />
                       ) : (
-                        <span className="font-label text-[12px] text-muted-foreground">
+                        <span className="text-[12px] text-muted-foreground">
                           Sin escritura aplicable
                         </span>
                       )}
@@ -165,29 +183,42 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
   )
 }
 
-/**
- * Un estado de origen con su etiqueta de qué objeto describe.
- *
- * El dato ausente se escribe, no se omite: `Sin registro` en muted, nunca una
- * celda vacía ni un cero inventado (ui-registry §1.4).
- */
-function Celda({ estado }: { estado: EstadoOrigen | null }) {
+const NOMBRE_PLATAFORMA: Record<Plataforma, string> = {
+  prisma: 'Prisma',
+  startrack: 'Startrack',
+}
+
+function Lado({ plataforma, estado }: { plataforma: Plataforma; estado: EstadoOrigen | null }) {
   return (
-    <td className="py-3.5 pr-3 align-middle">
-      {estado === null ? (
-        <SinRegistro />
-      ) : (
-        <>
-          <span className="block font-label text-[13px]">{estado.valor}</span>
-          <span className="block font-label text-[10px] text-muted-foreground">
-            {OBJETO[estado.objeto]}
+    <span className="flex items-start gap-2">
+      <span
+        aria-hidden
+        className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', PUNTO_ORIGEN[plataforma])}
+      />
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+          {plataforma === 'prisma' ? (
+            <Image src="/prisma.png" alt="" width={12} height={12} className="size-3 shrink-0" />
+          ) : (
+            <Image src="/startrack.png" alt="" width={52} height={11} className="h-[11px] w-auto shrink-0" />
+          )}
+          <span className={plataforma === 'startrack' ? 'sr-only' : undefined}>
+            {NOMBRE_PLATAFORMA[plataforma]}
           </span>
-        </>
-      )}
-    </td>
+        </span>
+        {estado === null ? (
+          <SinRegistro />
+        ) : (
+          <>
+            <span className="block text-[13px] leading-tight">{estado.valor}</span>
+            <span className="block text-[10px] text-muted-foreground">{OBJETO[estado.objeto]}</span>
+          </>
+        )}
+      </span>
+    </span>
   )
 }
 
 function SinRegistro() {
-  return <span className="font-label text-[13px] italic text-muted-foreground">Sin registro</span>
+  return <span className="text-[13px] italic text-muted-foreground">Sin registro</span>
 }

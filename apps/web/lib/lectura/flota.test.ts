@@ -52,6 +52,8 @@ function equipo(reglas: ResultadoRegla[], identidadResuelta = true): EquipoUnifi
       },
     },
     identidadResuelta,
+    nivelResolucionIdentidad: identidadResuelta ? 1 : null,
+    interpretacionDesfase: null,
     equipo: null,
     solicitud: null,
     falla: null,

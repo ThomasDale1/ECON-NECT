@@ -169,6 +169,25 @@ async function leerLista(endpoint: string): Promise<RespuestaConector<unknown[]>
 // `desenvolverStartrack`, que solo mira `success`... y este payload también
 // tiene `success:false`). Se resuelve pasando siempre `cmd=list`, que
 // devuelve la lista completa bajo la clave `data`.
+/**
+ * Estado de flota en vivo — el poller que alimenta el mapa de rastreo.
+ *
+ * Es el endpoint que más aporta de toda la superficie de Startrack: en **una
+ * sola llamada** trae, por vehículo, la posición GPS (`x`/`y`), la dirección ya
+ * geocodificada (`p`), el sitio nombrado más cercano (`rpn`), el estado legible
+ * (`moving_status`), el último evento (`rl`), el conductor asignado (`un`) y la
+ * antigüedad de la última comunicación (`coms_age_seconds`).
+ *
+ * Resuelve el **nivel 1 de la cascada de ubicación**, que 01 E.10 daba por no
+ * obtenible por REST: la página lo consulta cada 60 s.
+ *
+ * El parámetro `cb` de la página envuelve la respuesta en JSONP; sin él responde
+ * `application/json` limpio, así que no se manda.
+ */
+export function leerEstadoFlota(): Promise<RespuestaConector<unknown[]>> {
+  return leerLista('ajax/fsupdate.php')
+}
+
 export function leerVehiculos(): Promise<RespuestaConector<unknown[]>> {
   return leerLista('ajax/vehicles.php?cmd=list')
 }

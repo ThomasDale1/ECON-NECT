@@ -77,8 +77,21 @@ npm-debug.log*
 yarn-error.log*
 .eslintcache
 coverage/
+.playwright-cli/
 .vscode/
 .idea/
+
+# --- Python / servicio local de inteligencia --------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+datasets/
+checkpoints/
+adapters/
+models/
 
 # --- Temporales de sesión ----------------------------------------------------
 scratch/

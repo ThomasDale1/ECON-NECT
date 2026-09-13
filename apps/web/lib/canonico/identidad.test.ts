@@ -37,6 +37,7 @@ function equipo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string }): 
     active_failure_status: null,
     active_failure_is_paro: null,
     fallas_count: null,
+    updated_at: null,
     fecha_inicio_uso: null,
     fecha_fin_uso: null,
     ...parcial,
@@ -54,6 +55,7 @@ function vehiculo(parcial: Partial<VehiculoStartrackCrudo> & { id: number | stri
     unit_id: null,
     driver_id: null,
     license_plate: null,
+    last_contact_date: null,
     ...parcial,
   }
 }

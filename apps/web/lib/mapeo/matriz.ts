@@ -111,12 +111,12 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
   {
     modulo: 'Maquinaria',
     campoPrisma: 'Estado (módulo Maquinaria — el recurso)',
-    campoStartrack: 'Estado (módulo Vehículos)',
-    tipoRelacion: 'mismo nombre, distinto significado',
+    campoStartrack: 'Estado (módulo Vehículos — status 0–9 del conductor)',
+    tipoRelacion: 'sin equivalencia directa',
     transformacion:
-      'Ninguna transformación resuelve esto: describen objetos distintos con catálogos distintos. No se fusionan (01 Parte C.3) — se conservan ambos y se etiquetan con qué objeto describen.',
+      'Ninguna transformación: Prisma `estado` es el recurso; Startrack `status` es el estado del conductor. No se fusionan.',
     evidencia:
-      '01 Parte E.2 (verificado contra la API real): el catálogo del recurso en Prisma tiene 3 valores en mayúsculas — DISPONIBLE, OCUPADA, OBSOLETA — y no incluye "en mantenimiento". El diccionario de datos (hoja PRISMA, módulo Maquinaria, campo "Estado" — "Estado operativo o de disponibilidad de la maquinaria") documenta un catálogo distinto de 5 valores en Título — Disponible; Ocupada; Mant. preventivo; Mant. correctivo; Obsoletas — que mezcla el estado del recurso con el de la máquina de estados de falla. Es evidencia directa de "dos vocabularios dentro del mismo sistema" (01 E.8). Startrack (hoja STARTRACK, módulo Vehículos, campo "Estado") documenta un catálogo distinto ("Normal" como ejemplo); verificado contra la API real: el valor observado es constante ("0" en 14 de 14 registros) — describe la salud del rastreo del activo, poblado de forma uniforme, no su disponibilidad operativa.',
+      '01 Parte E.2 (verificado contra la API real): el catálogo del recurso en Prisma tiene 3 valores en mayúsculas — DISPONIBLE, OCUPADA, OBSOLETA — y no incluye "en mantenimiento". El diccionario de datos (hoja PRISMA, módulo Maquinaria, campo "Estado" — "Estado operativo o de disponibilidad de la maquinaria") documenta un catálogo distinto de 5 valores en Título — Disponible; Ocupada; Mant. preventivo; Mant. correctivo; Obsoletas — que mezcla el estado del recurso con el de la máquina de estados de falla. Es evidencia directa de "dos vocabularios dentro del mismo sistema" (01 E.8). Startrack expone `status` como código 0-9 (API: ajax/vehicles.php). Interpretación operativa del 13-sep-2026: 0 / vacío / null = Normal; 1 = Mantenimiento; 2 = Fuera de servicio; 3 = Dispositivo de rastreo en reparación; 4 = Se usa de vez en cuando; 5 = En línea; 6 = Fuera de línea; 7 = Almorzando; 8 = Reunión; 9 = Vacaciones. El "0" observado en 14 de 14 era ese código, no "salud del rastreo". Confirmado el 13-sep-2026: el catálogo describe al conductor (Almorzando, Reunión, Vacaciones, En línea…), no al recurso. No se fusiona con DISPONIBLE / OCUPADA / OBSOLETA.',
     confianza: 'alta',
     critico: true,
   },

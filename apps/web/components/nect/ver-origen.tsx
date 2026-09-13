@@ -42,14 +42,18 @@ export function VerOrigen({
   etiqueta = 'Ver origen',
   compacto = false,
 }: {
-  linaje: Linaje[]
+  /** Uno o varios linajes. Se acepta el escalar porque la ficha del equipo
+   * (S-B2) documenta campo por campo, mientras el calendario (S-B4) agrupa
+   * varios en un solo popover. */
+  linaje: Linaje | Linaje[]
   etiqueta?: string
   /** Solo el ícono, sin la etiqueta de texto — para espacios angostos (una
    * barra de un día en el timeline de S-B4). El popover completo se mantiene
    * igual; `title` cubre la accesibilidad que perdía el texto visible. */
   compacto?: boolean
 }) {
-  if (linaje.length === 0) return null
+  const linajes = Array.isArray(linaje) ? linaje : [linaje]
+  if (linajes.length === 0) return null
 
   return (
     <Popover>
@@ -75,7 +79,7 @@ export function VerOrigen({
           Linaje del dato
         </p>
         <div className="flex flex-col gap-2.5">
-          {linaje.map((l, i) => (
+          {linajes.map((l, i) => (
             <div key={i} className="flex flex-col gap-1 border-t border-border pt-2 first:border-t-0 first:pt-0">
               <div className="flex items-center justify-between gap-2">
                 <BadgeOrigen plataforma={l.plataforma} corto />

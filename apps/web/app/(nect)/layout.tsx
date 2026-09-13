@@ -1,42 +1,33 @@
-import { Exo, Lato, Roboto_Condensed } from 'next/font/google'
 import { BarraLateral } from '@/components/comando/barra-lateral'
-import { leerFlota } from '@/lib/lectura/flota'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
+import { actualizarFuente, actualizarFuentes } from './acciones'
 
 /**
- * Envoltorio de las pantallas de ECON NECT: barra lateral fija + área de trabajo.
+ * Envoltorio de las pantallas de ECON NECT.
  *
- * Las fuentes se declaran acá y no en `app/layout.tsx` porque ese archivo es del
- * carril A (AGENTS.md §4.2). Las variables se aplican al contenedor, así que
- * cubren todo el subárbol de rutas sin tocar territorio ajeno.
+ * La barra lateral vive acá, no en cada página. Un layout no se vuelve a
+ * montar al navegar, así que su estado de contracción sobrevive de una
+ * pantalla a otra.
+ *
+ * La lectura está memoizada por petición (`cache()` de React), así que que el
+ * layout pida la salud y la página pida los equipos no duplica llamadas al
+ * sandbox.
+ *
+ * Exo, Lato y Roboto Condensed se declaran en `app/layout.tsx` sobre `<html>`
+ * para que los diálogos portaleados hereden la misma letra que el command center.
  */
-const exo = Exo({ subsets: ['latin'], variable: '--font-exo', display: 'swap' })
-const lato = Lato({
-  subsets: ['latin'],
-  weight: ['400', '700', '900'],
-  variable: '--font-lato',
-  display: 'swap',
-})
-const robotoCondensed = Roboto_Condensed({
-  subsets: ['latin'],
-  variable: '--font-roboto-condensed',
-  display: 'swap',
-})
-
-// La salud de cada conector es real desde S-A3: sale de `lib/lectura/flota.ts`,
-// que mide cada plataforma por separado y declara la que no respondió. No pasa
-// por `GET /api/salud` porque esto ya corre en el servidor; la caché de
-// conectores (45 s) evita que cada navegación vuelva a golpear el sandbox.
+// Nada de esto se cachea entre visitas: la salud de cada conector es una
+// medición en vivo. El caché de conectores (45 s) evita que cada navegación
+// vuelva a golpear el sandbox.
 export const dynamic = 'force-dynamic'
 
 export default async function NectLayout({ children }: { children: React.ReactNode }) {
-  const { salud } = await leerFlota({ incluirPosicionEnVivo: false })
+  const { salud } = await leerEquiposUnificados()
 
   return (
-    <div
-      className={`${exo.variable} ${lato.variable} ${robotoCondensed.variable} flex min-h-screen bg-background font-sans text-foreground antialiased`}
-    >
-      <BarraLateral salud={salud} />
-      <div className="flex min-w-0 flex-1 flex-col">{children}</div>
+    <div className="flex min-h-screen bg-background font-sans text-foreground antialiased">
+      <BarraLateral salud={salud} onActualizar={actualizarFuente} onActualizarTodas={actualizarFuentes} />
+      {children}
     </div>
   )
 }

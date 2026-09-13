@@ -83,6 +83,22 @@ export const CATALOGO_KPI: Kpi[] = [
     datoFaltante: null,
   },
   {
+    id: 'estado-flota-30d',
+    nombre: 'Estado operativo de la flota, últimos 30 días',
+    queMide:
+      'Cómo cambió el estado operativo de la flota día a día en la última ventana de 30 días.',
+    porQueImporta:
+      'Dirección necesita ver si una incoherencia es un pico o un patrón. Una foto de hoy no alcanza para esa decisión.',
+    formula:
+      'Una observación por día: recuento de equipos por veredicto (o por moving_status de Startrack) en cada lectura persistida.',
+    referencia: 'Contra la propia serie de las últimas 4 semanas, cuando exista.',
+    accionQueDispara: 'Si el patrón empeora, abrir la bandeja; si es un pico de un día, no reorganizar la flota.',
+    porQueNingunaPlataformaLoVeSola:
+      'Prisma no guarda el veredicto cruzado. Startrack guarda telemetría viva, no la serie reconciliada de ECON NECT.',
+    datoFaltante:
+      'Histórico de 30 días. Los conectores leen el estado actual, no una serie. No se inventa una curva ni un porcentaje de tendencia.',
+  },
+  {
     id: 'ahorro-por-objetivo-optimizador',
     nombre: 'Ahorro del plan frente a la peor opción válida',
     queMide:

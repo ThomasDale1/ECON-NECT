@@ -20,19 +20,20 @@ export function proxy(request: NextRequest) {
   // cliente que la consume.
   if (request.nextUrl.pathname.startsWith('/api/')) {
     return NextResponse.json(
-      { error: 'no_autorizado', mensaje: 'Sin sesión. Entrá en /acceso.' },
+      { error: 'no_autorizado', mensaje: 'Sin sesión. Entrá en /entrar.' },
       { status: 401 },
     )
   }
 
-  const destino = new URL('/acceso', request.url)
-  destino.searchParams.set('desde', request.nextUrl.pathname)
+  // La pantalla de acceso vuelve a donde el usuario quería ir.
+  const destino = new URL('/entrar', request.url)
+  destino.searchParams.set('siguiente', request.nextUrl.pathname + request.nextUrl.search)
   return NextResponse.redirect(destino)
 }
 
 export const config = {
-  // Quedan fuera: los estáticos de Next, la pantalla de acceso y su ruta, y
+  // Quedan fuera: los estáticos de Next, la pantalla de acceso `/entrar`, y
   // `/api/salud` — que tiene que poder responder sin sesión, porque la propia
   // pantalla de acceso muestra el estado de las dos plataformas.
-  matcher: ['/((?!_next|acceso|api/acceso|api/salud|.*\\..*).*)'],
+  matcher: ['/((?!entrar|_next|api/salud|.*\\..*).*)'],
 }
