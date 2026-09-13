@@ -113,6 +113,25 @@ export type GeocercaStartrackCruda = {
   group_id: number | string | null
 }
 
+/**
+ * La misma geocerca leída por `GET /api/pois`, que sí trae geometría
+ * (13 de septiembre de 2026). `radius` e `is_round` llegan como **texto** en la
+ * respuesta real, igual que `x`/`y`: se parsean en la capa canónica, no acá.
+ *
+ * `is_round` vale 1 en las circulares —donde `radius` es el radio— y 0 en las
+ * poligonales, donde `radius` describe el círculo que las contiene. La unidad
+ * no viene declarada; los valores observados van de 15 a 1003, coherente con
+ * metros.
+ */
+export type GeocercaConGeometriaCruda = {
+  id: number | string
+  name: string | null
+  x: number | string | null
+  y: number | string | null
+  radius: number | string | null
+  is_round: number | string | null
+}
+
 export type TareaStartrackCruda = {
   id: number | string
   status: string | null

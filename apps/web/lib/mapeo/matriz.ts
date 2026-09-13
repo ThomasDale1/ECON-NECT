@@ -581,6 +581,15 @@ const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
     tipoDato: 'Catálogo',
     ejemplo: 'DISPONIBLE (valor de catálogo)',
   },
+  'mantenimiento_fecha_inicio, mantenimiento_fecha_fin, mantenimiento_notas (GET/PATCH /api/maquinaria/equipos/{id})':
+    {
+      tipoDato: 'Dos fechas AAAA-MM-DD y un texto libre',
+      ejemplo: 'Ventana de mantenimiento y su nota (forma del valor)',
+    },
+  'hour_meter (GET /api/maquinaria/fallas)': {
+    tipoDato: 'Numérico — horómetro al momento de la falla',
+    ejemplo: 'Horas acumuladas del equipo (forma del valor)',
+  },
 }
 
 const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
@@ -679,6 +688,23 @@ const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
       tipoDato: 'Numérico en minutos (unidad inferida, no declarada)',
       ejemplo: 'Minutos con motor encendido en el día (forma del valor)',
     },
+  'Horas de motor acumuladas del vehículo del conductor — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)':
+    {
+      tipoDato: 'Numérico en horas acumuladas (verificado contra ign_on_time)',
+      ejemplo: 'Horas de motor acumuladas del vehículo (forma del valor)',
+    },
+  'status = 1 (PUT api/vehicle/{id})': {
+    tipoDato: 'Entero del catálogo de estado del conductor (1 = Mantenimiento)',
+    ejemplo: 'Valor de catálogo, escrito por la propagación',
+  },
+  'curOperatingHours (ajax/report.php?id=22, reporte Estado de flota)': {
+    tipoDato: 'Numérico — horas de operación acumuladas',
+    ejemplo: 'Horómetro vivo del vehículo (forma del valor)',
+  },
+  'detail[].ignOnTime (ajax/report.php?id=3, Resumen Diario)': {
+    tipoDato: 'Numérico en segundos (verificado el 13 de septiembre de 2026)',
+    ejemplo: 'Segundos con motor encendido en el día (forma del valor)',
+  },
 }
 
 /**

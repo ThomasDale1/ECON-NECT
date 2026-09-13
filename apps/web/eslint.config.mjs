@@ -12,6 +12,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Sondas de investigación contra el sandbox: se escriben para verificar un
+    // supuesto contra la API y se borran. No son código de producto y no deben
+    // poder romper el gate de lint que bloquea los merges (AGENTS.md §4.4).
+    "scripts/_*.ts",
   ]),
 ]);
 

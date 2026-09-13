@@ -266,10 +266,16 @@ export function resolverConductoresDeOperadores(
 /**
  * Distancia en metros entre dos puntos (fórmula del semiverseno).
  *
- * `ajax/namedPlaces.php` publica el centro de la geocerca pero **no su radio**,
- * verificado campo por campo. Sin radio no se puede afirmar "dentro" ni "fuera":
- * esta distancia es lo único afirmable sobre la relación entre el equipo y su
- * geocerca, y así se presenta en pantalla.
+ * Corregido el 13 de septiembre de 2026: este comentario afirmaba que Startrack
+ * no publica el radio de la geocerca y que por eso "dentro" y "fuera" no eran
+ * afirmables. Era falso, y el error tenía una causa concreta: el sondeo se hizo
+ * solo contra `ajax/namedPlaces.php?cmd=list`, que devuelve nueve campos sin
+ * geometría. El radio está en `GET /api/pois` y en `cmd=detail` — el mismo
+ * patrón que ya había pasado con las tareas, donde la ruta buena estaba en la
+ * superficie REST moderna.
+ *
+ * La distancia sigue siendo esto; quien la compara contra el radio para decidir
+ * dentro/fuera es `geocercaConDistancia` en el orquestador.
  */
 export function distanciaEnMetros(
   latA: number,

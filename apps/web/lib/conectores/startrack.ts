@@ -203,6 +203,54 @@ export function leerConductores(): Promise<RespuestaConector<unknown[]>> {
   return leerLista('ajax/drivers.php?cmd=list')
 }
 
+// ── Geometría de las geocercas (13 de septiembre de 2026) ───────────────────
+//
+// **Corrección de un hallazgo previo.** El proyecto documentaba en tres puntos
+// que "Startrack publica el centro de la geocerca pero no su radio", y de ahí
+// que no se pudiera afirmar "dentro" ni "fuera". La afirmación salió de sondear
+// `ajax/namedPlaces.php?cmd=list`, que efectivamente devuelve nueve campos sin
+// geometría (id, name, address, group_id, created_by, creation_date, user_ids,
+// x, y).
+//
+// El radio sí existe, en la superficie REST moderna — el mismo patrón que ya
+// había pasado con las tareas, donde `ajax/jobs.php` daba 404 y la ruta buena
+// era `GET /api/job`. Verificado en vivo contra el sandbox:
+//
+//   GET /api/pois  → 20 registros. `radius` poblado en 20 de 20 (18 con valor
+//   mayor que cero), `is_round` con los dos valores 0 y 1, `geom` en 20 de 20,
+//   `corners` en 2 de 20.
+//
+// La otra vía es `ajax/namedPlaces.php?cmd=detail&id=<id>`, que agrega
+// `radius`, `is_round`, `vertices` y `bounding_box_wkt`. Se elige `/api/pois`
+// porque resuelve las 20 en una sola llamada en vez de una por geocerca.
+//
+// Proyecta dentro del conector: de todos los campos del POI salen solo los seis
+// que la cascada de ubicación necesita. `contact`, `url`, `photo_id` y los de
+// recurrencia de visitas no se leen.
+const ENDPOINT_POIS = 'api/pois'
+
+export function leerGeocercasConGeometria(): Promise<RespuestaConector<unknown[]>> {
+  return conCache(`startrack:${ENDPOINT_POIS}`, async () => {
+    const cuerpo = await peticionApiJson(ENDPOINT_POIS)
+    const lista = Array.isArray(cuerpo.data) ? (cuerpo.data as unknown[]) : []
+
+    const proyectadas = lista.map((cruda) => {
+      const p = cruda as Record<string, unknown>
+      return {
+        id: p.id,
+        name: p.name ?? null,
+        x: p.x ?? null,
+        y: p.y ?? null,
+        // Llegan como texto en la respuesta real; se parsean en la capa canónica.
+        radius: p.radius ?? null,
+        is_round: p.is_round ?? null,
+      }
+    })
+
+    return envolver(proyectadas as unknown[], PLATAFORMA, ENDPOINT_POIS)
+  })
+}
+
 // ── Operadores del optimizador (S-A10 Paso 2) ───────────────────────────────
 //
 // Los dos lectores de abajo PROYECTAN dentro del conector: lo que no se
