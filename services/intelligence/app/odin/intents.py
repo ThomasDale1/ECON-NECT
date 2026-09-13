@@ -28,7 +28,7 @@ def _normalize(message: str) -> str:
 
 
 def detect_intent(message: str) -> Intent:
-    """Router deliberadamente pequeño: solo reconoce las tres intenciones MVP."""
+    """Tres lecturas + pregunta libre sobre el equipo. Escribir sigue fuera."""
 
     text = _normalize(message)
     tokens = set(re.findall(r"[a-z0-9_-]+", text))
@@ -45,5 +45,5 @@ def detect_intent(message: str) -> Intent:
     if any(word in text for word in ("estado", "disponible", "situacion", "snapshot", "equipo", "activo")):
         return Intent.QUERY_ASSET_STATUS
 
-    return Intent.OUT_OF_SCOPE
+    return Intent.QUERY_ASSET_STATUS
 

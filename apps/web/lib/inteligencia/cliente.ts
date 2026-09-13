@@ -27,7 +27,7 @@ export async function consultarOdin(input: {
         context: input.context,
       }),
       cache: 'no-store',
-      signal: AbortSignal.timeout(25_000),
+      signal: AbortSignal.timeout(90_000),
     })
 
     if (!response.ok) {
