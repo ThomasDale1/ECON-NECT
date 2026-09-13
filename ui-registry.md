@@ -270,4 +270,86 @@ Notas: <desviaciones del baseline y su justificación>
 Registrado: <sprint> · <fecha>
 ```
 
-*(Sin entradas todavía — primera sesión de UI pendiente, S-B1.)*
+### BadgeVeredicto
+File: apps/web/components/nect/badge-veredicto.tsx
+Tipo: badge
+Clases: `rounded-full py-1 pl-2 pr-2.5` + `font-label text-[10px] font-bold uppercase`
+Tokens de color: los cuatro pares de §1.1. `SIN_EVIDENCIA` en violeta, nunca rojo.
+Notas: siempre ícono + texto (§5). Íconos de lucide: CircleCheck, TriangleAlert,
+OctagonAlert, CircleHelp — uno distinto por veredicto, para que el significado no
+dependa del color.
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### BadgeOrigen
+File: apps/web/components/nect/badge-origen.tsx
+Tipo: badge
+Clases: `border border-border bg-card rounded-full` + punto `size-1.5 rounded-full`
+Tokens de color: `--color-origen-prisma` azul, `--color-origen-startrack` naranja.
+Notas: resuelve el conflicto de §1.2. El mockup traía el badge de Startrack con
+relleno rojo, igual al rojo de `EN_RIESGO`; acá va de contorno con punto naranja.
+La prop `corto` deja solo el nombre para espacios estrechos.
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### BarraConfianza
+File: apps/web/components/nect/barra-confianza.tsx
+Tipo: tile
+Clases: pista `h-1.5 w-12 rounded-full bg-muted` + `font-mono text-xs`
+Tokens de color: escala de §1.3 — verde ≥85, ámbar 65–84, naranja 45–64, gris <45.
+Notas: `role="meter"` con `aria-valuenow` y etiqueta que dice la lectura en
+palabras, porque el color solo no comunica. Por debajo de 45 va en gris y no en
+rojo: un dato insuficiente es un hueco, no una alarma.
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### BarraLateral
+File: apps/web/components/comando/barra-lateral.tsx
+Tipo: overlay
+Clases: `w-60 bg-marina text-white flex flex-col justify-between`
+Tokens de color: azules de marca (`--color-marina*`, `--color-marca*`); el punto de
+salud usa los tokens de veredicto.
+Notas: ancho 240px y `#0B1E30` tomados del Figma, no el `w-64 #0F1E3D` de §3.1 —
+el registro describe el mismo mockup de forma aproximada. El estado de plataformas
+está cableado a constantes; sale de la salud real en S-A1.
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### BarraSuperior
+File: apps/web/components/comando/barra-superior.tsx
+Tipo: card
+Clases: `border-b border-border bg-card px-9 py-4 shadow-header`
+Tokens de color: píldora en `--color-veredicto-riesgo` (en vivo) o
+`--color-veredicto-atencion` (dato viejo).
+Notas: la prop `datoViejo` implementa la regla de §3.2 — si la última lectura pasó
+el TTL, la píldora dice DATO VIEJO en ámbar en vez de EN VIVO. El avatar es de
+iniciales y no una foto: una foto de una persona real no entra al repo (§1.2).
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### PanelSituacion
+File: apps/web/components/comando/panel-situacion.tsx
+Tipo: card
+Clases: `rounded-xl bg-card p-5 shadow-card`
+Tokens de color: variante de alerta con `--color-veredicto-riesgo`.
+Notas: §3.3 — en la variante de alerta el color entra por el contenido interno, no
+por el borde del panel; el card exterior sigue blanco. Controles de carrusel con
+`aria-label` por botón y `aria-current` en el punto activo.
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### PanelEnCurso · PanelFueraDeGeocerca
+File: apps/web/components/comando/paneles-situacion.tsx
+Tipo: card
+Clases: fila de activo `rounded-xl p-4` + ícono `size-14 rounded-2xl`
+Tokens de color: `--color-origen-prisma/10` en la neutra, `--color-veredicto-riesgo`
+y su fondo en la de alerta.
+Notas: íconos de lucide (Truck, MapPin, ArrowRight, Clock, X); no se versionó ningún
+SVG exportado de Figma porque los nodos del diseño ya eran íconos de lucide.
+Registrado: S-B1 · 12 de septiembre de 2026
+
+### TablaExcepciones
+File: apps/web/components/comando/tabla-excepciones.tsx
+Tipo: tabla
+Clases: `overflow-x-auto rounded-xl border border-border` + `<th scope="col">` y
+`<caption>` accesible
+Tokens de color: los del BadgeVeredicto y la BarraConfianza; la tabla en sí no pinta.
+Notas: ocho columnas en el orden de §3.4, incluida **Responsable**, que el mockup no
+traía. Cada valor de Prisma y Startrack lleva debajo su etiqueta de qué objeto
+describe: sin eso la tabla no resuelve el Caso de Uso 02. El dato ausente se escribe
+`Sin registro` en muted, nunca celda vacía. Estado vacío incluido.
+Registrado: S-B1 · 12 de septiembre de 2026
