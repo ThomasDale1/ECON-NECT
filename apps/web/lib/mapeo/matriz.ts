@@ -466,7 +466,7 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     critico: false,
   },
 
-  // Coherencia de estado — resolver R2 desde el expediente
+  // Coherencia de estado — resolver R2 desde "Tomar acción" del centro de comando
   {
     modulo: 'Coherencia de estado (R2)',
     campoPrisma: 'estado del equipo (PATCH /api/maquinaria/equipos/{id}/estado)',
