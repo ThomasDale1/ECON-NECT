@@ -87,16 +87,39 @@ export type ResultadoRegla = {
 /**
  * La geocerca del proyecto asignado, con la distancia a la posición reportada.
  *
- * `radioMetros` es siempre `null`: `ajax/namedPlaces.php` publica el centro y el
- * nombre, no el radio ni la forma. Sin radio **no se puede afirmar "dentro" o
- * "fuera"**, solo a qué distancia está. El hueco se declara, no se rellena.
+ * `radioMetros` sale de `GET /api/pois` (13 de septiembre de 2026). Hasta
+ * entonces el proyecto lo daba por inexistente porque
+ * `ajax/namedPlaces.php?cmd=list` no lo publica; el sondeo se había hecho solo
+ * contra ese endpoint. **Con radio y posición en vivo sí se puede afirmar
+ * "dentro" o "fuera"**, y eso es lo que expone `dentro`. Cuando falta
+ * cualquiera de los dos el campo va en `null` — que no es lo mismo que estar
+ * fuera. El hueco se declara, no se rellena.
  */
 export type Geocerca = {
   nombre: Dato<string>
   lat: Dato<number>
   lon: Dato<number>
   distanciaMetros: number | null
+  /**
+   * Radio de la geocerca, en metros. Sale de `GET /api/pois` (`radius`), no de
+   * `ajax/namedPlaces.php?cmd=list`, que no lo publica — de ahí venía la
+   * afirmación anterior de que el radio no existía. `null` cuando la geocerca
+   * no trae radio utilizable.
+   */
   radioMetros: number | null
+  /**
+   * ¿El equipo está dentro de su geocerca? `true`/`false` solo cuando hay
+   * posición en vivo Y radio; `null` cuando falta cualquiera de los dos, que es
+   * distinto de "está fuera".
+   *
+   * En las geocercas poligonales (`is_round = 0`) el radio describe el círculo
+   * que las contiene, así que un `false` es firme —está fuera del círculo, y
+   * por lo tanto del polígono— pero un `true` significa "dentro del círculo
+   * que la contiene". Eso lo declara `precisionRadio`.
+   */
+  dentro: boolean | null
+  /** `exacta` en las circulares; `circulo-contenedor` en las poligonales. */
+  precisionRadio: 'exacta' | 'circulo-contenedor' | null
 }
 
 /**
