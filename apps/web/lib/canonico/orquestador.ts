@@ -76,7 +76,7 @@ export type LecturaUnificada = {
   equipos: EquipoUnificado[]
   salud: SaludFuente[]
   urlStartrack: string | null
-  /** Base de Prisma (sin path inventado: no hay UI documentada de búsqueda). */
+  /** Host de Prisma. La ficha de un equipo es `{urlPrisma}/maquinaria/equipos/{id}`. */
   urlPrisma: string | null
   leidoEn: string
 }
@@ -185,7 +185,6 @@ async function leerTodo(): Promise<LecturaUnificada> {
   })
 
   const hostStartrack = process.env.STARTRACK_BASE_URL?.replace(/\/+$/, '') ?? null
-  // Sin path de UI documentado para Prisma: solo la base recortada.
   const hostPrisma = process.env.PRISMA_BASE_URL?.replace(/\/+$/, '') ?? null
 
   return {

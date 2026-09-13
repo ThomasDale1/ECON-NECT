@@ -6,6 +6,7 @@ import { VerOrigen } from '@/components/nect/ver-origen'
 import { agenteResponsablePorRol } from '@/lib/gobernanza/raci'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen } from '@/lib/tipos/canonico'
+import { urlFichaPrisma } from '@/lib/nect/enlaces'
 import { cn } from '@/lib/utils'
 
 /**
@@ -391,7 +392,7 @@ export function FichaEquipo({
             <div className="flex flex-wrap gap-2">
               <BadgeOrigen
                 plataforma="prisma"
-                href={urlPrisma}
+                href={urlFichaPrisma(urlPrisma, equipo.id)}
                 equipo={equipo.codigoActivo.valor ?? undefined}
               />
               <BadgeOrigen

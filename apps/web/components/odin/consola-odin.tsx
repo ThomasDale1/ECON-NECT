@@ -9,6 +9,7 @@ import { IconoMaquinaria } from '@/components/nect/icono-maquinaria'
 import { TextoEnfasis } from '@/components/odin/texto-enfasis'
 import type { ClaseEquipoCatalogo } from '@/lib/canonico/catalogos'
 import type { RespuestaOdin } from '@/lib/inteligencia/tipos'
+import { urlFichaPrisma } from '@/lib/nect/enlaces'
 import type { Veredicto } from '@/lib/tipos/canonico'
 
 type EquipoOdin = {
@@ -167,7 +168,7 @@ export function ConsolaOdin({
             <BadgeOrigen
               plataforma="prisma"
               corto
-              href={urlPrisma}
+              href={urlFichaPrisma(urlPrisma, seleccionado.id)}
               equipo={seleccionado.codigo}
             />
             <BadgeOrigen

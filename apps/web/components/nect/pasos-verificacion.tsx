@@ -1,4 +1,5 @@
 import { BadgeOrigen } from '@/components/nect/badge-origen'
+import { urlFichaPrisma } from '@/lib/nect/enlaces'
 import type { EquipoUnificado } from '@/lib/tipos/canonico'
 
 /**
@@ -32,8 +33,8 @@ export function PasosVerificacion({
       </h3>
       <ol className="flex list-decimal flex-col gap-3 pl-5 font-label text-[13px] leading-relaxed text-foreground">
         <li className="flex flex-wrap items-center gap-2">
-          <span>Abrí Prisma y pegá el código de activo en la búsqueda.</span>
-          <BadgeOrigen plataforma="prisma" corto href={urlPrisma} equipo={codigo} />
+          <span>Abrí la ficha del equipo en Prisma.</span>
+          <BadgeOrigen plataforma="prisma" corto href={urlFichaPrisma(urlPrisma, equipo.id)} equipo={codigo} />
         </li>
         <li className="flex flex-wrap items-center gap-2">
           <span>Abrí Startrack y pegá el mismo código en el filtro.</span>

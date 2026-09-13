@@ -14,12 +14,9 @@ import { cn } from '@/lib/utils'
  * mismo rojo de `EN_RIESGO`, y en una tabla de excepciones eso hace que cada
  * fila parezca crítica.
  *
- * **Por qué copia el código en vez de enlazar al vehículo:** la pantalla de
- * rastreo de Startrack (`members-new.php`) no guarda estado en la URL —
- * seleccionar una unidad no la cambia— y su bundle solo lee `jobStatus` como
- * parámetro. No existe deep link por vehículo. Prisma tampoco documenta un
- * deep link de búsqueda de activo. Así que al pulsar se copia el código y se
- * abre la plataforma: el operador pega en el filtro/búsqueda.
+ * Prisma sí tiene ficha por id (`/maquinaria/equipos/{id}`). Startrack no:
+ * `members-new.php` no guarda el vehículo en la URL, así que al pulsar se
+ * copia el código y se abre el mapa para pegarlo en el filtro.
  */
 const PRESENTACION: Record<
   Plataforma,
@@ -118,16 +115,20 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
       href={href}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={copiarCodigo}
+      onClick={plataforma === 'startrack' ? copiarCodigo : undefined}
       aria-label={
-        equipo
-          ? `Abrir ${destino} y copiar el código ${equipo} para pegarlo en la búsqueda (se abre en otra pestaña)`
-          : `Abrir ${etiqueta} (se abre en otra pestaña)`
+        plataforma === 'prisma'
+          ? `Abrir la ficha de Prisma (se abre en otra pestaña)`
+          : equipo
+            ? `Abrir ${destino} y copiar el código ${equipo} para pegarlo en la búsqueda (se abre en otra pestaña)`
+            : `Abrir ${etiqueta} (se abre en otra pestaña)`
       }
       title={
-        equipo
-          ? `Copia ${equipo} y abre ${destino}. Pegá el código en el filtro o la búsqueda.`
-          : `Abrir ${etiqueta}`
+        plataforma === 'prisma'
+          ? 'Abrir la ficha del equipo en Prisma'
+          : equipo
+            ? `Copia ${equipo} y abre ${destino}. Pegá el código en el filtro o la búsqueda.`
+            : `Abrir ${etiqueta}`
       }
       className={cn(
         clases,
