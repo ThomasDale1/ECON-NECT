@@ -35,7 +35,8 @@ class OllamaClient:
                     "content": build_explanation_prompt(question, tool_result),
                 },
             ],
-            "options": {"temperature": 0.1, "num_predict": 180},
+            "keep_alive": "30m",
+            "options": {"temperature": 0.1, "num_predict": 120},
         }
 
         try:

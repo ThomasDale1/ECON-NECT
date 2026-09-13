@@ -3,7 +3,7 @@
 // con su veredicto. No conoce HTTP.
 
 import { REGLAS, type ContextoReglas } from '@/lib/reglas'
-import type { EquipoUnificado, ResultadoRegla, Veredicto } from '@/lib/tipos/canonico'
+import type { EquipoUnificado, NivelResolucionIdentidad, ResultadoRegla, Veredicto } from '@/lib/tipos/canonico'
 import { CATALOGO_CLASE_EQUIPO, CATALOGO_TIPO_TAREA } from './catalogos'
 import { puedeOperar } from './estados'
 import {
@@ -14,7 +14,7 @@ import {
   tareasDeVehiculo,
 } from './identidad'
 import { construirEquipoUnificado } from './modelo'
-import type { DatosCrudos } from './tipos-crudos'
+import type { DatosCrudos, SolicitudPrismaCruda, TareaStartrackCruda } from './tipos-crudos'
 
 const PRECEDENCIA_VEREDICTO: Record<Veredicto, number> = {
   EN_RIESGO: 3,
@@ -23,19 +23,90 @@ const PRECEDENCIA_VEREDICTO: Record<Veredicto, number> = {
   SIN_EVIDENCIA: 0,
 }
 
+const CINCO_MINUTOS_MS = 5 * 60 * 1000
+
+/**
+ * Sugerencia en español cuando Startrack va por delante de Prisma ≤ 5 minutos.
+ * Es una sugerencia para revisión humana, no un hecho ni un veredicto nuevo.
+ */
+const SUGERENCIA_DESFASE =
+  'Startrack muestra una marca de tiempo más reciente que Prisma (desfase de hasta 5 minutos). Es posible que Prisma aún no se haya actualizado; conviene revisar ambas plataformas antes de concluir.'
+
+function parseFecha(valor: string | null | undefined): number | null {
+  if (!valor) return null
+  const t = Date.parse(valor)
+  return Number.isFinite(t) ? t : null
+}
+
+/**
+ * Si la fecha de Startrack es posterior a la de Prisma por ≤ 5 minutos,
+ * sugiere (no afirma) que Prisma puede no haberse actualizado aún.
+ * Sin fechas en cualquiera de los dos lados → `null`. Nunca inventa timestamps.
+ */
+export function interpretarDesfase(
+  fechaPrisma: string | null | undefined,
+  fechaStartrack: string | null | undefined,
+): string | null {
+  const prismaMs = parseFecha(fechaPrisma)
+  const startrackMs = parseFecha(fechaStartrack)
+  if (prismaMs === null || startrackMs === null) return null
+  const delta = startrackMs - prismaMs
+  if (delta > 0 && delta <= CINCO_MINUTOS_MS) return SUGERENCIA_DESFASE
+  return null
+}
+
+/** Fecha de Prisma para el par solicitud↔tarea: solo campos ya tipados. */
+function fechaPrismaSolicitud(solicitud: SolicitudPrismaCruda): string | null {
+  return solicitud.approved_at ?? solicitud.fecha_inicio ?? solicitud.created_at
+}
+
+/**
+ * Combina el desfase solicitud↔tarea con el desfase equipo↔vehículo.
+ * Preferir `vehicle_status_changed_date` (fsupdate) sobre `last_contact_date`.
+ */
+export function interpretarDesfases(args: {
+  solicitud: SolicitudPrismaCruda | null
+  tarea: TareaStartrackCruda | null
+  equipoUpdatedAt: string | null | undefined
+  startrackVehiculoFecha: string | null | undefined
+}): string | null {
+  const porSolicitud =
+    args.solicitud && args.tarea
+      ? interpretarDesfase(fechaPrismaSolicitud(args.solicitud), args.tarea.start_date)
+      : null
+  const porEquipo = interpretarDesfase(args.equipoUpdatedAt, args.startrackVehiculoFecha)
+  return porSolicitud ?? porEquipo
+}
+
 /** Agregación del veredicto (S-A2 §lib/canonico/reconciliacion.ts): heurística
  * determinística y documentada, no ML. Exportada (además de usarse en
  * `reconciliar`) para poder probar la prueba obligatoria #5 de agregación de
- * forma aislada. */
+ * forma aislada.
+ *
+ * Penalización por identidad (heurística, NO certeza):
+ * - sin resolver: −60
+ * - nivel 1 (remote_id): sin penalización extra
+ * - nivel 2 (código de activo): −10
+ * - nivel 3 (clave): −25
+ * El umbral `confianza < 45` → SIN_EVIDENCIA es el de ui-registry.md §1.3. */
 export function agregarVeredicto(
   identidadResuelta: boolean,
   resultados: ResultadoRegla[],
+  nivelResolucionIdentidad: NivelResolucionIdentidad | null = null,
 ): { veredicto: Veredicto; confianza: number } {
   const concluidas = resultados.filter((r) => r.veredicto !== 'SIN_EVIDENCIA')
   const noConcluidas = resultados.filter((r) => r.veredicto === 'SIN_EVIDENCIA')
 
   let confianza = 100
-  if (!identidadResuelta) confianza -= 60
+  if (!identidadResuelta) {
+    confianza -= 60
+  } else if (nivelResolucionIdentidad === 2) {
+    confianza -= 10
+  } else if (nivelResolucionIdentidad === 3) {
+    confianza -= 25
+  }
+  // nivel 1: sin penalización extra — el enlace por remote_id es el más directo,
+  // pero sigue siendo heurística, no certeza medida.
   confianza -= 20 * noConcluidas.length
   confianza = Math.max(0, confianza)
 
@@ -48,6 +119,7 @@ export function agregarVeredicto(
       : 'SIN_EVIDENCIA'
 
   if (concluidas.length === 0) veredicto = 'SIN_EVIDENCIA'
+  // Heurística elegida de ui-registry.md §1.3 — no es una constante medida.
   if (confianza < 45) veredicto = 'SIN_EVIDENCIA'
 
   return { veredicto, confianza }
@@ -77,7 +149,7 @@ export function reconciliar(datos: DatosCrudos): EquipoUnificado[] {
     tareasPorEquipoId[id] = tareasDeVehiculo(vinculo.vehiculo, datos.tareas.datos)
     solicitudesPorEquipoId[id] = solicitudes
 
-    return construirEquipoUnificado({
+    const base = construirEquipoUnificado({
       vinculo,
       procedenciaEquipos: datos.equipos,
       procedenciaVehiculos: datos.vehiculos,
@@ -88,6 +160,18 @@ export function reconciliar(datos: DatosCrudos): EquipoUnificado[] {
       geocercas: datos.geocercas.datos,
       procedenciaGeocercas: datos.geocercas,
     })
+
+    // Desfase con fechas reales tipadas. Preferencia Startrack vehículo:
+    // last_contact_date aquí; orquestador puede sustituir por
+    // vehicle_status_changed_date de fsupdate cuando exista.
+    const interpretacionDesfase = interpretarDesfases({
+      solicitud,
+      tarea: resolucionTarea?.tarea ?? null,
+      equipoUpdatedAt: vinculo.equipo.updated_at,
+      startrackVehiculoFecha: vinculo.vehiculo?.last_contact_date ?? null,
+    })
+
+    return { ...base, interpretacionDesfase }
   })
 
   const ctx: ContextoReglas = {
@@ -116,7 +200,11 @@ export function reconciliar(datos: DatosCrudos): EquipoUnificado[] {
       (r): r is ResultadoRegla => r !== null,
     )
 
-    const { veredicto, confianza } = agregarVeredicto(equipoSinVeredicto.identidadResuelta, resultados)
+    const { veredicto, confianza } = agregarVeredicto(
+      equipoSinVeredicto.identidadResuelta,
+      resultados,
+      equipoSinVeredicto.nivelResolucionIdentidad,
+    )
 
     return { ...equipoSinVeredicto, veredicto, confianza, reglas: resultados }
   })

@@ -1,12 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart2,
   Bot,
-  Cpu,
   LayoutDashboard,
   List,
   PanelLeftClose,
@@ -15,7 +15,7 @@ import {
   Table2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { BotonActualizar } from '@/components/comando/boton-actualizar'
+import { BotonActualizar, BotonActualizarAmbas } from '@/components/comando/boton-actualizar'
 import type { Plataforma, SaludFuente } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
 
@@ -32,7 +32,7 @@ type Navegacion = { etiqueta: string; icono: LucideIcon; href: string }
 // La ficha unificada no está acá a propósito: necesita un equipo, y se entra a
 // ella desde la flota. Un ítem de nav que lleva a un 404 es peor que no tenerlo.
 const NAVEGACION: Navegacion[] = [
-  { etiqueta: 'Command Center', icono: LayoutDashboard, href: '/command-center' },
+  { etiqueta: 'Centro de comando', icono: LayoutDashboard, href: '/command-center' },
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
   { etiqueta: 'Mapeo y RACI', icono: Table2, href: '/mapeo' },
@@ -68,10 +68,12 @@ const TEXTO_SALUD: Record<Estado, string> = {
 export function BarraLateral({
   salud,
   onActualizar,
+  onActualizarTodas,
 }: {
   salud: SaludFuente[]
   /** Server Action de relectura. Sin ella el estado se muestra sin botón. */
   onActualizar?: (plataforma: Plataforma) => Promise<void>
+  onActualizarTodas?: () => Promise<void>
 }) {
   const ruta = usePathname()
   const [contraida, setContraida] = useState(false)
@@ -88,18 +90,19 @@ export function BarraLateral({
       )}
     >
       <div className={cn('flex flex-col gap-6 pb-4 pt-7', contraida ? 'px-3' : 'px-5')}>
-        <div className={cn('flex items-center gap-2.5', contraida && 'justify-center')}>
-          <div className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-marca-clara">
-            <Cpu aria-hidden className="size-5 text-white" />
-          </div>
-          {!contraida && (
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-heading text-[17px] font-extrabold leading-none">ECONNECT</span>
-              <span className="font-label text-[9px] uppercase leading-none text-marca-clara">
-                Capa de operaciones
-              </span>
-            </div>
-          )}
+        <div className={cn('flex items-center', contraida && 'justify-center')}>
+          <Image
+            src={contraida ? '/econ-nect-mark.png' : '/econ-nect-logo-marina.png'}
+            alt="ECON NECT"
+            width={contraida ? 34 : 168}
+            height={contraida ? 34 : 40}
+            priority
+            className={
+              contraida
+                ? 'size-[34px] shrink-0 object-contain'
+                : 'h-9 w-auto max-w-full object-contain object-left'
+            }
+          />
         </div>
 
         {contraida ? (
@@ -225,6 +228,10 @@ export function BarraLateral({
             )}
           </div>
         ))}
+
+        {onActualizarTodas && (
+          <BotonActualizarAmbas onActualizar={onActualizarTodas} contraida={contraida} />
+        )}
 
         {!contraida && <p className="font-label text-[10px] text-[#2d4a60]">v2.4.1-Tactical</p>}
 

@@ -32,12 +32,14 @@ function equipoUnificado(parcial: Partial<EquipoUnificado> = {}): EquipoUnificad
     codigoActivo: { valor: 'EQ-01', linaje: linaje('no_activo', 'EQ-01') },
     nombre: { valor: 'Equipo de prueba', linaje: linaje('nombre', 'Equipo de prueba') },
     identidadResuelta: true,
+    nivelResolucionIdentidad: 1,
     equipo: null,
     solicitud: null,
     falla: null,
     vehiculo: null,
     tarea: null,
     ubicacion: null,
+    interpretacionDesfase: null,
     veredicto: 'SIN_EVIDENCIA',
     confianza: 0,
     reglas: [],
@@ -78,6 +80,7 @@ function equipoCrudo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string
     active_failure_status: null,
     active_failure_is_paro: null,
     fallas_count: null,
+    updated_at: null,
     ...parcial,
   }
 }

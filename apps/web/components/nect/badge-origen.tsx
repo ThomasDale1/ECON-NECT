@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import Image from 'next/image'
 import { Check, ExternalLink } from 'lucide-react'
 import type { Plataforma } from '@/lib/tipos/canonico'
@@ -14,16 +14,26 @@ import { cn } from '@/lib/utils'
  * mismo rojo de `EN_RIESGO`, y en una tabla de excepciones eso hace que cada
  * fila parezca crítica.
  *
- * **Por qué copia el código en vez de enlazar al vehículo:** la pantalla de
- * rastreo de Startrack (`members-new.php`) no guarda estado en la URL —
- * seleccionar una unidad no la cambia— y su bundle solo lee `jobStatus` como
- * parámetro. No existe deep link por vehículo. Así que al pulsar se copia el
- * código y se abre el mapa: el operador pega en el filtro de la grilla y cae en
- * su unidad, sin depender de ninguna extensión del navegador.
+ * Prisma sí tiene ficha por id (`/maquinaria/equipos/{id}`). Startrack no:
+ * `members-new.php` no guarda el vehículo en la URL, así que al pulsar se
+ * copia el código y se abre el mapa para pegarlo en el filtro.
  */
-const PRESENTACION: Record<Plataforma, { etiqueta: string; contexto: string; punto: string }> = {
-  prisma: { etiqueta: 'Prisma', contexto: 'esperado', punto: 'bg-origen-prisma' },
-  startrack: { etiqueta: 'Startrack', contexto: 'observado', punto: 'bg-origen-startrack' },
+const PRESENTACION: Record<
+  Plataforma,
+  { etiqueta: string; contexto: string; punto: string; hover: string }
+> = {
+  prisma: {
+    etiqueta: 'Prisma',
+    contexto: 'esperado',
+    punto: 'bg-origen-prisma',
+    hover: 'hover:border-origen-prisma/40 hover:text-foreground',
+  },
+  startrack: {
+    etiqueta: 'Startrack',
+    contexto: 'observado',
+    punto: 'bg-origen-startrack',
+    hover: 'hover:border-origen-startrack/40 hover:text-foreground',
+  },
 }
 
 type Props = {
@@ -38,13 +48,12 @@ type Props = {
 }
 
 export function BadgeOrigen({ plataforma, corto = false, href, equipo, className }: Props) {
-  const { etiqueta, contexto, punto } = PRESENTACION[plataforma]
+  const { etiqueta, contexto, punto, hover } = PRESENTACION[plataforma]
   const [copiado, setCopiado] = useState(false)
 
   const contenido = (
     <>
       {plataforma === 'startrack' ? (
-        // El logo es la etiqueta: el `alt` lleva el nombre de la plataforma.
         <Image
           src="/startrack.png"
           alt={etiqueta}
@@ -54,7 +63,13 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
         />
       ) : (
         <>
-          <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', punto)} />
+          <Image
+            src="/prisma.png"
+            alt=""
+            width={16}
+            height={16}
+            className="size-3.5 shrink-0"
+          />
           {etiqueta}
         </>
       )}
@@ -78,42 +93,66 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
     return <span className={clases}>{contenido}</span>
   }
 
-  async function copiarCodigo() {
-    if (!equipo) return
+  async function copiar(texto: string) {
     try {
-      await navigator.clipboard.writeText(equipo)
+      await navigator.clipboard.writeText(texto)
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2500)
     } catch {
-      // Sin permiso de portapapeles el enlace sigue abriendo el mapa; no se
-      // interrumpe la navegación por no haber podido copiar.
+      // Sin portapapeles el enlace sigue abriendo.
     }
   }
+
+  function alPulsar(e: MouseEvent<HTMLAnchorElement>) {
+    if (plataforma === 'prisma' && href) {
+      e.preventDefault()
+      void copiar(href)
+      // Misma ventana nombrada: el primer click puede pedir login (SameSite=strict).
+      // Los siguientes navegan esa pestaña, ya con cookie de primer partido.
+      window.open(href, 'nect-prisma')
+      return
+    }
+    if (plataforma === 'startrack' && equipo) void copiar(equipo)
+  }
+
+  const destino =
+    plataforma === 'startrack'
+      ? 'el mapa de Startrack'
+      : 'Prisma'
 
   return (
     <a
       href={href}
       target="_blank"
-      rel="noopener noreferrer"
-      onClick={copiarCodigo}
+      rel={plataforma === 'prisma' ? 'noopener' : 'noopener noreferrer'}
+      onClick={alPulsar}
       aria-label={
-        equipo
-          ? `Abrir el mapa de Startrack y copiar el código ${equipo} para pegarlo en el filtro (se abre en otra pestaña)`
-          : `Abrir ${etiqueta} (se abre en otra pestaña)`
+        plataforma === 'prisma'
+          ? `Abrir la ficha de Prisma (se abre en otra pestaña)`
+          : equipo
+            ? `Abrir ${destino} y copiar el código ${equipo} para pegarlo en la búsqueda (se abre en otra pestaña)`
+            : `Abrir ${etiqueta} (se abre en otra pestaña)`
       }
       title={
-        equipo
-          ? `Copia ${equipo} y abre el mapa de Startrack. Pegá el código en el filtro de la grilla.`
-          : `Abrir ${etiqueta}`
+        plataforma === 'prisma'
+          ? 'Abre Prisma en una pestaña reutilizable. El primer login queda ahi; si pide sesion, pega la URL copiada.'
+          : equipo
+            ? `Copia ${equipo} y abre ${destino}. Pegá el código en el filtro o la búsqueda.`
+            : `Abrir ${etiqueta}`
       }
       className={cn(
         clases,
-        'transition-colors hover:border-origen-startrack/40 hover:text-foreground',
+        'transition-colors',
+        hover,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
       )}
     >
       {contenido}
-      {copiado && <span className="sr-only">Código {equipo} copiado</span>}
+      {copiado && (
+        <span className="sr-only">
+          {plataforma === 'prisma' ? 'URL de Prisma copiada' : `Código ${equipo} copiado`}
+        </span>
+      )}
     </a>
   )
 }

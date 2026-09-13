@@ -9,6 +9,7 @@ import type {
   TareaStartrackCruda,
   VehiculoStartrackCrudo,
 } from './tipos-crudos'
+import { interpretarEstadoVehiculoStartrack } from './catalogos'
 
 export function crearLinaje(
   procedencia: ProcedenciaFuente,
@@ -39,13 +40,21 @@ export function estadoDesdeEquipo(equipo: EquipoPrismaCrudo, procedencia: Proced
   return crearEstadoOrigen(equipo.estado, 'recurso', crearLinaje(procedencia, 'estado', equipo.estado))
 }
 
-/** El estado del recurso, tal como lo reporta Startrack sobre el vehículo. */
+/** El `status` del vehículo en Startrack describe al **conductor**, no al recurso.
+ * Se guarda en `equipo.vehiculo` (contrato congelado) y la ficha lo rotula
+ * "Estado del conductor". `objeto: 'recurso'` se conserva porque el contrato
+ * no tiene un cuarto valor; no se fusiona con el estado de Prisma. */
 export function estadoDesdeVehiculo(
   vehiculo: VehiculoStartrackCrudo | null,
   procedencia: ProcedenciaFuente,
 ): EstadoOrigen | null {
-  if (!vehiculo?.status) return null
-  return crearEstadoOrigen(vehiculo.status, 'recurso', crearLinaje(procedencia, 'status', vehiculo.status))
+  if (!vehiculo) return null
+  const leido = interpretarEstadoVehiculoStartrack(vehiculo.status)
+  return crearEstadoOrigen(
+    leido.etiqueta,
+    'recurso',
+    crearLinaje(procedencia, 'status', vehiculo.status),
+  )
 }
 
 /** La solicitud se etiqueta `objeto: 'recurso'` — decisión del usuario: no se

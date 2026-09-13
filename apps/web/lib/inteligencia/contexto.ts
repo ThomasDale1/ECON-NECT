@@ -51,6 +51,8 @@ export function crearContextoOdin(equipo: EquipoUnificado): ContextoOdin {
         missing_fields: regla.camposFaltantes,
       })),
       as_of: equipo.leidoEn,
+      location_description: equipo.ubicacion?.descripcion.valor ?? null,
+      lag_interpretation: equipo.interpretacionDesfase,
     },
     // El contrato canónico actual no contiene señales históricas suficientes.
     // O.D.I.N. debe responder UNKNOWN en vez de inventarlas.

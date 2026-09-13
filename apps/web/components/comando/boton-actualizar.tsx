@@ -1,4 +1,4 @@
-'use client'
+﻿'use client'
 
 import { useTransition } from 'react'
 import { RefreshCw } from 'lucide-react'
@@ -10,11 +10,7 @@ import { cn } from '@/lib/utils'
  *
  * No recarga la página: llama a una Server Action que invalida el caché de esa
  * fuente y revalida la ruta. Next vuelve a renderizar el árbol de servidor y
- * manda solo lo que cambió, así que el estado de cliente —la posición de los
- * carruseles— sobrevive.
- *
- * Mientras la lectura corre el botón queda deshabilitado y el ícono gira, para
- * que no se dispare dos veces contra un sandbox que comparten 13 equipos.
+ * manda solo lo que cambió, así que el estado de cliente sobrevive.
  */
 export function BotonActualizar({
   plataforma,
@@ -23,7 +19,6 @@ export function BotonActualizar({
 }: {
   plataforma: Plataforma
   nombre: string
-  /** Server Action. Se recibe por prop para que este componente no importe servidor. */
   onActualizar: (plataforma: Plataforma) => Promise<void>
 }) {
   const [pendiente, iniciar] = useTransition()
@@ -43,6 +38,37 @@ export function BotonActualizar({
       )}
     >
       <RefreshCw aria-hidden className={cn('size-3', pendiente && 'animate-spin')} />
+    </button>
+  )
+}
+
+/** Relee Prisma y Startrack en la misma acción. */
+export function BotonActualizarAmbas({
+  onActualizar,
+  contraida = false,
+}: {
+  onActualizar: () => Promise<void>
+  contraida?: boolean
+}) {
+  const [pendiente, iniciar] = useTransition()
+
+  return (
+    <button
+      type="button"
+      disabled={pendiente}
+      onClick={() => iniciar(() => onActualizar())}
+      aria-label={pendiente ? 'Leyendo Prisma y Startrack…' : 'Releer Prisma y Startrack'}
+      title="Releer Prisma y Startrack"
+      className={cn(
+        'flex items-center justify-center gap-2 rounded-lg border border-marina-borde bg-marina-clara',
+        'py-2 font-label text-xs font-bold text-white transition-colors hover:bg-white/10',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara',
+        'disabled:cursor-not-allowed disabled:opacity-50',
+        contraida ? 'px-0' : 'px-3.5',
+      )}
+    >
+      <RefreshCw aria-hidden className={cn('size-3.5', pendiente && 'animate-spin')} />
+      {!contraida && (pendiente ? 'Leyendo ambas…' : 'Releer ambas')}
     </button>
   )
 }

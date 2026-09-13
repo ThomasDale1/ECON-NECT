@@ -71,7 +71,7 @@ export function construirEquipoUnificado(entrada: EntradaModelo): EquipoSinVered
     geocercas,
     procedenciaGeocercas,
   } = entrada
-  const { equipo, vehiculo, identidadResuelta } = vinculo
+  const { equipo, vehiculo, identidadResuelta, nivelResolucion } = vinculo
   const tarea = resolucionTarea?.tarea ?? null
 
   return {
@@ -85,12 +85,16 @@ export function construirEquipoUnificado(entrada: EntradaModelo): EquipoSinVered
       linaje: crearLinaje(procedenciaEquipos, 'nombre', equipo.nombre),
     },
     identidadResuelta,
+    // Cascada de respaldo documentada en identidad.ts — heurística, no certeza.
+    nivelResolucionIdentidad: nivelResolucion,
     equipo: estadoDesdeEquipo(equipo, procedenciaEquipos),
     solicitud: estadoDesdeSolicitud(solicitud, procedenciaSolicitudes),
     falla: estadoDesdeFalla(equipo, procedenciaEquipos),
     vehiculo: estadoDesdeVehiculo(vehiculo, procedenciaVehiculos),
     tarea: estadoDesdeTarea(tarea, procedenciaTareas),
     ubicacion: resolverUbicacion(resolucionTarea, equipo, geocercas, procedenciaGeocercas),
+    // Lo completa `reconciliar` con fechas crudas reales (nunca inventadas).
+    interpretacionDesfase: null,
     leidoEn: procedenciaEquipos.leidoEn,
   }
 }

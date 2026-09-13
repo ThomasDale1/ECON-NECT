@@ -34,6 +34,8 @@ export const EQUIPOS_EJEMPLO: EquipoUnificado[] = [
       },
     },
     identidadResuelta: true,
+    nivelResolucionIdentidad: 1,
+    interpretacionDesfase: null,
     equipo: {
       valor: 'DISPONIBLE',
       objeto: 'recurso',
@@ -137,6 +139,8 @@ export const EQUIPOS_EJEMPLO: EquipoUnificado[] = [
       },
     },
     identidadResuelta: true,
+    nivelResolucionIdentidad: 2,
+    interpretacionDesfase: null,
     equipo: {
       valor: 'ASIGNADO',
       objeto: 'recurso',
@@ -271,6 +275,8 @@ export const EQUIPOS_EJEMPLO: EquipoUnificado[] = [
       },
     },
     identidadResuelta: false,
+    nivelResolucionIdentidad: null,
+    interpretacionDesfase: null,
     equipo: {
       valor: 'INACTIVO',
       objeto: 'recurso',

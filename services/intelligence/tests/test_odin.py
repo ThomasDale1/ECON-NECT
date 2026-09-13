@@ -43,6 +43,11 @@ GOLDEN_QUERIES = [
     ("¿Qué señales de falla futura existen?", Intent.EXPLAIN_MAINTENANCE_RISK),
     ("¿Cómo está para mantenimiento?", Intent.EXPLAIN_MAINTENANCE_RISK),
     ("¿Por qué tiene riesgo este equipo?", Intent.EXPLAIN_MAINTENANCE_RISK),
+    ("¿Prisma y Startrack apuntan al mismo equipo?", Intent.QUERY_ASSET_STATUS),
+    ("¿Dónde está el equipo y qué proyecto tiene?", Intent.QUERY_ASSET_STATUS),
+    ("¿Qué datos faltan para concluir?", Intent.QUERY_ASSET_STATUS),
+    ("¿Cuál es el siguiente paso y quién lo ejecuta?", Intent.QUERY_ASSET_STATUS),
+    ("¿Hay una falla o paro activo en Prisma?", Intent.QUERY_ASSET_STATUS),
 ]
 
 
@@ -71,6 +76,19 @@ async def test_write_request_is_rejected_without_executing_a_tool(chat_request_f
     assert response.intent is Intent.OUT_OF_SCOPE
     assert response.tool_used is None
     assert "cambios" in response.answer
+
+
+@pytest.mark.asyncio
+async def test_freeform_question_uses_status_tool_not_policy(chat_request_factory) -> None:
+    response = await OdinAgent(model=UnavailableModel()).chat(
+        chat_request_factory("Cual es su kilometraje")
+    )
+
+    assert response.intent is Intent.QUERY_ASSET_STATUS
+    assert response.tool_used == TOOLS[Intent.QUERY_ASSET_STATUS].name
+    assert response.response_mode == "deterministic_fallback"
+    assert "fuera" not in response.answer.lower()
+    assert "kilometraje" in response.answer.lower()
 
 
 def test_registry_contains_only_the_three_read_tools() -> None:

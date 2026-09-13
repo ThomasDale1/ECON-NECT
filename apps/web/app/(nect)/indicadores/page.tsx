@@ -11,8 +11,7 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic'
 
 export default async function IndicadoresPage() {
-  const { equipos, salud, leidoEn } = await leerEquiposUnificados()
-
+  const { equipos, salud, leidoEn, paresLatencia, solicitudesAprobadas } = await leerEquiposUnificados()
 
   return (
     <Marco
@@ -20,7 +19,11 @@ export default async function IndicadoresPage() {
       salud={salud}
       leidoEn={leidoEn}
     >
-      <PanelIndicadores equipos={equipos} />
+      <PanelIndicadores
+        equipos={equipos}
+        paresLatencia={paresLatencia}
+        solicitudesAprobadas={solicitudesAprobadas}
+      />
     </Marco>
   )
 }

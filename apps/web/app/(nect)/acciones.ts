@@ -23,3 +23,11 @@ export async function actualizarFuente(plataforma: Plataforma): Promise<void> {
   // el dato viejo.
   revalidatePath('/', 'layout')
 }
+
+
+/** Relectura de Prisma y Startrack en la misma acción. */
+export async function actualizarFuentes(): Promise<void> {
+  invalidarPorPrefijo('prisma:')
+  invalidarPorPrefijo('startrack:')
+  revalidatePath('/', 'layout')
+}

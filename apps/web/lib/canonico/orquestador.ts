@@ -12,7 +12,10 @@ import type {
   Ubicacion,
 } from '@/lib/tipos/canonico'
 import { distanciaEnMetros } from './identidad'
-import { reconciliar } from './reconciliacion'
+import { interpretarDesfases, reconciliar } from './reconciliacion'
+import { paresDesdeCrudos } from '@/lib/kpi/pares'
+import { conductorDesdeStartrack, personalDesdePrisma } from '@/lib/nect/asignacion'
+import type { ParLatencia } from '@/lib/kpi/calculo'
 import type {
   DatosCrudos,
   EquipoPrismaCrudo,
@@ -76,7 +79,11 @@ export type LecturaUnificada = {
   equipos: EquipoUnificado[]
   salud: SaludFuente[]
   urlStartrack: string | null
+  /** Host de Prisma. La ficha de un equipo es `{urlPrisma}/maquinaria/equipos/{id}`. */
+  urlPrisma: string | null
   leidoEn: string
+  paresLatencia: ParLatencia[]
+  solicitudesAprobadas: number
 }
 
 export const leerEquiposUnificados = cache(leerTodo)
@@ -90,7 +97,7 @@ async function leerTodo(): Promise<LecturaUnificada> {
   const prismaDesdeCache = estaVigente('prisma:equipos')
   const startrackDesdeCache = estaVigente('startrack:ajax/vehicles.php?cmd=list')
 
-  const [equipos_, solicitudes_, vehiculos_, geocercas_, tareas_, tipos_, flota_] =
+  const [equipos_, solicitudes_, vehiculos_, geocercas_, tareas_, tipos_, flota_, conductores_] =
     await Promise.all([
       medir(prisma.leerEquipos),
       medir(prisma.leerSolicitudes),
@@ -99,6 +106,7 @@ async function leerTodo(): Promise<LecturaUnificada> {
       medir(startrack.leerTareas),
       medir(startrack.leerTiposTarea),
       medir(startrack.leerEstadoFlota),
+      medir(startrack.leerConductores),
     ])
 
   const vacia = (
@@ -146,25 +154,79 @@ async function leerTodo(): Promise<LecturaUnificada> {
     if (codigo) porCodigo.set(codigo, v)
   }
 
+
+  const conductoresOk = ok(conductores_.res, vacia('startrack', 'ajax/drivers.php?cmd=list')).datos.filter(esRegistro)
+  const conductorPorId = new Map<string, Registro>()
+  for (const c of conductoresOk) {
+    const id = texto(c, 'i')
+    if (id) conductorPorId.set(id, c)
+  }
+  const vehiculoPorCodigo = new Map<string, (typeof datos.vehiculos.datos)[number]>()
+  for (const v of datos.vehiculos.datos) {
+    const codigo = codigoDe(v.description)
+    if (codigo) vehiculoPorCodigo.set(codigo, v)
+  }
+
   const equipos = reconciliados.map((eq) => {
     const codigo = eq.codigoActivo.valor
     const vivo = codigo ? (porCodigo.get(codigo) ?? null) : null
+    const crudo = datos.equipos.datos.find((e) => String(e.id) === eq.id) ?? null
+
+    // Preferir vehicle_status_changed_date de fsupdate sobre last_contact_date
+    // (ya usado en reconciliar). Si fsupdate no trae la fecha, se deja lo de reconciliar.
+    const changed = vivo ? texto(vivo, 'vehicle_status_changed_date') : null
+    const desfaseFlota =
+      changed != null
+        ? interpretarDesfases({
+            solicitud: null,
+            tarea: null,
+            equipoUpdatedAt: crudo?.updated_at ?? null,
+            startrackVehiculoFecha: changed,
+          })
+        : null
+    const interpretacionDesfase = desfaseFlota ?? eq.interpretacionDesfase
+
+    const crudoReg = (crudo ?? {}) as Registro
+    const vehiculo = codigo ? (vehiculoPorCodigo.get(codigo) ?? null) : null
+    const driverId = vehiculo?.driver_id != null ? String(vehiculo.driver_id) : vivo ? texto(vivo, 'did') : null
+    const asignacion = {
+      prisma: personalDesdePrisma(crudoReg.assigned_personnel, {
+        plataforma: 'prisma',
+        endpoint: datos.equipos.endpoint,
+        leidoEn,
+      }),
+      startrack: conductorDesdeStartrack(driverId ? (conductorPorId.get(driverId) ?? null) : null, {
+        plataforma: 'startrack',
+        endpoint: 'ajax/drivers.php?cmd=list',
+        leidoEn,
+      }),
+    }
+
     const enVivo = ubicacionEnVivo(vivo, leidoEn)
-    if (!enVivo) return eq
+    if (!enVivo) {
+      return { ...eq, interpretacionDesfase, asignacion }
+    }
 
     // La ubicación que resolvió el motor pasa a ser la referencia del proyecto;
     // la posición en vivo la reemplaza como ubicación actual.
     return {
       ...eq,
+      interpretacionDesfase,
+      asignacion,
       ubicacion: enVivo,
       geocercaProyecto: eq.ubicacion ? geocercaConDistancia(eq.ubicacion, enVivo) : null,
     }
   })
 
-  const host = process.env.STARTRACK_BASE_URL?.replace(/\/+$/, '') ?? null
+  const hostStartrack = process.env.STARTRACK_BASE_URL?.replace(/\/+$/, '') ?? null
+  const hostPrisma = process.env.PRISMA_BASE_URL?.replace(/\/+$/, '') ?? null
+
+  const { pares, aprobadas } = paresDesdeCrudos(datos.solicitudes.datos, datos.tareas.datos)
 
   return {
     equipos,
+    paresLatencia: pares,
+    solicitudesAprobadas: aprobadas,
     salud: [
       {
         plataforma: 'prisma',
@@ -179,7 +241,8 @@ async function leerTodo(): Promise<LecturaUnificada> {
         latenciaMs: startrackOk && !startrackDesdeCache ? vehiculos_.ms : null,
       },
     ],
-    urlStartrack: host ? `${host}/members-new.php` : null,
+    urlStartrack: hostStartrack ? `${hostStartrack}/members-new.php` : null,
+    urlPrisma: hostPrisma,
     leidoEn,
   }
 }
