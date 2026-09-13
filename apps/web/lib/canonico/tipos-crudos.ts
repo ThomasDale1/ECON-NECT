@@ -127,6 +127,24 @@ export type TipoTareaStartrackCrudo = {
   name: string | null
 }
 
+/** Nivel 1 de la cascada de ubicación (01 Parte E.10, corregido el 13 de
+ * septiembre de 2026): posición en vivo del vehículo, observada con
+ * `GET /api/vehicle/{id}/status`. La investigación original de S-A1 buscó
+ * telemetría bajo `ajax/*.php` y no la encontró — existe, pero en la
+ * superficie REST moderna. Los campos numéricos llegan como texto (forma
+ * real observada, no un error de tipeo); se parsean recién en
+ * `identidad.ts`/`modelo.ts`, nunca acá. */
+export type EstadoVehiculoStartrackCrudo = {
+  vehicle_id: string | null
+  x: string | null
+  y: string | null
+  speed: string | null
+  heading: string | null
+  date_time: string | null
+  placename: string | null
+  reason: string | null
+}
+
 /** Procedencia de una fuente completa (una lista), la misma forma que
  * `RespuestaConector.linaje` de lib/conectores/tipos.ts pero copiada acá en
  * vez de importada — lib/canonico no conoce HTTP ni la capa de conectores
@@ -142,6 +160,14 @@ export type FuenteCruda<T> = ProcedenciaFuente & {
   datos: T[]
 }
 
+/** Cada estado de vehículo es su propia llamada HTTP (una por vehículo, igual
+ * que `DetalleEquipoPrismaCrudo` en S-A7) — no comparte un `leidoEn` único
+ * como una lista. */
+export type EstadoVehiculoConProcedencia = {
+  datos: EstadoVehiculoStartrackCrudo
+  procedencia: ProcedenciaFuente
+}
+
 /** Lo que `reconciliar()` recibe. Deliberadamente no incluye `fallas` ni
  * `proyectos`: el prompt los menciona como fuente, pero su forma real no está
  * documentada en la sección "Formas reales observadas" de S-A2, y la
@@ -155,4 +181,9 @@ export type DatosCrudos = {
   geocercas: FuenteCruda<GeocercaStartrackCruda>
   tareas: FuenteCruda<TareaStartrackCruda>
   tiposTarea: FuenteCruda<TipoTareaStartrackCrudo>
+  /** Nivel 1 de ubicación (01 E.10, corregido), por id de vehículo de
+   * Startrack. Opcional a propósito: `reconciliar()` y sus pruebas siguen
+   * funcionando sin ella, degradando a nivel 2/3 como antes — ningún
+   * orquestador viejo se rompe por no traerla todavía. */
+  estadosVehiculoPorVehiculoId?: Record<string, EstadoVehiculoConProcedencia>
 }

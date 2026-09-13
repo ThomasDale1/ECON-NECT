@@ -42,6 +42,21 @@ export async function conCache<T>(
   return valor
 }
 
+/** Olvida toda entrada cuya clave empiece con `prefijo`. Se usa después de una
+ * escritura (S-A4): si la tarea recién creada no se ve hasta que venza el TTL,
+ * la incoherencia sigue en pantalla un minuto después de haberla resuelto — y
+ * ese instante es justamente el de la demo. Devuelve cuántas entradas olvidó. */
+export function invalidarCache(prefijo: string): number {
+  let olvidadas = 0
+  for (const clave of [...almacen.keys()]) {
+    if (clave.startsWith(prefijo)) {
+      almacen.delete(clave)
+      olvidadas++
+    }
+  }
+  return olvidadas
+}
+
 /** Solo para pruebas: vacía el caché entre casos. */
 export function limpiarCache(): void {
   almacen.clear()

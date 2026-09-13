@@ -99,7 +99,7 @@ la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
   7.  Copiloto de consulta en lenguaje natural      (S-A6 — estiramiento puro)
   6.  Propagación P3 — mantenimiento                (S-A5)
   5.  Propagación P2 — estado de vuelta a Prisma    (S-A5)
-  4.  Posición GPS en vivo                          (nivel 1 de la cascada, E.10)
+  4.  Posición GPS en vivo — ✅ resuelto 13 sep., ya no es de esta lista (E.10)
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
@@ -763,7 +763,7 @@ nuestro indicador en dinero durante el pitch.
 | El sandbox se cae o va lento (13 equipos encima) | Alta | Riesgo aceptado: sin modo respaldo. El caché alivia; si está caído, no hay demo |
 | La sesión de Startrack expira a media demo | Alta | Reautenticación por cuerpo, no por status (E.7) |
 | Conflicto de merge a las 4 a.m. | Media | Ventanas de merge fijas (§0.4) + propiedad disjunta de directorios |
-| No se logra la posición GPS en vivo | Media | Cascada de 3 niveles; la demo nunca depende del nivel 1 |
+| ~~No se logra la posición GPS en vivo~~ — resuelto 13 sep. | ~~Media~~ | `GET /api/vehicle/{id}/status` (E.10 corregido); cascada de 3 niveles sigue como respaldo si un vehículo puntual falla |
 | El wifi del evento falla durante el pitch | Media | Riesgo aceptado; la demo depende de Vercel y de ahí al sandbox |
 | Se acaba el tiempo | Media | Escalera de recorte (§0.5), aplicada sin discutir |
 | Otro equipo modifica datos compartidos del sandbox | Media | La demo se apoya en nuestros recursos; los ajenos solo se leen |

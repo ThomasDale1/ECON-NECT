@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { BarChart2, Cpu, Cuboid, LayoutDashboard, List, PanelLeftClose, Search } from 'lucide-react'
+import { BarChart2, CalendarRange, Cpu, Cuboid, LayoutDashboard, List, PanelLeftClose, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Plataforma, SaludFuente } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,7 @@ const NAVEGACION: Navegacion[] = [
   { etiqueta: 'Ficha unificada', icono: Cuboid, href: '/equipo' },
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
+  { etiqueta: 'Planeación', icono: CalendarRange, href: '/planeacion' },
 ]
 
 type Estado = SaludFuente['estado']

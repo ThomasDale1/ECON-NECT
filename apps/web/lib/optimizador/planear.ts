@@ -7,6 +7,7 @@
 import 'server-only'
 import { ErrorClima, leerPronosticoLluvia } from '@/lib/conectores/clima'
 import { geocercaPorCodigoProyecto } from '@/lib/canonico/identidad'
+import { calcularKpisOptimizador } from '@/lib/kpi/optimizador'
 import { adaptar, type ResultadoAdaptador } from './adaptador'
 import { ensamblar } from './ensamblar'
 import { ErrorSolver, optimizarEnSolver } from './cliente'
@@ -167,13 +168,9 @@ export async function planear(peticion: PeticionOptimizar): Promise<RespuestaOpt
     avisosAdicionales: avisosClima,
   })
 
-  // KPIs (S-C4, carril C): `lib/kpi/optimizador.ts` todavía no existe en esta
-  // rama — Paso 4i pide explícitamente no crearlo ni importarlo acá. Cuando
-  // exista, conectarlo es una línea: reemplazar este bloque por
-  // `calcularKpisOptimizador(respuestaSinKpis)` importado de ese módulo.
   return {
     ...respuestaSinKpis,
-    kpis: null,
-    kpisPendientesMotivo: 'Cálculo de KPIs pendiente (S-C4)',
+    kpis: calcularKpisOptimizador(respuestaSinKpis),
+    kpisPendientesMotivo: null,
   }
 }

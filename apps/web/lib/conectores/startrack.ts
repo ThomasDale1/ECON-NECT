@@ -14,8 +14,8 @@
 
 import 'server-only'
 import { asegurarEntornoCargado } from './entorno'
-import { SesionExpirada, ErrorConector } from './errores'
-import { conCache } from './cache'
+import { SesionExpirada, ErrorConector, ErrorEscritura } from './errores'
+import { conCache, invalidarCache } from './cache'
 import { envolver, type RespuestaConector } from './tipos'
 
 asegurarEntornoCargado()
@@ -254,4 +254,124 @@ export function leerTiposTarea(): Promise<RespuestaConector<unknown[]>> {
     const lista = Array.isArray(cuerpo.data) ? (cuerpo.data as unknown[]) : []
     return envolver(lista, PLATAFORMA, ENDPOINT_TIPOS_TAREA)
   })
+}
+
+// Nivel 1 de la cascada de ubicación (01 E.10) — corrección de hallazgo,
+// verificada en vivo el 13 de septiembre de 2026. La investigación original
+// buscó telemetría bajo `ajax/*.php` y no la encontró; existe en la
+// superficie REST moderna, sin envoltura `{success, ...}` (no hace falta
+// `desenvolverStartrack`, pero sí reautentica igual que `api/job` ante 401 o
+// success:false — se reusa `peticionApiJson` por eso).
+export function leerEstadoVehiculo(vehiculoId: string): Promise<RespuestaConector<unknown>> {
+  const endpoint = `api/vehicle/${vehiculoId}/status`
+  return conCache(`startrack:${endpoint}`, async () => {
+    const cuerpo = await peticionApiJson(endpoint)
+    return envolver(cuerpo, PLATAFORMA, endpoint)
+  })
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura — Propagación P1 (S-A4). Única escritura de este conector.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Dos diferencias deliberadas respecto de los lectores de arriba:
+//
+// 1. **No se reintenta ante `success:false`.** La superficie de Startrack usa
+//    ese mismo cuerpo para "sesión vencida" y para "tu petición no me gustó"
+//    (01 E.7). En una lectura, reintentar es gratis; en una escritura, un
+//    reintento a ciegas puede crear DOS tareas cuando la primera sí se había
+//    creado. Solo se reintenta ante un 401 explícito, que sí garantiza que el
+//    servidor no procesó nada.
+// 2. **No pasa por caché.** Y al terminar invalida la caché de tareas, para que
+//    la vista que se refresca detrás del diálogo ya no muestre la incoherencia
+//    que se acaba de resolver.
+//
+// Ningún campo de contacto (`contact_name`, `contact_email`, `phone_number`) se
+// escribe ni se lee acá: son PII de personal real de ECON (AGENTS.md §1.2).
+
+/** Cuerpo de creación de tarea. Los nombres de campo son los que devuelve
+ * `GET /api/job` sobre el mismo recurso — el contrato de escritura del sandbox
+ * no está documentado de nuestro lado, así que se espeja la forma de lectura y
+ * se verifica contra la API real. Todo campo opcional que no tengamos se omite:
+ * no se manda un valor inventado para rellenar (AGENTS.md §1.1). */
+export type NuevaTareaStartrack = {
+  job_type_id: number | string
+  /** El id de la solicitud de Prisma. Es el punto de toda la propagación: lo
+   * que vuelve determinística la unión entre las dos plataformas (01 E.5). */
+  remote_id: string
+  start_date?: string | null
+  end_datetime?: string | null
+  poi_id?: number | string | null
+  origin_poi_id?: number | string | null
+  assigned_vehicle_id?: number | string | null
+  address?: string | null
+  x?: number | null
+  y?: number | null
+  name?: string | null
+}
+
+const ENDPOINT_CREAR_TAREA = 'api/job'
+
+function sinCamposVacios(tarea: NuevaTareaStartrack): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(tarea).filter(([, valor]) => valor !== null && valor !== undefined),
+  )
+}
+
+export async function crearTarea(
+  tarea: NuevaTareaStartrack,
+): Promise<RespuestaConector<Record<string, unknown>>> {
+  const { baseUrl } = config()
+  if (!cookieSesion) await iniciarSesion()
+
+  const cuerpoPeticion = JSON.stringify(sinCamposVacios(tarea))
+
+  const intentar = async (): Promise<Response> =>
+    fetch(`${baseUrl}/${ENDPOINT_CREAR_TAREA}`, {
+      method: 'POST',
+      headers: { Cookie: cookieSesion!, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: cuerpoPeticion,
+    })
+
+  let respuesta = await intentar()
+  if (respuesta.status === 401) {
+    // 401 = el servidor no procesó la petición. Reautenticar y reintentar una
+    // sola vez es seguro; cualquier otro código, no.
+    await iniciarSesion()
+    respuesta = await intentar()
+  }
+
+  let cuerpo: unknown
+  try {
+    cuerpo = await respuesta.json()
+  } catch {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      ENDPOINT_CREAR_TAREA,
+      `respuesta no-JSON (status ${respuesta.status})`,
+    )
+  }
+
+  const comoObjeto = (cuerpo ?? {}) as Record<string, unknown>
+
+  if (!respuesta.ok) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      ENDPOINT_CREAR_TAREA,
+      `status ${respuesta.status}: ${String(comoObjeto.errorMsg ?? comoObjeto.message ?? 'sin detalle')}`,
+    )
+  }
+
+  if (comoObjeto.success === false) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      ENDPOINT_CREAR_TAREA,
+      String(comoObjeto.errorMsg ?? 'la plataforma respondió success:false sin detalle'),
+    )
+  }
+
+  // La tarea nueva tiene que verse en la próxima lectura, no dentro de 45s.
+  invalidarCache('startrack:api/job')
+
+  return envolver(comoObjeto, PLATAFORMA, ENDPOINT_CREAR_TAREA)
 }

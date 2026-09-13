@@ -362,3 +362,67 @@ lleva debajo su etiqueta de qué objeto describe: sin eso la tabla no resuelve e
 Caso de Uso 02. El dato ausente se escribe `Sin registro`, nunca celda vacía.
 Estado vacío incluido.
 Registrado: S-B1 · 12 de septiembre de 2026
+
+### VerOrigen
+File: apps/web/components/nect/ver-origen.tsx
+Tipo: overlay
+Clases: `Popover`/`PopoverContent` de shadcn (`w-80`), botón `variant="ghost" size="sm"` del baseline §2.
+Tokens de color: ninguno propio — reusa `BadgeOrigen` (§1.2) para la plataforma de cada entrada de linaje; el resto es texto muted/mono.
+Notas: no existía un componente genérico de "ver origen" (AGENTS.md principio 2.4 / §1 de este registro). Recibe un array de `Linaje` y solo lista plataforma, endpoint, campo, valor crudo y hora — no decide ni transforma nada. Si `linaje` viene vacío no renderiza nada (evita un botón que abre a un popover sin contenido).
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### Planeador
+File: apps/web/components/calendario/planeador.tsx
+Tipo: card (orquestador de página)
+Clases: `main` con `flex flex-col gap-6 p-7` (contenedor de página, §2); `Alert`/`AlertTitle`/`AlertDescription` de shadcn para el aviso fijo, los errores y los avisos.
+Tokens de color: `--color-veredicto-atencion` solo para el texto "Hay cambios sin aplicar" (es una advertencia operativa, no un veredicto de reconciliación, pero comparte semántica de "atención").
+Notas: compone en el orden fijo del prompt (aviso · pila · clases · niveles · timeline · tiles · avisos). El fetch a `POST /api/optimizar` vive acá — la UI no recalcula nada, solo maneja estado de carga/error. `BarraSuperior` se renderiza acá (no en `page.tsx`) porque su `ultimaLectura` sale de `respuesta.generadoEn`, que solo existe después del fetch — nunca una hora fija (S-B4 §1). El efecto de montaje usa una función separada (`ejecutarPeticion`) para que el único `setState` corra después de `await fetch(...)` y no dispare el lint `react-hooks/set-state-in-effect` de forma espuria sobre el patrón estándar de "cargar al montar".
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### PilaPrioridades
+File: apps/web/components/calendario/pila-prioridades.tsx
+Tipo: formulario
+Clases: card baseline (`rounded-xl border border-border bg-card p-6 shadow-card`); checkboxes e íconos de lucide (`GripVertical`, `ChevronUp`, `ChevronDown`) para arrastre y reordenamiento sin mouse.
+Tokens de color: ninguno de §1 — es una lista de preferencias del planificador, no un veredicto. `accent-primary` en los checkboxes, consistente con el botón primario del baseline.
+Notas: `@dnd-kit/core` + `@dnd-kit/sortable` (ya estaban en `package.json`, no se instaló nada). Cada ítem lleva `aria-label` propio en el asa de arrastre, el checkbox y los botones ↑↓ (S-B4 §3 / ui-registry §5). Desmarcar "incluir" no borra el id de la lista visual — solo lo saca de la petición (`pilaAPeticion`); el orden se conserva para que re-incluirlo no pierda su posición.
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### ClasesSensiblesLluvia
+File: apps/web/components/calendario/clases-sensibles-lluvia.tsx
+Tipo: formulario
+Clases: card baseline (`rounded-xl border border-border bg-card p-6 shadow-card`); checkboxes nativos con `accent-primary`.
+Tokens de color: ninguno de §1 — criterio del planificador, no un veredicto.
+Notas: la lista de clases viene de `CATALOGO_CLASE_EQUIPO` (`lib/canonico/catalogos.ts`), nunca escrita a mano (AGENTS.md §1.1). Arranca vacío a propósito: no se presupone ninguna clase sensible.
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### ResumenNiveles
+File: apps/web/components/calendario/resumen-niveles.tsx
+Tipo: card
+Clases: card baseline (`rounded-xl border border-border bg-card p-6 shadow-card`).
+Tokens de color: ninguno de §1.1 — deliberado. El estado del solver (`optimo`/`factible`/`infactible`) no es un `Veredicto` de reconciliación y por eso no usa la escala verde/ámbar/rojo/violeta reservada a esa severidad; va en `text-foreground` neutro con ícono (`CircleCheck`/`TriangleAlert`/`Ban`) para no perder el significado sin color.
+Notas: los nombres de nivel salen de `NOMBRE_OBJETIVO` (`components/calendario/objetivos.ts`), compartido con `PilaPrioridades` y `DetalleAsignacion` para no repetir la redacción de negocio en tres lugares.
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### TimelineMaquinas
+File: apps/web/components/calendario/timeline-maquinas.tsx
+Tipo: tabla (grilla de calendario)
+Clases: `overflow-x-auto rounded-xl border border-border` (§2, tablas anchas); carril colapsable de excluidas con el mismo card baseline.
+Tokens de color: `bg-marca` para la barra de propuesta (identidad de marca, nunca un color de veredicto — S-B4 §5); `bg-muted` + patrón rayado (`repeating-linear-gradient`) para la ocupación real de Prisma; `border-dashed` + `bg-muted` neutro para "sin asignación posible" — **nunca rojo**, y nunca violeta (ese color es exclusivo de `SIN_EVIDENCIA`). La alerta de lluvia va con ícono `CloudRain` + texto, sin color de veredicto.
+Notas: la posición de cada barra es presentación pura (offset/ancho en px calculados desde `horizonte.desde`) — no recalcula choques, objetivos ni candidatas (esos ya vienen resueltos en `RespuestaOptimizar`). Columna de etiqueta fija (`sticky left-0`) mientras el calendario hace scroll horizontal. La lista de excluidas es un `<button aria-expanded>` plegable con conteo y motivo, nunca oculto sin explicación.
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### DetalleAsignacion
+File: apps/web/components/calendario/detalle-asignacion.tsx
+Tipo: overlay
+Clases: `Sheet`/`SheetContent` de shadcn (base-ui, `side` por defecto derecho); tabla HTML simple para la comparación manual-vs-propuesta, con `<th scope="col">` (§5).
+Tokens de color: ninguno de §1.1 propio — usa `Badge variant="outline"` neutro para "peor caso declarado" y `text-muted-foreground` para "Sin registro", igual que el resto del producto (§1.4: el dato faltante se escribe, no se omite).
+Notas: reutiliza `VerOrigen` juntando el linaje de todos los campos de la asignación (solicitud, máquina, operador, objetivos y, si existe, la asignación manual) en una sola lista. No recalcula nada — todo valor viene tal cual del contrato `AsignacionPropuesta`.
+Registrado: S-B4 · 12 de septiembre de 2026
+
+### TilesKpiOptimizador
+File: apps/web/components/calendario/tiles-kpi-optimizador.tsx
+Tipo: tile
+Clases: contrato de "stat tile" de la skill `dataviz` (label · value · soporte de cobertura, sin delta ni sparkline); card baseline (`rounded-xl border border-border bg-card p-6 shadow-card`); `Popover` para "ver fórmula".
+Tokens de color: ninguno de §1.1 — un KPI no es un veredicto. El valor grande usa `font-heading` neutro, no un color de severidad.
+Notas: mientras `respuesta.kpis` sea `null` (S-C4 no mergeado), los tres tiles muestran `kpisPendientesMotivo` en vez de inventar un número (AGENTS.md §1.1). Si `lib/kpi/catalogo.ts` todavía no tiene la entrada del id (`ahorro-por-objetivo-optimizador`, etc.), el tile dice "KPI pendiente de catálogo (S-C4)" en vez de romper. Ningún número se muestra sin su dato de cobertura al lado (§1.4).
+Registrado: S-B4 · 12 de septiembre de 2026

@@ -28,3 +28,35 @@ describe('CATALOGO_KPI — honestidad de datoFaltante (AGENTS.md §1.1)', () => 
     expect(kpi('cobertura-interpretacion').formula).toMatch(/identidadResuelta/)
   })
 })
+
+describe('CATALOGO_KPI — moneda corregida a USD (S-C4)', () => {
+  it('tiempo-muerto-quetzales ahora se presenta en USD, sin renombrar id ni función', () => {
+    const encontrado = kpi('tiempo-muerto-quetzales')
+    expect(encontrado.nombre).toBe('Tiempo muerto en USD')
+    expect(encontrado.nombre).not.toMatch(/quetzales/i)
+    expect(`${encontrado.queMide} ${encontrado.porQueImporta} ${encontrado.formula}`).toMatch(/USD.*moneda inferida/i)
+  })
+})
+
+describe('CATALOGO_KPI — los tres KPIs nuevos del optimizador (S-C4)', () => {
+  const idsNuevos = [
+    'ahorro-por-objetivo-optimizador',
+    'lluvia-clases-sensibles-optimizador',
+    'cobertura-plan-optimizador',
+  ]
+
+  it.each(idsNuevos)('%s existe con sus seis campos no vacíos y datoFaltante null (es calculable)', (id) => {
+    const encontrado = kpi(id)
+    expect(encontrado.queMide.length).toBeGreaterThan(0)
+    expect(encontrado.porQueImporta.length).toBeGreaterThan(0)
+    expect(encontrado.formula.length).toBeGreaterThan(0)
+    expect(encontrado.referencia.length).toBeGreaterThan(0)
+    expect(encontrado.accionQueDispara.length).toBeGreaterThan(0)
+    expect(encontrado.porQueNingunaPlataformaLoVeSola.length).toBeGreaterThan(0)
+    expect(encontrado.datoFaltante).toBeNull()
+  })
+
+  it('el lowboy no entra al catálogo: el sandbox no modela transporte', () => {
+    expect(CATALOGO_KPI.some((k) => /lowboy/i.test(k.id) || /lowboy/i.test(k.nombre))).toBe(false)
+  })
+})

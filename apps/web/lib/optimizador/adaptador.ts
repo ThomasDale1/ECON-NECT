@@ -175,10 +175,23 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     solicitudCrudaPorId.set(id, s)
     const status = (s.status ?? '').toUpperCase()
 
-    if (status !== 'PENDIENTE' && status !== 'APROBADA') {
+    // Decisión revisada el 13 de septiembre de 2026 (feedback directo sobre
+    // el calendario): una solicitud APROBADA es una decisión humana ya
+    // tomada — el optimizador deja de tocarla por completo, ni la propone ni
+    // la reevalúa ("si se toman decisiones manuales, el optimizador ya no
+    // puede hacer nada"). No entra a `excluidas` porque no es un hueco: su
+    // máquina ya se ve ocupada en el Gantt vía `FilaMaquina.ocupacionReal`
+    // (sale de `fecha_inicio_uso`/`fecha_fin_uso` del propio equipo,
+    // independiente de este bucle). Efecto secundario aceptado a propósito:
+    // `manualPorSolicitudId` (más abajo) deja de tener con qué comparar el
+    // KPI de ahorro proyectado de S-C4 para estas solicitudes — el indicador
+    // queda parcial en vez de mostrar una hipótesis que ya no es accionable.
+    if (status === 'APROBADA') continue
+
+    if (status !== 'PENDIENTE') {
       excluidas.push({
         solicitud: construirSolicitudPlan(s, s.fecha_inicio ?? hoy),
-        motivo: `estado ${s.status ?? '(sin estado)'} no es PENDIENTE ni APROBADA`,
+        motivo: `estado ${s.status ?? '(sin estado)'} no es PENDIENTE`,
       })
       continue
     }

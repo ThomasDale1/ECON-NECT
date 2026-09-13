@@ -87,6 +87,7 @@ export function reconciliar(datos: DatosCrudos): EquipoUnificado[] {
       procedenciaTareas: datos.tareas,
       geocercas: datos.geocercas.datos,
       procedenciaGeocercas: datos.geocercas,
+      estadosVehiculoPorVehiculoId: datos.estadosVehiculoPorVehiculoId,
     })
   })
 

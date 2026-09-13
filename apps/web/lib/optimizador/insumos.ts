@@ -9,6 +9,8 @@ import type {
   DatosCrudos,
   DetalleEquipoPrismaCrudo,
   EquipoPrismaCrudo,
+  EstadoVehiculoConProcedencia,
+  EstadoVehiculoStartrackCrudo,
   FuenteCruda,
   GeocercaStartrackCruda,
   OperadorPrismaCrudo,
@@ -67,6 +69,33 @@ export async function leerInsumosOptimizador(): Promise<InsumosOptimizador> {
     }),
   )
 
+  // Nivel 1 de ubicación (01 E.10, corregido el 13 de septiembre de 2026):
+  // una lectura por vehículo. Se degrada por vehículo, no por corrida — si
+  // uno falla, ese equipo cae a nivel 2/3 en vez de tumbar toda la petición
+  // (endpoint recién descubierto, sin historial de estabilidad todavía).
+  const listaVehiculos = vehiculos.datos as VehiculoStartrackCrudo[]
+  const estadosVehiculoPorVehiculoId: Record<string, EstadoVehiculoConProcedencia> = {}
+  await Promise.all(
+    listaVehiculos.map(async (vehiculo) => {
+      const id = String(vehiculo.id)
+      try {
+        const respuesta = await startrack.leerEstadoVehiculo(id)
+        estadosVehiculoPorVehiculoId[id] = {
+          datos: respuesta.datos as EstadoVehiculoStartrackCrudo,
+          procedencia: {
+            plataforma: respuesta.linaje.plataforma,
+            endpoint: respuesta.linaje.endpoint,
+            leidoEn: respuesta.linaje.leidoEn,
+          },
+        }
+      } catch {
+        // Sin posición en vivo para este vehículo: resolverUbicacion() cae a
+        // nivel 2/3 automáticamente (EntradaModelo.estadosVehiculoPorVehiculoId
+        // es opcional por vehículo).
+      }
+    }),
+  )
+
   return {
     datos: {
       equipos: comoFuente<EquipoPrismaCrudo>(equipos),
@@ -75,6 +104,7 @@ export async function leerInsumosOptimizador(): Promise<InsumosOptimizador> {
       geocercas: comoFuente<GeocercaStartrackCruda>(geocercas),
       tareas: comoFuente<TareaStartrackCruda>(tareas),
       tiposTarea: comoFuente<TipoTareaStartrackCrudo>(tiposTarea),
+      estadosVehiculoPorVehiculoId,
     },
     operadores: comoFuente<OperadorPrismaCrudo>(operadores),
     detallesPorEquipoId,

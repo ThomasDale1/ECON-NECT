@@ -12,6 +12,8 @@ import { reconciliar } from '../lib/canonico/reconciliacion'
 import type {
   DatosCrudos,
   EquipoPrismaCrudo,
+  EstadoVehiculoConProcedencia,
+  EstadoVehiculoStartrackCrudo,
   GeocercaStartrackCruda,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
@@ -33,6 +35,29 @@ async function main() {
     startrack.leerTiposTarea(),
   ])
 
+  // Nivel 1 de ubicación (01 E.10, corregido el 13 de septiembre de 2026):
+  // se degrada por vehículo, no por corrida completa.
+  const listaVehiculos = vehiculos.datos as VehiculoStartrackCrudo[]
+  const estadosVehiculoPorVehiculoId: Record<string, EstadoVehiculoConProcedencia> = {}
+  await Promise.all(
+    listaVehiculos.map(async (vehiculo) => {
+      const id = String(vehiculo.id)
+      try {
+        const respuesta = await startrack.leerEstadoVehiculo(id)
+        estadosVehiculoPorVehiculoId[id] = {
+          datos: respuesta.datos as EstadoVehiculoStartrackCrudo,
+          procedencia: {
+            plataforma: respuesta.linaje.plataforma,
+            endpoint: respuesta.linaje.endpoint,
+            leidoEn: respuesta.linaje.leidoEn,
+          },
+        }
+      } catch {
+        // Sin posición en vivo para este vehículo: cae a nivel 2/3.
+      }
+    }),
+  )
+
   const datos: DatosCrudos = {
     equipos: comoFuente<EquipoPrismaCrudo>(equipos),
     solicitudes: comoFuente<SolicitudPrismaCruda>(solicitudes),
@@ -40,6 +65,7 @@ async function main() {
     geocercas: comoFuente<GeocercaStartrackCruda>(geocercas),
     tareas: comoFuente<TareaStartrackCruda>(tareas),
     tiposTarea: comoFuente<TipoTareaStartrackCrudo>(tiposTarea),
+    estadosVehiculoPorVehiculoId,
   }
 
   const equiposUnificados = reconciliar(datos)
@@ -49,15 +75,18 @@ async function main() {
     'codigoActivo'.padEnd(18),
     'veredicto'.padEnd(16),
     'confianza'.padEnd(10),
+    'ubicNivel'.padEnd(10),
     'regla(s)',
   )
   for (const eq of equiposUnificados) {
     const codigo = eq.codigoActivo.valor ?? '(sin código)'
     const reglasDisparadas = eq.reglas.map((r) => r.regla).join(', ') || '(ninguna)'
+    const ubicNivel = eq.ubicacion ? String(eq.ubicacion.nivel) : '—'
     console.log(
       codigo.padEnd(18),
       eq.veredicto.padEnd(16),
       String(eq.confianza).padEnd(10),
+      ubicNivel.padEnd(10),
       reglasDisparadas,
     )
   }

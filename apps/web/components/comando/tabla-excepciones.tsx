@@ -1,4 +1,5 @@
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
+import { PropagarTraslado } from '@/components/nect/propagar-traslado'
 import { BarraConfianza } from '@/components/nect/barra-confianza'
 import { Button } from '@/components/ui/button'
 import type { EquipoUnificado, EstadoOrigen, ResultadoRegla, Rol } from '@/lib/tipos/canonico'
@@ -12,6 +13,13 @@ import type { EquipoUnificado, EstadoOrigen, ResultadoRegla, Rol } from '@/lib/t
  * Consume `EquipoUnificado` directamente: el veredicto, la confianza y las
  * reglas vienen ya calculados. Acá no se reconcilia nada, solo se proyecta —
  * la UI solo muestra (S-B1).
+ *
+ * La última columna es la propagación P1 (S-A4): aparece solo en las filas
+ * donde disparó R3 — solicitud aprobada en Prisma sin tarea de traslado en
+ * Startrack. No es un botón decorativo: escribe la tarea real, con
+ * confirmación, y al refrescarse la fila desaparece porque la incoherencia
+ * dejó de existir. Que el botón se vea no autoriza nada: el servidor vuelve a
+ * verificar sesión, rol y recurso propio.
  *
  * Las dos columnas del medio son el corazón del Caso de Uso 02 de ECON: cada
  * valor lleva debajo la etiqueta de **qué objeto describe**. Un recurso ocupado
@@ -63,7 +71,7 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[1060px] border-collapse text-left">
+          <table className="w-full min-w-[1210px] border-collapse text-left">
             <caption className="sr-only">
               Equipos con incoherencias entre Prisma y Startrack, ordenados por severidad.
             </caption>
@@ -76,7 +84,8 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                 <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Startrack (observado)</th>
                 <th scope="col" className="w-[96px] py-2.5 pr-3 font-bold">Confianza</th>
                 <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Acción sugerida</th>
-                <th scope="col" className="w-[112px] py-2.5 pr-4 font-bold">Responsable</th>
+                <th scope="col" className="w-[112px] py-2.5 pr-3 font-bold">Responsable</th>
+                <th scope="col" className="w-[150px] py-2.5 pr-4 font-bold">Propagación</th>
               </tr>
             </thead>
             <tbody>
@@ -84,6 +93,10 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                 // La regla que produjo el veredicto es la primera que lo comparte.
                 const regla: ResultadoRegla | undefined =
                   equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
+
+                // R3 = "solicitud aprobada sin tarea de traslado": la única
+                // incoherencia que P1 resuelve escribiendo (01 D.6).
+                const puedePropagarse = equipo.reglas.some((r) => r.regla === 'R3')
 
                 return (
                   <tr
@@ -126,8 +139,20 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                     <td className="py-3.5 pr-3 align-middle font-label text-[13px] text-muted-foreground">
                       {regla ? regla.accionSugerida : <SinRegistro />}
                     </td>
-                    <td className="py-3.5 pr-4 align-middle font-label text-[13px]">
+                    <td className="py-3.5 pr-3 align-middle font-label text-[13px]">
                       {regla ? ROL[regla.rolResponsable] : <SinRegistro />}
+                    </td>
+                    <td className="py-3.5 pr-4 align-middle">
+                      {puedePropagarse ? (
+                        <PropagarTraslado
+                          equipoId={equipo.id}
+                          codigoActivo={equipo.codigoActivo.valor}
+                        />
+                      ) : (
+                        <span className="font-label text-[12px] text-muted-foreground">
+                          Sin escritura aplicable
+                        </span>
+                      )}
                     </td>
                   </tr>
                 )

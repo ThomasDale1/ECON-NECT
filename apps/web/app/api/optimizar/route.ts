@@ -8,8 +8,12 @@ import { ErrorConector, SesionExpirada } from '@/lib/conectores/errores'
 import { ErrorSolver } from '@/lib/optimizador/cliente'
 import { ErrorVerificacion, planear } from '@/lib/optimizador/planear'
 import { PeticionOptimizarSchema, type ErrorOptimizar } from '@/lib/optimizador/tipos'
+import { exigirSesion } from '@/lib/acceso/servidor'
 
 export async function POST(request: NextRequest) {
+  const acceso = await exigirSesion(request)
+  if (acceso.respuesta) return acceso.respuesta
+
   const cuerpo = await request.json().catch(() => null)
   const peticion = PeticionOptimizarSchema.safeParse(cuerpo)
 
