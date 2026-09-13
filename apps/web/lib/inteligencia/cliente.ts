@@ -15,7 +15,7 @@ export async function consultarOdin(input: {
   assetId: string
   context: ContextoOdin
 }): Promise<RespuestaOdin> {
-  const baseUrl = process.env.INTELLIGENCE_BASE_URL ?? 'http://127.0.0.1:8000'
+  const baseUrl = process.env.INTELLIGENCE_BASE_URL ?? 'http://127.0.0.1:8001'
 
   try {
     const response = await fetch(`${baseUrl}/odin/chat`, {
