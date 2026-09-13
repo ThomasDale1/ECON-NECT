@@ -7,7 +7,7 @@ import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilid
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen, PersonaAsignada } from '@/lib/tipos/canonico'
 import { urlFichaPrisma } from '@/lib/nect/enlaces'
-import { lecturaAsignacion, pasoAsignacion } from '@/lib/nect/asignacion'
+import { estadoDelConductor, lecturaAsignacion } from '@/lib/nect/asignacion'
 import { cn } from '@/lib/utils'
 
 /**
@@ -68,6 +68,7 @@ export function FichaEquipo({
   // El paso del proceso en el que se resuelve esta incoherencia. Sin él, la
   // ficha dice quién responde pero no en qué momento del proceso actúa.
   const pasoProceso = decisiva ? (PASO_DE_REGLA[decisiva.regla] ?? null) : null
+  const estadoConductor = estadoDelConductor(equipo.asignacion, equipo.vehiculo)
   const faltantes = [...new Set(equipo.reglas.flatMap((r) => r.camposFaltantes))]
 
   const dimensiones: Dimension[] = [
@@ -84,7 +85,7 @@ export function FichaEquipo({
       prisma: null,
       startrack: equipo.vehiculo,
       compatible: 'sin-equivalencia',
-      nota: 'Solo Startrack. El status 0–9 del vehículo es el estado del conductor, no el del recurso.',
+      nota: 'Solo Startrack. Prisma no publica un estado equivalente para la persona.',
       leyendaStartrack: 'describe al conductor',
     },
     {
@@ -234,7 +235,11 @@ export function FichaEquipo({
             <div className="rounded-lg border border-border bg-muted/40 p-4">
               <p className="font-label text-[11px] font-bold uppercase tracking-wide text-primary">Conductor de la maquinaria</p>
               <p className="mt-1 font-label text-sm leading-relaxed">{lecturaAsignacion(equipo.asignacion)}</p>
-              <p className="mt-2 font-label text-[13px] font-bold">{pasoAsignacion(equipo.asignacion)}</p>
+              {estadoConductor && (
+                <p className="mt-2 font-label text-[13px]">
+                  Estado: <strong className="font-bold">{estadoConductor}</strong>
+                </p>
+              )}
             </div>
 
             {decisiva ? (
@@ -395,9 +400,6 @@ export function FichaEquipo({
             </h3>
             <p className="rounded-lg border border-border bg-muted p-4 font-label text-[13px] leading-relaxed">
               {decisiva?.accionSugerida ?? 'Sin acción determinada.'}
-            </p>
-            <p className="font-label text-[12px] leading-relaxed text-muted-foreground">
-              {pasoAsignacion(equipo.asignacion)}
             </p>
             <div className="flex flex-col gap-2">
               <p className="font-label text-xs uppercase tracking-wide text-muted-foreground">

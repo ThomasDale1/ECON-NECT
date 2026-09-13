@@ -44,7 +44,7 @@ export function PasosVerificacion({
           Compará los estados y los objetos que describe cada plataforma (recurso, tarea, falla).
         </li>
         <li>
-          En Startrack, Personas asignadas es el conductor de la maquinaria y el status 0–9 es su estado. No lo leas como estado del recurso ni como el operador de Prisma.
+          En Startrack, Personas asignadas es el conductor de la maquinaria: no es el operador que nombra Prisma.
         </li>
         <li>
           Solo entonces tratá ambos registros como el mismo activo.

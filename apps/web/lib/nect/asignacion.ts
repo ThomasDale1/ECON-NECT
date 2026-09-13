@@ -1,4 +1,4 @@
-import type { AsignacionPersonas, Linaje, PersonaAsignada } from '@/lib/tipos/canonico'
+import type { AsignacionPersonas, EstadoOrigen, Linaje, PersonaAsignada } from '@/lib/tipos/canonico'
 
 function texto(valor: unknown): string | null {
   if (typeof valor === 'string' && valor.trim() !== '') return valor.trim()
@@ -65,13 +65,22 @@ export function lecturaAsignacion(asignacion: AsignacionPersonas | null | undefi
   return `${startrack}${prisma}`
 }
 
-export function pasoAsignacion(asignacion: AsignacionPersonas | null | undefined): string {
-  if (!asignacion) return 'Abrir Startrack si hace falta ver quién conduce la máquina.'
-  if (asignacion.startrack) {
-    return 'Usar el conductor de Startrack como la persona asignada a la maquinaria. El status 0–9 es su estado, no el del recurso.'
-  }
-  if (asignacion.prisma) {
-    return 'Prisma nombra un operador, pero el conductor de la maquinaria no vino en Startrack. El hueco se declara; no se rellena.'
-  }
-  return 'Nadie figura como conductor de esta máquina. El hueco se declara; no se rellena.'
+/**
+ * En qué estado está el conductor, en una línea.
+ *
+ * El `status` 0–9 del vehículo en Startrack describe a la **persona**, no al
+ * recurso (lib/canonico/estados.ts), así que `equipo.vehiculo` ya trae la
+ * palabra traducida y su linaje. Antes acá se explicaba esa distinción cada
+ * vez; la explicación es documentación, no algo que el operador necesite leer
+ * en cada tarjeta. El dato útil es el estado.
+ *
+ * Devuelve `null` cuando no hay nada que decir, para que la interfaz omita la
+ * línea en vez de rellenarla.
+ */
+export function estadoDelConductor(
+  asignacion: AsignacionPersonas | null | undefined,
+  vehiculo: EstadoOrigen | null | undefined,
+): string | null {
+  if (!asignacion?.startrack) return null
+  return vehiculo?.valor ?? null
 }
