@@ -1,6 +1,7 @@
 import { Box, ExternalLink, MapPin } from 'lucide-react'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
+import { PasosVerificacion } from '@/components/nect/pasos-verificacion'
 import { VerOrigen } from '@/components/nect/ver-origen'
 import { agenteResponsablePorRol } from '@/lib/gobernanza/raci'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
@@ -43,12 +44,20 @@ type Dimension = {
   nota: string
 }
 
+const NIVEL_IDENTIDAD: Record<1 | 2 | 3, string> = {
+  1: 'enlace por remote_id',
+  2: 'enlace por código de activo',
+  3: 'enlace por clave',
+}
+
 export function FichaEquipo({
   equipo,
   urlStartrack,
+  urlPrisma,
 }: {
   equipo: EquipoUnificado
   urlStartrack: string | null
+  urlPrisma: string | null
 }) {
   const decisiva = equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
   const agente = decisiva ? agenteResponsablePorRol(decisiva.rolResponsable) : null
@@ -105,11 +114,11 @@ export function FichaEquipo({
             </h2>
             <p className="flex flex-wrap items-center gap-2 font-label text-[13px] text-muted-foreground">
               {equipo.ubicacion?.descripcion.valor ?? 'Sin proyecto asignado'}
-              {!equipo.identidadResuelta && (
-                <span className="rounded border border-border px-1.5 py-0.5 text-[10px] uppercase">
-                  sin contraparte en Startrack
-                </span>
-              )}
+              <span className="rounded border border-border px-1.5 py-0.5 text-[10px] uppercase">
+                {equipo.nivelResolucionIdentidad
+                  ? NIVEL_IDENTIDAD[equipo.nivelResolucionIdentidad]
+                  : 'sin contraparte'}
+              </span>
             </p>
           </div>
         </div>
@@ -126,6 +135,21 @@ export function FichaEquipo({
           )}
         </div>
       </section>
+
+      {equipo.interpretacionDesfase && (
+        <p
+          role="status"
+          className="rounded-xl border border-veredicto-atencion/30 bg-veredicto-atencion-fondo px-4 py-3 font-label text-sm text-veredicto-atencion"
+        >
+          {equipo.interpretacionDesfase}
+        </p>
+      )}
+
+      <PasosVerificacion
+        equipo={equipo}
+        urlPrisma={urlPrisma}
+        urlStartrack={urlStartrack}
+      />
 
       <div className="grid gap-6 xl:grid-cols-[1fr_420px]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -365,7 +389,11 @@ export function FichaEquipo({
               Origen de los datos
             </h3>
             <div className="flex flex-wrap gap-2">
-              <BadgeOrigen plataforma="prisma" />
+              <BadgeOrigen
+                plataforma="prisma"
+                href={urlPrisma}
+                equipo={equipo.codigoActivo.valor ?? undefined}
+              />
               <BadgeOrigen
                 plataforma="startrack"
                 href={urlStartrack}

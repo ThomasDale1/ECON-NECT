@@ -40,7 +40,7 @@ export type ConflictoDisponibilidad = {
 export const PREDICCION: Prediccion = {
   activo: 'RE-02',
   resumen: 'requiere mantenimiento preventivo en ~120 hrs de uso.',
-  detalle: 'Temperatura de culata 12% sobre baseline.',
+  detalle: 'Temperatura de culata 12% sobre línea base.',
   confianza: 87,
 }
 
@@ -68,4 +68,4 @@ export const CONFLICTO: ConflictoDisponibilidad = {
     'Asignar a Épsilon (proximidad 8 km, combustible −23%, técnica ✓). Reemplazo sugerido para Delta: MOT-007 disponible.',
 }
 
-export const CONSULTAS_RAPIDAS = ['Interpretar estado', 'Forecast flota', 'Enviar alerta']
+export const CONSULTAS_RAPIDAS = ['Interpretar estado', 'Pronóstico de flota', 'Enviar alerta']

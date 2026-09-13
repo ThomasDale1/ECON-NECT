@@ -17,13 +17,26 @@ import { cn } from '@/lib/utils'
  * **Por qué copia el código en vez de enlazar al vehículo:** la pantalla de
  * rastreo de Startrack (`members-new.php`) no guarda estado en la URL —
  * seleccionar una unidad no la cambia— y su bundle solo lee `jobStatus` como
- * parámetro. No existe deep link por vehículo. Así que al pulsar se copia el
- * código y se abre el mapa: el operador pega en el filtro de la grilla y cae en
- * su unidad, sin depender de ninguna extensión del navegador.
+ * parámetro. No existe deep link por vehículo. Prisma tampoco documenta un
+ * deep link de búsqueda de activo. Así que al pulsar se copia el código y se
+ * abre la plataforma: el operador pega en el filtro/búsqueda.
  */
-const PRESENTACION: Record<Plataforma, { etiqueta: string; contexto: string; punto: string }> = {
-  prisma: { etiqueta: 'Prisma', contexto: 'esperado', punto: 'bg-origen-prisma' },
-  startrack: { etiqueta: 'Startrack', contexto: 'observado', punto: 'bg-origen-startrack' },
+const PRESENTACION: Record<
+  Plataforma,
+  { etiqueta: string; contexto: string; punto: string; hover: string }
+> = {
+  prisma: {
+    etiqueta: 'Prisma',
+    contexto: 'esperado',
+    punto: 'bg-origen-prisma',
+    hover: 'hover:border-origen-prisma/40 hover:text-foreground',
+  },
+  startrack: {
+    etiqueta: 'Startrack',
+    contexto: 'observado',
+    punto: 'bg-origen-startrack',
+    hover: 'hover:border-origen-startrack/40 hover:text-foreground',
+  },
 }
 
 type Props = {
@@ -38,7 +51,7 @@ type Props = {
 }
 
 export function BadgeOrigen({ plataforma, corto = false, href, equipo, className }: Props) {
-  const { etiqueta, contexto, punto } = PRESENTACION[plataforma]
+  const { etiqueta, contexto, punto, hover } = PRESENTACION[plataforma]
   const [copiado, setCopiado] = useState(false)
 
   const contenido = (
@@ -85,10 +98,15 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2500)
     } catch {
-      // Sin permiso de portapapeles el enlace sigue abriendo el mapa; no se
+      // Sin permiso de portapapeles el enlace sigue abriendo la plataforma; no se
       // interrumpe la navegación por no haber podido copiar.
     }
   }
+
+  const destino =
+    plataforma === 'startrack'
+      ? 'el mapa de Startrack'
+      : 'Prisma'
 
   return (
     <a
@@ -98,17 +116,18 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
       onClick={copiarCodigo}
       aria-label={
         equipo
-          ? `Abrir el mapa de Startrack y copiar el código ${equipo} para pegarlo en el filtro (se abre en otra pestaña)`
+          ? `Abrir ${destino} y copiar el código ${equipo} para pegarlo en la búsqueda (se abre en otra pestaña)`
           : `Abrir ${etiqueta} (se abre en otra pestaña)`
       }
       title={
         equipo
-          ? `Copia ${equipo} y abre el mapa de Startrack. Pegá el código en el filtro de la grilla.`
+          ? `Copia ${equipo} y abre ${destino}. Pegá el código en el filtro o la búsqueda.`
           : `Abrir ${etiqueta}`
       }
       className={cn(
         clases,
-        'transition-colors hover:border-origen-startrack/40 hover:text-foreground',
+        'transition-colors',
+        hover,
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary',
       )}
     >
