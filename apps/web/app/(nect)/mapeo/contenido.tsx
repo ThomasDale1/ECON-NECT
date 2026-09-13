@@ -52,7 +52,7 @@ function descargarCsv(nombreArchivo: string, contenido: string) {
   URL.revokeObjectURL(url)
 }
 
-export default function PaginaMapeo() {
+export function ContenidoMapeo() {
   const [filtro, setFiltro] = useState<TipoRelacion | 'todas'>('todas')
 
   const filasFiltradas = useMemo(
@@ -64,9 +64,8 @@ export default function PaginaMapeo() {
   )
 
   return (
-    <main className="mx-auto flex max-w-7xl flex-col gap-6 p-8">
+    <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">Matriz de mapeo, RACI y KPIs</h1>
         <p className="text-sm text-muted-foreground">
           Entregables 1, 2 y 3 del brief — estructura tipada en{' '}
           <code className="font-mono text-xs">lib/mapeo</code>,{' '}
@@ -113,17 +112,17 @@ export default function PaginaMapeo() {
           </p>
 
           <div className="overflow-x-auto rounded-xl border border-border">
-            <Table>
+            <Table className="min-w-[1500px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col">Módulo</TableHead>
-                  <TableHead scope="col">Campo Prisma</TableHead>
-                  <TableHead scope="col">Campo Startrack</TableHead>
-                  <TableHead scope="col">Tipo de relación</TableHead>
-                  <TableHead scope="col">Transformación</TableHead>
-                  <TableHead scope="col">Evidencia</TableHead>
-                  <TableHead scope="col">Confianza</TableHead>
-                  <TableHead scope="col">Crítico</TableHead>
+                  <TableHead scope="col" className="w-[110px]">Módulo</TableHead>
+                  <TableHead scope="col" className="w-[190px]">Campo Prisma</TableHead>
+                  <TableHead scope="col" className="w-[190px]">Campo Startrack</TableHead>
+                  <TableHead scope="col" className="w-[150px]">Tipo de relación</TableHead>
+                  <TableHead scope="col" className="w-[330px]">Transformación</TableHead>
+                  <TableHead scope="col" className="w-[380px]">Evidencia</TableHead>
+                  <TableHead scope="col" className="w-[100px]">Confianza</TableHead>
+                  <TableHead scope="col" className="w-[80px]">Crítico</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,10 +205,10 @@ export default function PaginaMapeo() {
           </div>
 
           <div className="overflow-x-auto rounded-xl border border-border">
-            <Table>
+            <Table className="min-w-[1100px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col">Paso del proceso</TableHead>
+                  <TableHead scope="col" className="w-[260px]">Paso del proceso</TableHead>
                   {AGENTES.map((agente) => (
                     <TableHead key={agente} scope="col" className="whitespace-normal">
                       {agente}
@@ -302,6 +301,6 @@ export default function PaginaMapeo() {
           </div>
         </TabsContent>
       </Tabs>
-    </main>
+    </div>
   )
 }

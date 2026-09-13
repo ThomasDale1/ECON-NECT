@@ -294,9 +294,26 @@ File: apps/web/components/nect/barra-confianza.tsx
 Tipo: tile
 Clases: pista `h-1.5 w-12 rounded-full bg-muted` + `font-mono text-xs`
 Tokens de color: escala de §1.3 — verde ≥85, ámbar 65–84, naranja 45–64, gris <45.
-Notas: `role="meter"` con `aria-valuenow` y una etiqueta que dice la lectura en
-palabras. Por debajo de 45 va en gris y no en rojo: un dato insuficiente es un
-hueco, no una alarma.
+Notas: construida según §1.3, pero **hoy no se usa en ninguna pantalla**. Se
+retiró de la bandeja, de la flota y de la ficha por decisión de producto: un
+porcentaje al lado del veredicto invita a decidir a ojo —*"tiene 54 %, no lo
+reviso"*— cuando lo accionable es **qué evidencia falta y a quién llamar**. En su
+lugar va la columna **Qué falta** con el diccionario de
+`components/nect/faltantes.ts`, y el motor convierte a `SIN_EVIDENCIA` por debajo
+del umbral (plan maestro §3.5) en vez de emitir un veredicto a medias.
+Se conserva el componente para agregados —donde un continuo sí informa, como la
+confianza media de la flota— pero no para decisiones fila a fila.
+Registrado: S-B1 · 12 de septiembre de 2026 · revisado tras la crítica de diseño
+
+### QueFalta (columna) · faltantes.ts
+File: apps/web/components/nect/faltantes.ts
+Tipo: tabla
+Clases: lista `font-label text-[12px] leading-snug text-muted-foreground`
+Tokens de color: verde de coherente para "Evidencia completa"; el resto en muted.
+Notas: traduce `camposFaltantes` a lenguaje operativo — *"La telemetría de
+Startrack está desconectada y la posición puede estar vieja"*, no
+`startrack.posicion.vigencia` (§3.5). Módulo plano sin `server-only` porque lo
+importan tanto componentes de cliente como el motor de reglas.
 Registrado: S-B1 · 12 de septiembre de 2026
 
 ### BarraLateral
