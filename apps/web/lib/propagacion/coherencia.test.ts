@@ -1,4 +1,4 @@
-// Pruebas puras de la coherencia de estado (R2 desde el expediente): **el
+// Pruebas puras de la coherencia de estado (R2 desde "Tomar acción"): **el
 // servidor** rechaza escribir sobre un recurso ajeno, sin confirmación y con
 // un rol sin permiso (AGENTS.md §9.4).
 //

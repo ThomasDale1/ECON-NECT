@@ -366,7 +366,7 @@ export async function programarMantenimiento(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Escritura — estado del equipo (coherencia R2, expediente; P2 de 01 D.6).
+// Escritura — estado del equipo (coherencia R2, centro de comando; P2 de 01 D.6).
 // `PATCH /api/maquinaria/equipos/{id}/estado`: OPTIONS anuncia PATCH
 // (verificado el 13-sep-2026). El cuerpo `{ estado }` espeja el nombre del
 // campo que devuelve la lista; si Prisma no lo acepta, el error vuelve tal cual

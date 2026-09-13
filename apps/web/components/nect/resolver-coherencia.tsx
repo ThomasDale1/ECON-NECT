@@ -17,13 +17,13 @@ import { equivalenciaPara, type LadoQueSeMantiene } from '@/lib/propagacion/equi
 import { cn } from '@/lib/utils'
 
 /**
- * Resolver R2 eligiendo qué estado se mantiene (expediente).
+ * Resolver R2 eligiendo qué estado se mantiene ("Tomar acción" del centro de comando).
  *
  * Dos botones, uno por plataforma. Cada uno abre la confirmación con la
  * equivalencia que se escribirá en la otra; nada se escribe sin "Confirmar".
  * La interfaz no autoriza: el servidor vuelve a verificar sesión, rol y
- * recurso propio. Al terminar refresca la vista: el veredicto cambia porque
- * el dato cambió en la plataforma, no porque se oculte la alerta.
+ * recurso propio. Al cerrar el rastro refresca la vista: el veredicto cambia
+ * porque el dato cambió en la plataforma, no porque se oculte la alerta.
  */
 type Paso = {
   plataforma: string
@@ -71,8 +71,9 @@ export function ResolverCoherencia({
         setEstado({ fase: 'error', mensaje: cuerpo?.mensaje ?? 'La escritura fue rechazada.' })
         return
       }
+      // Sin refresh todavía: si el equipo sale coherente, su fila desaparece
+      // de la tabla y cerraría este diálogo antes de que se lea el rastro.
       setEstado({ fase: 'hecho', pasos: cuerpo.rastro.pasos, parcial: cuerpo.rastro.parcial })
-      router.refresh()
     } catch {
       setEstado({ fase: 'error', mensaje: 'No se pudo contactar al servidor.' })
     }
@@ -107,7 +108,9 @@ export function ResolverCoherencia({
       <Dialog
         open={estado.fase !== 'cerrado'}
         onOpenChange={(abierto) => {
-          if (!abierto) setEstado({ fase: 'cerrado' })
+          if (abierto) return
+          if (estado.fase === 'hecho') router.refresh()
+          setEstado({ fase: 'cerrado' })
         }}
       >
         <DialogContent className="max-w-lg">

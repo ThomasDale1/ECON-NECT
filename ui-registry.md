@@ -538,13 +538,13 @@ Tokens de color: mantiene la escala de veredicto para filas del motor y usa amba
 Notas: la seccion aparece solo para `rol=MANTENIMIENTO` y enlaza a la ficha, donde vive la accion P4/P3. Evita mezclar alertas predictivas con reglas de coherencia.
 Registrado: S-A11 · 13 de septiembre de 2026
 
-### ExpedienteVivo
-File: apps/web/components/expediente/expediente-vivo.tsx
-Tipo: card + tabla narrativa
-Clases: contenedores `rounded-xl border border-border bg-card shadow-card`; selector lateral `rounded-lg border`; mini tiles `bg-muted/50`; botones/enlaces con altura `h-8` y foco visible.
-Tokens de color: usa `BadgeVeredicto` para el veredicto; verde/ambar/violeta solo en estados de cadena de decision y huecos, sin introducir una escala nueva.
-Notas: vista de demo ejecutiva en `/expediente`. No lee APIs ni recalcula reglas en cliente: recibe `EquipoUnificado[]` ya calculado por `leerEquiposUnificados`, permite seleccionar un equipo y recompone la historia problema -> evidencia -> responsable -> decision -> escritura posible. P1 aparece solo cuando la regla R3 ya lo habilita, mediante `PropagarTraslado`; O.D.I.N. queda como enlace de explicacion de solo lectura.
-Registrado: Feature extra - 13 de septiembre de 2026
+### ResolverCoherencia
+File: apps/web/components/nect/resolver-coherencia.tsx
+Tipo: card de decisión + diálogo de confirmación
+Clases: contenedor `rounded-lg border bg-card p-4`; dos opciones `rounded-lg border bg-muted/40 p-3` con hover `border-primary bg-primary/5`; diálogo con la misma estructura `dl grid-cols-[auto_1fr]` que `PropagarTraslado`.
+Tokens de color: borde `veredicto-en-riesgo/25` en el contenedor (solo aparece con R2); sin escala nueva.
+Notas: se despliega desde "Tomar acción" de `DialogoAccion` (centro de comando) cuando la regla R2 dispara. Mantener Prisma cancela el traslado en Startrack (definitivo); mantener Startrack pasa el equipo a DISPONIBLE en Prisma. El servidor verifica rol y recurso propio; la vista se refresca al cerrar el rastro. Reemplaza a la vista `/expediente`, retirada el 13 de septiembre de 2026 por duplicar el centro de comando.
+Registrado: 13 de septiembre de 2026
 
 ### AvisoCambios
 File: apps/web/components/calendario/aviso-cambios.tsx

@@ -1,4 +1,4 @@
-// Coherencia de estado — resolver R2 desde el expediente. server-only.
+// Coherencia de estado — resolver R2 desde "Tomar acción" (centro de comando). server-only.
 //
 // R2 dispara cuando Prisma dice que el equipo no puede operar (OBSOLETA) y
 // Startrack tiene un traslado vivo para él. Los dos pueden ser verdad a la vez
