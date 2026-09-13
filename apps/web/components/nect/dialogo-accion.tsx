@@ -1,9 +1,12 @@
 'use client'
 
+import { useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import Link from 'next/link'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
+import { PropagarTraslado } from '@/components/nect/propagar-traslado'
+import { ResolverCoherencia } from '@/components/nect/resolver-coherencia'
 import { lecturaRespaldo } from '@/components/nect/respaldo'
 import {
   Dialog,
@@ -19,7 +22,20 @@ import { cn } from '@/lib/utils'
 /**
  * Detalle de una fila: por qué el motor concluyó eso, si había datos
  * suficientes, y el siguiente paso. El color solo expresa severidad.
+ *
+ * "Tomar acción" despliega la escritura que la regla habilita: R2 → decidir
+ * cuál estado manda (`ResolverCoherencia`); R3 → generar el traslado (P1). Las
+ * demás reglas no tienen una escritura equivalente y el botón lo dice. La
+ * interfaz no autoriza: el servidor vuelve a verificar rol y recurso propio.
  */
+type AccionDisponible = 'coherencia' | 'traslado' | null
+
+function accionDe(equipo: EquipoUnificado): AccionDisponible {
+  if (equipo.reglas.some((r) => r.regla === 'R2')) return 'coherencia'
+  if (equipo.reglas.some((r) => r.regla === 'R3')) return 'traslado'
+  return null
+}
+
 const ROL: Record<Rol, string> = {
   PROYECTOS: 'Proyectos',
   LOGISTICA: 'Logística',
@@ -34,9 +50,11 @@ export function DialogoAccion({ equipo }: { equipo: EquipoUnificado }) {
   const { faltantes, puedeConcluir, etiqueta, lecturaPersonas, estadoConductor } =
     lecturaRespaldo(equipo)
   const codigo = equipo.codigoActivo.valor ?? equipo.id
+  const accion = accionDe(equipo)
+  const [accionAbierta, setAccionAbierta] = useState(false)
 
   return (
-    <Dialog>
+    <Dialog onOpenChange={(abierto) => !abierto && setAccionAbierta(false)}>
       <DialogTrigger
         className={cn(
           'group flex w-full cursor-pointer flex-col items-start gap-1 rounded-lg border border-border bg-card px-3 py-2 text-left',
@@ -161,13 +179,51 @@ export function DialogoAccion({ equipo }: { equipo: EquipoUnificado }) {
             </Link>
             <button
               type="button"
-              disabled
-              title="Propagar la decisión a Startrack llega en S-A4"
-              className="cursor-not-allowed rounded-lg border border-border px-4 py-2 text-[13px] font-bold text-muted-foreground opacity-60"
+              disabled={!accion}
+              aria-expanded={accion ? accionAbierta : undefined}
+              onClick={() => setAccionAbierta((abierta) => !abierta)}
+              title={
+                accion
+                  ? undefined
+                  : 'Esta regla no tiene una escritura equivalente en otra plataforma: se resuelve con seguimiento.'
+              }
+              className={cn(
+                'rounded-lg border px-4 py-2 text-[13px] font-bold transition-colors',
+                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2',
+                accion
+                  ? accionAbierta
+                    ? 'border-primary bg-primary/5 text-primary'
+                    : 'border-border text-foreground hover:border-primary hover:bg-muted'
+                  : 'cursor-not-allowed border-border text-muted-foreground opacity-60',
+              )}
             >
               Tomar acción
             </button>
           </div>
+
+          {accionAbierta && accion === 'coherencia' && (
+            <ResolverCoherencia
+              equipoId={equipo.id}
+              codigoActivo={equipo.codigoActivo.valor}
+              estadoPrisma={equipo.equipo?.valor ?? null}
+              estadoStartrack={equipo.tarea?.valor ?? null}
+            />
+          )}
+
+          {accionAbierta && accion === 'traslado' && (
+            <section className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
+              <h3 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+                Generar el traslado
+              </h3>
+              <p className="text-[12px] leading-snug text-muted-foreground">
+                Crea en Startrack la tarea de traslado de la solicitud aprobada, enlazada por remote_id. No
+                modifica Prisma.
+              </p>
+              <div>
+                <PropagarTraslado equipoId={equipo.id} codigoActivo={equipo.codigoActivo.valor} />
+              </div>
+            </section>
+          )}
         </div>
       </DialogContent>
     </Dialog>

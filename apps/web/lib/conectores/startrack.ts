@@ -851,7 +851,7 @@ export async function actualizarEstadoVehiculo(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Escritura — estado de una tarea (coherencia R2, expediente).
+// Escritura — estado de una tarea (coherencia R2, centro de comando).
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // Mismas tres reglas que `actualizarEstadoVehiculo`: el PUT espeja el objeto
