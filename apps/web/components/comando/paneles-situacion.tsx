@@ -13,7 +13,13 @@ import type { ActivoEnCurso, ViolacionGeocerca } from '@/app/(nect)/command-cent
  * naranja (ui-registry §1.2): el relleno rojo del mockup competía con el rojo de
  * la severidad.
  */
-export function PanelEnCurso({ activos }: { activos: ActivoEnCurso[] }) {
+export function PanelEnCurso({
+  activos,
+  urlStartrack,
+}: {
+  activos: ActivoEnCurso[]
+  urlStartrack: string | null
+}) {
   const { indice, setIndice } = useCarrusel(activos.length)
   const activo = activos[indice]
 
@@ -62,7 +68,7 @@ export function PanelEnCurso({ activos }: { activos: ActivoEnCurso[] }) {
           <BadgeOrigen
             plataforma="startrack"
             corto
-            href={activo.urlStartrack}
+            href={urlStartrack}
             equipo={activo.codigo}
           />
         </div>
@@ -71,7 +77,13 @@ export function PanelEnCurso({ activos }: { activos: ActivoEnCurso[] }) {
   )
 }
 
-export function PanelFueraDeGeocerca({ violaciones }: { violaciones: ViolacionGeocerca[] }) {
+export function PanelFueraDeGeocerca({
+  violaciones,
+  urlStartrack,
+}: {
+  violaciones: ViolacionGeocerca[]
+  urlStartrack: string | null
+}) {
   const { indice, setIndice } = useCarrusel(violaciones.length)
   const violacion = violaciones[indice]
 
@@ -120,7 +132,7 @@ export function PanelFueraDeGeocerca({ violaciones }: { violaciones: ViolacionGe
           <BadgeOrigen
             plataforma="startrack"
             corto
-            href={violacion.urlStartrack}
+            href={urlStartrack}
             equipo={violacion.codigo}
           />
         </div>
