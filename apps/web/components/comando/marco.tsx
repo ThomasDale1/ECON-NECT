@@ -1,6 +1,7 @@
 import { cookies } from 'next/headers'
 import { BarraSuperior } from '@/components/comando/barra-superior'
 import { ETIQUETA_ROL, NOMBRE_COOKIE, verificarCookie } from '@/lib/acceso/verificar'
+import { asegurarEntornoCargado } from '@/lib/conectores/entorno'
 import type { SaludFuente } from '@/lib/tipos/canonico'
 
 /**
@@ -26,7 +27,11 @@ export async function Marco({
   const fuenteCaida = salud.find((f) => f.estado === 'caida')
   const hora = new Date(leidoEn).toLocaleTimeString('es-SV', { hour12: false })
   // La firma se verifica acá también: la barra superior no muestra un rol que
-  // el servidor no pueda comprobar (S-C3).
+  // el servidor no pueda comprobar (S-C3). El entorno se carga antes porque la
+  // firma se deriva de las NECT_CLAVE_*: sin ellas `verificarCookie` devuelve
+  // null y el rol se vería como "Sala de control" aun con sesión válida. No se
+  // puede depender de que otro módulo lo haya cargado primero.
+  asegurarEntornoCargado()
   const sesion = await verificarCookie((await cookies()).get(NOMBRE_COOKIE)?.value)
   const etiqueta = sesion ? ETIQUETA_ROL[sesion.rol] : 'Sala de control'
   const iniciales = sesion ? sesion.rol.slice(0, 2) : 'SC'

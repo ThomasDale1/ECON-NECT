@@ -95,9 +95,9 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     campoStartrack: 'Grupo, Etiquetas (módulo Vehículos)',
     tipoRelacion: 'con transformación',
     transformacion:
-      'Prisma guarda solo el nombre del equipo de hackathon ("The Hub"); Startrack lo repite dentro de Etiquetas junto a un correlativo ("Equipo 14 - The Hub") y por separado en Grupo ("Vehículos-Hackathon", un valor compartido por todos los equipos, no distintivo). Extraer el nombre de equipo de Etiquetas antes de comparar contra Empresa.',
+      'Prisma guarda solo el nombre del equipo participante; Startrack lo repite dentro de Etiquetas precedido de un correlativo («Equipo N - «nombre»») y por separado en Grupo, cuyo valor es el mismo para todos los participantes y por lo tanto no distingue a ninguno. Extraer el nombre de equipo de Etiquetas antes de comparar contra Empresa.',
     evidencia:
-      'Diccionario de datos, hoja PRISMA (módulo Maquinaria, campo "Empresa" — "Código interno utilizado para identificar el equipo", ejemplo "The Hub", valores posibles "Nombres de Equipos de Participantes"). Hoja STARTRACK, módulo Vehículos, campos "Grupo" (ejemplo "Vehículos-Hackathon") y "Etiquetas" (ejemplo "Equipo 14 - The Hub").',
+      'Diccionario de datos, hoja PRISMA (módulo Maquinaria, campo "Empresa" — "Código interno utilizado para identificar el equipo", valores posibles "Nombres de Equipos de Participantes"). Hoja STARTRACK, módulo Vehículos, campos "Grupo" (un único valor común a todos los participantes) y "Etiquetas" (correlativo seguido del nombre del equipo).',
     confianza: 'alta',
     critico: true,
   },
@@ -107,9 +107,9 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     campoStartrack: 'Descripción (módulo Vehículos)',
     tipoRelacion: 'con transformación',
     transformacion:
-      'Prisma concatena código y tipo en un solo texto ("CF-03 - Cargador frontal 03"); Startrack expone el código solo ("CF-03") en Descripción y el tipo aparte en Tipo. Extraer el código como subcadena antes de comparar.',
+      'Prisma concatena código y nombre en un solo texto («código - nombre del equipo»); Startrack expone el código solo en Descripción y el tipo aparte en Tipo. Extraer el código como subcadena, hasta el primer " - ", antes de comparar.',
     evidencia:
-      'Diccionario de datos, hoja PRISMA (módulo Maquinaria, campo "No. de activo" — "Número de activo fijo asociado al equipo", ejemplo "CF-03 - Cargador frontal 03"). Hoja STARTRACK, módulo Vehículos, campo "Descripción" (ejemplo "CF-03"). Confirma 01 Parte E.4 (verificado contra la API real): la llave de unión es el código de activo de Prisma contra la descripción del vehículo en Startrack, coincide en 14 de los 15 equipos observados.',
+      'Diccionario de datos, hoja PRISMA (módulo Maquinaria, campo "No. de activo" — "Número de activo fijo asociado al equipo", cuyo ejemplo concatena código y nombre). Hoja STARTRACK, módulo Vehículos, campo "Descripción" (solo el código). Confirma 01 Parte E.4 (verificado contra la API real): la llave de unión es el código de activo de Prisma contra la descripción del vehículo en Startrack, coincide en 14 de los 15 equipos observados.',
     confianza: 'alta',
     critico: true,
   },
@@ -120,7 +120,7 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     tipoRelacion: 'solo en Prisma',
     transformacion: null,
     evidencia:
-      'Diccionario de datos, hoja PRISMA (módulo Maquinaria, campo "Nombre del equipo" — "Denominación o descripción del equipo", ejemplo "Cargador frontal 03", sin catálogo). Sin fila equivalente confirmada en Startrack: "Descripción" de Vehículos guarda el código (ver fila "No. de activo" arriba), no esta denominación.',
+      'Diccionario de datos, hoja PRISMA (módulo Maquinaria, campo "Nombre del equipo" — "Denominación o descripción del equipo", sin catálogo). Sin fila equivalente confirmada en Startrack: "Descripción" de Vehículos guarda el código (ver fila "No. de activo" arriba), no esta denominación.',
     confianza: 'media',
     critico: false,
   },
@@ -155,7 +155,7 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     tipoRelacion: 'mismo nombre, distinto significado',
     transformacion: null,
     evidencia:
-      'Diccionario de datos, hoja PRISMA (módulo Mantenimiento, campo "Estado" — "Estado de la maquinaria", ejemplo "CF-03 - Obsoleto", sin catálogo propio listado): parece reutilizar el mismo catálogo del recurso (ver fila "Estado (módulo Maquinaria)" arriba) y no corresponde al catálogo de 8 valores de la máquina de estados de falla que 01 Parte E.2 verificó contra la API real. El diccionario no documenta un módulo "Falla" separado — se deja constancia de esa ausencia en vez de forzar la equivalencia.',
+      'Diccionario de datos, hoja PRISMA (módulo Mantenimiento, campo "Estado" — "Estado de la maquinaria", cuyo ejemplo concatena el código de activo con un estado, sin catálogo propio listado): parece reutilizar el mismo catálogo del recurso (ver fila "Estado (módulo Maquinaria)" arriba) y no corresponde al catálogo de 8 valores de la máquina de estados de falla que 01 Parte E.2 verificó contra la API real. El diccionario no documenta un módulo "Falla" separado — se deja constancia de esa ausencia en vez de forzar la equivalencia.',
     confianza: 'media',
     critico: false,
   },
@@ -237,7 +237,7 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     transformacion:
       'Unir por código de proyecto, no por nombre completo: el nombre es frágil (01 E.4).',
     evidencia:
-      'Diccionario de datos: hoja PRISMA (módulo Solicitudes de maquinaria, campo "Proyecto" — "Proyecto asociado a la solicitud de maquinaria", ejemplo "PROY-014 - The Hub - Proyecto Xi - La Unión") y hoja STARTRACK (módulo Geocercas, campo "Nombre") documentan el mismo formato de ejemplo. 01 Parte E.4 (verificado contra la API real): los nombres coinciden en casi todos los casos observados, excepto en uno donde los componentes del nombre aparecen en distinto orden.',
+      'Diccionario de datos: hoja PRISMA (módulo Solicitudes de maquinaria, campo "Proyecto" — "Proyecto asociado a la solicitud de maquinaria", cuyo ejemplo concatena código de proyecto, empresa, obra y zona) y hoja STARTRACK (módulo Geocercas, campo "Nombre") documentan el mismo formato de ejemplo. 01 Parte E.4 (verificado contra la API real): los nombres coinciden en casi todos los casos observados, excepto en uno donde los componentes del nombre aparecen en distinto orden.',
     confianza: 'alta',
     critico: true,
   },
@@ -293,7 +293,7 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     transformacion:
       'El valor observado combina código, tipo y un correlativo en un solo texto; separar el código antes de usarlo como llave de identidad.',
     evidencia:
-      'Diccionario de datos, hoja PRISMA (módulo Solicitudes de maquinaria, campo "Maquinaria" — "Nombre del equipo asignado a la solicitud"): catálogo con ejemplo "CF-03 - Cargador frontal 03" y valores posibles que incluyen "+ Correlativo".',
+      'Diccionario de datos, hoja PRISMA (módulo Solicitudes de maquinaria, campo "Maquinaria" — "Nombre del equipo asignado a la solicitud"): catálogo cuyo ejemplo concatena código y nombre del equipo, con valores posibles que incluyen "+ Correlativo".',
     confianza: 'alta',
     critico: true,
   },
