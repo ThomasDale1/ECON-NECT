@@ -34,6 +34,8 @@ export type EquipoPrismaCrudo = {
   /** Observado en vivo el 13-sep-2026: marca de actualización del registro en Prisma. */
   updated_at: string | null
   occupied_without_project?: boolean | null
+  /** Observado: el campo existe en equipos; en el sandbox viene vacío. */
+  assigned_personnel?: unknown
 }
 
 export type SolicitudPrismaCruda = {

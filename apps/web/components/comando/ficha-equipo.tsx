@@ -5,8 +5,9 @@ import { PasosVerificacion } from '@/components/nect/pasos-verificacion'
 import { VerOrigen } from '@/components/nect/ver-origen'
 import { agenteResponsablePorRol } from '@/lib/gobernanza/raci'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
-import type { EquipoUnificado, EstadoOrigen } from '@/lib/tipos/canonico'
+import type { EquipoUnificado, EstadoOrigen, PersonaAsignada } from '@/lib/tipos/canonico'
 import { urlFichaPrisma } from '@/lib/nect/enlaces'
+import { lecturaAsignacion, pasoAsignacion } from '@/lib/nect/asignacion'
 import { cn } from '@/lib/utils'
 
 /**
@@ -43,6 +44,8 @@ type Dimension = {
   startrack: EstadoOrigen | null
   compatible: 'si' | 'atencion' | 'sin-evidencia' | 'sin-equivalencia'
   nota: string
+  leyendaPrisma?: string
+  leyendaStartrack?: string
 }
 
 const NIVEL_IDENTIDAD: Record<1 | 2 | 3, string> = {
@@ -68,12 +71,18 @@ export function FichaEquipo({
     {
       nombre: 'Estado del recurso',
       prisma: equipo.equipo,
+      startrack: null,
+      compatible: 'sin-equivalencia',
+      nota: 'Prisma describe el recurso (DISPONIBLE / OCUPADA / OBSOLETA). Startrack no publica un estado de recurso equivalente.',
+      leyendaPrisma: 'describe el recurso',
+    },
+    {
+      nombre: 'Estado del conductor',
+      prisma: null,
       startrack: equipo.vehiculo,
-      compatible: equipo.vehiculo === null ? 'sin-evidencia' : 'si',
-      nota:
-        equipo.vehiculo === null
-          ? 'Startrack no tiene contraparte para este activo.'
-          : 'Describen objetos distintos; no se contradicen.',
+      compatible: 'sin-equivalencia',
+      nota: 'Solo Startrack. El status 0–9 del vehículo es el estado del conductor, no el del recurso.',
+      leyendaStartrack: 'describe al conductor',
     },
     {
       nombre: 'Compromiso y traslado',
@@ -94,6 +103,15 @@ export function FichaEquipo({
         equipo.falla === null
           ? 'Sin falla activa registrada en Prisma.'
           : 'La falla vive en su propia máquina de estados, aparte del recurso.',
+    },
+    {
+      nombre: 'Personas asignadas',
+      prisma: personaAEstado(equipo.asignacion?.prisma ?? null),
+      startrack: personaAEstado(equipo.asignacion?.startrack ?? null),
+      compatible: 'sin-equivalencia',
+      nota: 'Solo Startrack nombra al conductor de la maquinaria. El operador de Prisma, si aparece, es otro catálogo.',
+      leyendaPrisma: 'operador en Prisma',
+      leyendaStartrack: 'conductor de la maquinaria',
     },
   ]
 
@@ -173,8 +191,8 @@ export function FichaEquipo({
                   {dimensiones.map((d) => (
                     <tr key={d.nombre} className="border-t border-border align-top">
                       <td className="py-3 pr-3 font-label text-[13px] font-bold">{d.nombre}</td>
-                      <Celda estado={d.prisma} />
-                      <Celda estado={d.startrack} />
+                      <Celda estado={d.prisma} leyenda={d.leyendaPrisma} />
+                      <Celda estado={d.startrack} leyenda={d.leyendaStartrack} />
                       <td className="py-3 font-label text-xs">
                         <span className={cn('flex items-center gap-1.5 font-bold', COLOR[d.compatible])}>
                           <span aria-hidden className={cn('size-2 rounded-full', FONDO[d.compatible])} />
@@ -208,6 +226,12 @@ export function FichaEquipo({
                   Evidencia incompleta
                 </span>
               )}
+            </div>
+
+            <div className="rounded-lg border border-border bg-muted/40 p-4">
+              <p className="font-label text-[11px] font-bold uppercase tracking-wide text-primary">Conductor de la maquinaria</p>
+              <p className="mt-1 font-label text-sm leading-relaxed">{lecturaAsignacion(equipo.asignacion)}</p>
+              <p className="mt-2 font-label text-[13px] font-bold">{pasoAsignacion(equipo.asignacion)}</p>
             </div>
 
             {decisiva ? (
@@ -369,6 +393,9 @@ export function FichaEquipo({
             <p className="rounded-lg border border-border bg-muted p-4 font-label text-[13px] leading-relaxed">
               {decisiva?.accionSugerida ?? 'Sin acción determinada.'}
             </p>
+            <p className="font-label text-[12px] leading-relaxed text-muted-foreground">
+              {pasoAsignacion(equipo.asignacion)}
+            </p>
             <div className="flex flex-col gap-2">
               <p className="font-label text-xs uppercase tracking-wide text-muted-foreground">
                 Responsable según la RACI
@@ -437,7 +464,7 @@ function formatearDistancia(metros: number): string {
   return metros < 1000 ? `${metros} m` : `${(metros / 1000).toFixed(1)} km`
 }
 
-function Celda({ estado }: { estado: EstadoOrigen | null }) {
+function Celda({ estado, leyenda }: { estado: EstadoOrigen | null; leyenda?: string }) {
   return (
     <td className="py-3 pr-3">
       {estado === null ? (
@@ -449,10 +476,20 @@ function Celda({ estado }: { estado: EstadoOrigen | null }) {
             <VerOrigen linaje={estado.linaje} etiqueta={estado.valor} />
           </span>
           <span className="block font-label text-[10px] text-muted-foreground">
-            {OBJETO[estado.objeto]}
+            {leyenda ?? OBJETO[estado.objeto]}
           </span>
         </>
       )}
     </td>
   )
+}
+
+
+function personaAEstado(persona: PersonaAsignada | null): EstadoOrigen | null {
+  if (!persona) return null
+  return {
+    valor: persona.codigo ? `${persona.etiqueta} · ${persona.codigo}` : persona.etiqueta,
+    objeto: 'recurso',
+    linaje: persona.linaje,
+  }
 }

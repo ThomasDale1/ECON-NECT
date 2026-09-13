@@ -14,6 +14,7 @@ import type {
 import { distanciaEnMetros } from './identidad'
 import { interpretarDesfases, reconciliar } from './reconciliacion'
 import { paresDesdeCrudos } from '@/lib/kpi/pares'
+import { conductorDesdeStartrack, personalDesdePrisma } from '@/lib/nect/asignacion'
 import type { ParLatencia } from '@/lib/kpi/calculo'
 import type {
   DatosCrudos,
@@ -96,7 +97,7 @@ async function leerTodo(): Promise<LecturaUnificada> {
   const prismaDesdeCache = estaVigente('prisma:equipos')
   const startrackDesdeCache = estaVigente('startrack:ajax/vehicles.php?cmd=list')
 
-  const [equipos_, solicitudes_, vehiculos_, geocercas_, tareas_, tipos_, flota_] =
+  const [equipos_, solicitudes_, vehiculos_, geocercas_, tareas_, tipos_, flota_, conductores_] =
     await Promise.all([
       medir(prisma.leerEquipos),
       medir(prisma.leerSolicitudes),
@@ -105,6 +106,7 @@ async function leerTodo(): Promise<LecturaUnificada> {
       medir(startrack.leerTareas),
       medir(startrack.leerTiposTarea),
       medir(startrack.leerEstadoFlota),
+      medir(startrack.leerConductores),
     ])
 
   const vacia = (
@@ -152,6 +154,19 @@ async function leerTodo(): Promise<LecturaUnificada> {
     if (codigo) porCodigo.set(codigo, v)
   }
 
+
+  const conductoresOk = ok(conductores_.res, vacia('startrack', 'ajax/drivers.php?cmd=list')).datos.filter(esRegistro)
+  const conductorPorId = new Map<string, Registro>()
+  for (const c of conductoresOk) {
+    const id = texto(c, 'i')
+    if (id) conductorPorId.set(id, c)
+  }
+  const vehiculoPorCodigo = new Map<string, (typeof datos.vehiculos.datos)[number]>()
+  for (const v of datos.vehiculos.datos) {
+    const codigo = codigoDe(v.description)
+    if (codigo) vehiculoPorCodigo.set(codigo, v)
+  }
+
   const equipos = reconciliados.map((eq) => {
     const codigo = eq.codigoActivo.valor
     const vivo = codigo ? (porCodigo.get(codigo) ?? null) : null
@@ -171,11 +186,25 @@ async function leerTodo(): Promise<LecturaUnificada> {
         : null
     const interpretacionDesfase = desfaseFlota ?? eq.interpretacionDesfase
 
+    const crudoReg = (crudo ?? {}) as Registro
+    const vehiculo = codigo ? (vehiculoPorCodigo.get(codigo) ?? null) : null
+    const driverId = vehiculo?.driver_id != null ? String(vehiculo.driver_id) : vivo ? texto(vivo, 'did') : null
+    const asignacion = {
+      prisma: personalDesdePrisma(crudoReg.assigned_personnel, {
+        plataforma: 'prisma',
+        endpoint: datos.equipos.endpoint,
+        leidoEn,
+      }),
+      startrack: conductorDesdeStartrack(driverId ? (conductorPorId.get(driverId) ?? null) : null, {
+        plataforma: 'startrack',
+        endpoint: 'ajax/drivers.php?cmd=list',
+        leidoEn,
+      }),
+    }
+
     const enVivo = ubicacionEnVivo(vivo, leidoEn)
     if (!enVivo) {
-      return interpretacionDesfase === eq.interpretacionDesfase
-        ? eq
-        : { ...eq, interpretacionDesfase }
+      return { ...eq, interpretacionDesfase, asignacion }
     }
 
     // La ubicación que resolvió el motor pasa a ser la referencia del proyecto;
@@ -183,6 +212,7 @@ async function leerTodo(): Promise<LecturaUnificada> {
     return {
       ...eq,
       interpretacionDesfase,
+      asignacion,
       ubicacion: enVivo,
       geocercaProyecto: eq.ubicacion ? geocercaConDistancia(eq.ubicacion, enVivo) : null,
     }

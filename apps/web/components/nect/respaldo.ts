@@ -1,4 +1,5 @@
 import type { EquipoUnificado } from '@/lib/tipos/canonico'
+import { lecturaAsignacion, pasoAsignacion } from '@/lib/nect/asignacion'
 
 /**
  * El respaldo no es un semáforo. Dice si el motor pudo concluir, no si
@@ -17,5 +18,11 @@ export function lecturaRespaldo(equipo: EquipoUnificado) {
       ? `Faltan ${faltantes.length} datos`
       : 'No se puede concluir'
 
-  return { faltantes, puedeConcluir, etiqueta }
+  return {
+    faltantes,
+    puedeConcluir,
+    etiqueta,
+    lecturaPersonas: lecturaAsignacion(equipo.asignacion),
+    pasoPersonas: pasoAsignacion(equipo.asignacion),
+  }
 }

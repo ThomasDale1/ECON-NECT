@@ -106,6 +106,17 @@ export type Geocerca = {
  */
 export type NivelResolucionIdentidad = 1 | 2 | 3
 
+export type PersonaAsignada = {
+  etiqueta: string
+  codigo: string | null
+  linaje: Linaje
+}
+
+export type AsignacionPersonas = {
+  prisma: PersonaAsignada | null
+  startrack: PersonaAsignada | null
+}
+
 export type EquipoUnificado = {
   id: string
   codigoActivo: Dato<string>
@@ -130,6 +141,12 @@ export type EquipoUnificado = {
    * fechas o el desfase no aplica.
    */
   interpretacionDesfase: string | null
+  /**
+   * Startrack: conductor de la maquinaria (`asignacion.startrack`).
+   * Prisma: operador si el equipo lo trae (`asignacion.prisma`) — otro catálogo.
+   * No se cruzan.
+   */
+  asignacion?: AsignacionPersonas | null
   veredicto: Veredicto
   confianza: number
   reglas: ResultadoRegla[]

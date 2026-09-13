@@ -31,7 +31,7 @@ const ROL: Record<Rol, string> = {
 export function DialogoAccion({ equipo }: { equipo: EquipoUnificado }) {
   const decisiva: ResultadoRegla | undefined =
     equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
-  const { faltantes, puedeConcluir, etiqueta } = lecturaRespaldo(equipo)
+  const { faltantes, puedeConcluir, etiqueta, lecturaPersonas, pasoPersonas } = lecturaRespaldo(equipo)
   const codigo = equipo.codigoActivo.valor ?? equipo.id
 
   return (
@@ -75,6 +75,11 @@ export function DialogoAccion({ equipo }: { equipo: EquipoUnificado }) {
         </DialogHeader>
 
         <div className="flex flex-col gap-5 font-label tracking-normal">
+          <section className="flex flex-col gap-1.5 rounded-lg border border-border bg-muted/40 p-3">
+            <h3 className="text-[11px] font-bold uppercase tracking-wide text-primary">Conductor (Startrack)</h3>
+            <p className="text-sm leading-relaxed">{lecturaPersonas}</p>
+            <p className="text-[13px] font-bold">{pasoPersonas}</p>
+          </section>
           {decisiva && (
             <section className="flex flex-col gap-2">
               <h3 className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
@@ -127,6 +132,7 @@ export function DialogoAccion({ equipo }: { equipo: EquipoUnificado }) {
                 Siguiente paso
               </h3>
               <p className="text-[13px] leading-snug">{decisiva.accionSugerida}</p>
+              <p className="text-[12px] leading-snug text-muted-foreground">{pasoPersonas}</p>
               <p className="text-[12px] text-muted-foreground">
                 Responsable: <strong className="font-bold">{ROL[decisiva.rolResponsable]}</strong>
               </p>
