@@ -61,6 +61,38 @@ describe('MATRIZ_MAPEO', () => {
     }
   })
 
+  // La misma regla vale para la evidencia y la transformación, no solo para el
+  // ejemplo: ahí el argumento se sostiene describiendo la FORMA del valor
+  // («código - nombre»), nunca copiando un registro. Estos son los códigos de
+  // activo y nombres de proyecto que el diccionario trae; si alguno vuelve a
+  // aparecer en cualquier campo de texto de la matriz, es una regresión.
+  it('no transcribe registros del diccionario en ningún campo de la matriz', () => {
+    const registros = [
+      'The Hub',
+      'CF-03',
+      'PROY-014',
+      'Proyecto Xi',
+      'Cargador frontal 03',
+      'Equipo 14',
+      'Vehículos-Hackathon',
+    ]
+    for (const fila of MATRIZ_MAPEO) {
+      const texto = [
+        fila.campoPrisma,
+        fila.campoStartrack,
+        fila.transformacion,
+        fila.evidencia,
+        fila.prisma.ejemplo,
+        fila.startrack.ejemplo,
+      ]
+        .filter(Boolean)
+        .join(' | ')
+      for (const registro of registros) {
+        expect(texto).not.toContain(registro)
+      }
+    }
+  })
+
   it('hace visibles los mapeos no uno-a-uno y las ausencias de equivalencia', () => {
     expect(MATRIZ_MAPEO.some((fila) => fila.cardinalidad === '1:N')).toBe(true)
     expect(MATRIZ_MAPEO.some((fila) => fila.cardinalidad === 'sin equivalencia')).toBe(true)
