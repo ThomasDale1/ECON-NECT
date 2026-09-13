@@ -1,27 +1,32 @@
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
+import { DialogoAccion } from '@/components/nect/dialogo-accion'
 import { Button } from '@/components/ui/button'
-import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
-import type { EquipoUnificado, EstadoOrigen, ResultadoRegla, Rol } from '@/lib/tipos/canonico'
+import type { EquipoUnificado, EstadoOrigen, Plataforma, Rol } from '@/lib/tipos/canonico'
+import { cn } from '@/lib/utils'
 
 /**
  * Excepciones prioritarias — ui-registry.md §3.4.
  *
- * No es una lista de errores: es una cola de trabajo, ordenada por severidad y
- * con el responsable de cada fila.
+ * No es una lista de errores: es una cola de trabajo, ordenada por severidad.
  *
- * Consume `EquipoUnificado` directamente: el veredicto, la confianza y las
- * reglas vienen ya calculados. Acá no se reconcilia nada, solo se proyecta —
- * la UI solo muestra (S-B1).
+ * **Seis columnas, no ocho.** Lo que se escanea de un vistazo se queda en la
+ * tabla; lo que se lee con calma —por qué, qué falta, el siguiente paso y quién
+ * lo ejecuta— vive en el diálogo de cada fila.
  *
- * Las dos columnas del medio son el corazón del Caso de Uso 02 de ECON: cada
- * valor lleva debajo la etiqueta de **qué objeto describe**. Un recurso ocupado
- * y una tarea completada pueden ser ambos correctos porque describen objetos
- * distintos; sin esa etiqueta la tabla no resuelve el caso.
+ * Prisma y Startrack comparten columna porque se leen comparando, no por
+ * separado. Cada valor conserva su punto de plataforma y su etiqueta de **qué
+ * objeto describe**: eso es lo que resuelve el Caso de Uso 02 de ECON, donde un
+ * recurso ocupado y una tarea completada pueden ser ambos correctos.
  */
 const OBJETO: Record<EstadoOrigen['objeto'], string> = {
   recurso: 'describe el recurso',
   tarea: 'describe la tarea',
   falla: 'describe la falla',
+}
+
+const PUNTO_ORIGEN: Record<Plataforma, string> = {
+  prisma: 'bg-origen-prisma',
+  startrack: 'bg-origen-startrack',
 }
 
 const ROL: Record<Rol, string> = {
@@ -71,26 +76,24 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[1160px] border-collapse text-left">
+          <table className="w-full min-w-[940px] border-collapse text-left">
             <caption className="sr-only">
-              Equipos con incoherencias entre Prisma y Startrack, ordenados por severidad.
+              Equipos con incoherencias entre Prisma y Startrack, ordenados por severidad. Cada fila
+              abre un diálogo con el detalle y el siguiente paso.
             </caption>
             <thead>
               <tr className="border-y border-border font-label text-[11px] uppercase tracking-wide text-muted-foreground">
-                <th scope="col" className="w-[108px] py-2.5 pl-4 font-bold">Severidad</th>
-                <th scope="col" className="w-[172px] py-2.5 pr-3 font-bold">Activo / clase</th>
-                <th scope="col" className="w-[120px] py-2.5 pr-3 font-bold">Proyecto</th>
-                <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Prisma (esperado)</th>
-                <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Startrack (observado)</th>
-                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Qué falta</th>
-                <th scope="col" className="w-[200px] py-2.5 pr-3 font-bold">Siguiente paso</th>
-                <th scope="col" className="w-[112px] py-2.5 pr-4 font-bold">Responsable</th>
+                <th scope="col" className="w-[118px] py-2.5 pl-4 pr-3 font-bold">Severidad</th>
+                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Activo / clase</th>
+                <th scope="col" className="w-[150px] py-2.5 pr-3 font-bold">Proyecto</th>
+                <th scope="col" className="w-[250px] py-2.5 pr-3 font-bold">Prisma ↔ Startrack</th>
+                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Evidencia</th>
+                <th scope="col" className="py-2.5 pr-4 font-bold">Responsable</th>
               </tr>
             </thead>
             <tbody>
               {filas.map((equipo) => {
-                // La regla que produjo el veredicto es la primera que lo comparte.
-                const regla: ResultadoRegla | undefined =
+                const decisiva =
                   equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
 
                 return (
@@ -98,7 +101,7 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                     key={equipo.id}
                     className="border-b border-muted transition-colors last:border-0 hover:bg-muted/60"
                   >
-                    <td className="py-3.5 pl-4 align-middle">
+                    <td className="py-3.5 pl-4 pr-3 align-middle">
                       <BadgeVeredicto veredicto={equipo.veredicto} />
                     </td>
                     <td className="py-3.5 pr-3 align-middle">
@@ -124,21 +127,25 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                         <SinRegistro />
                       )}
                     </td>
-                    {/* Prisma describe el recurso; si hay falla activa, manda la falla. */}
-                    <Celda estado={equipo.falla ?? equipo.solicitud ?? equipo.equipo} />
-                    {/* Startrack describe la tarea de traslado; si no hay, el vehículo. */}
-                    <Celda estado={equipo.tarea ?? equipo.vehiculo} />
-                    {/* Sin porcentaje: un "54%" invita a decidir a ojo si vale
-                        la pena revisar. Acá se dice qué dato falta, que es lo
-                        único accionable. */}
+
+                    {/* Las dos plataformas en una sola columna: se leen
+                        comparando. El punto identifica el origen sin usar
+                        relleno de color (§1.2). */}
                     <td className="py-3.5 pr-3 align-middle">
-                      <QueFalta reglas={equipo.reglas} />
+                      <div className="flex flex-col gap-1.5">
+                        <Lado
+                          plataforma="prisma"
+                          estado={equipo.falla ?? equipo.solicitud ?? equipo.equipo}
+                        />
+                        <Lado plataforma="startrack" estado={equipo.tarea ?? equipo.vehiculo} />
+                      </div>
                     </td>
-                    <td className="py-3.5 pr-3 align-middle font-label text-[13px] text-muted-foreground">
-                      {regla ? regla.accionSugerida : <SinRegistro />}
+
+                    <td className="py-3.5 pr-3 align-middle">
+                      <DialogoAccion equipo={equipo} />
                     </td>
                     <td className="py-3.5 pr-4 align-middle font-label text-[13px]">
-                      {regla ? ROL[regla.rolResponsable] : <SinRegistro />}
+                      {decisiva ? ROL[decisiva.rolResponsable] : <SinRegistro />}
                     </td>
                   </tr>
                 )
@@ -152,52 +159,31 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
 }
 
 /**
- * Un estado de origen con su etiqueta de qué objeto describe.
+ * Un lado de la comparación: punto de plataforma, valor y qué objeto describe.
  *
- * El dato ausente se escribe, no se omite: `Sin registro` en muted, nunca una
- * celda vacía ni un cero inventado (ui-registry §1.4).
+ * El dato ausente se escribe, no se omite (ui-registry §1.4).
  */
-function Celda({ estado }: { estado: EstadoOrigen | null }) {
+function Lado({ plataforma, estado }: { plataforma: Plataforma; estado: EstadoOrigen | null }) {
   return (
-    <td className="py-3.5 pr-3 align-middle">
-      {estado === null ? (
-        <SinRegistro />
-      ) : (
-        <>
-          <span className="block font-label text-[13px]">{estado.valor}</span>
-          <span className="block font-label text-[10px] text-muted-foreground">
-            {OBJETO[estado.objeto]}
-          </span>
-        </>
-      )}
-    </td>
-  )
-}
-
-/**
- * Qué evidencia falta, en lenguaje operativo.
- *
- * Si no falta nada lo dice; el vacío no se deja en blanco (ui-registry §1.4).
- */
-function QueFalta({ reglas }: { reglas: ResultadoRegla[] }) {
-  const faltantes = [...new Set(reglas.flatMap((r) => r.camposFaltantes))]
-
-  if (faltantes.length === 0) {
-    return (
-      <span className="font-label text-[12px] text-veredicto-coherente">
-        Evidencia completa
+    <span className="flex items-start gap-2">
+      <span
+        aria-hidden
+        className={cn('mt-1.5 size-1.5 shrink-0 rounded-full', PUNTO_ORIGEN[plataforma])}
+      />
+      <span className="min-w-0">
+        <span className="sr-only">{plataforma === 'prisma' ? 'Prisma: ' : 'Startrack: '}</span>
+        {estado === null ? (
+          <SinRegistro />
+        ) : (
+          <>
+            <span className="block font-label text-[13px] leading-tight">{estado.valor}</span>
+            <span className="block font-label text-[10px] text-muted-foreground">
+              {OBJETO[estado.objeto]}
+            </span>
+          </>
+        )}
       </span>
-    )
-  }
-
-  return (
-    <ul className="flex flex-col gap-1">
-      {faltantes.map((f) => (
-        <li key={f} className="font-label text-[12px] leading-snug text-muted-foreground">
-          {FALTANTE_EN_PALABRAS[f] ?? f}
-        </li>
-      ))}
-    </ul>
+    </span>
   )
 }
 
