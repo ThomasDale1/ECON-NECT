@@ -7,8 +7,8 @@ Esta carpeta es la salida de la **sesión 1 (Planeación)** y la entrada de la
 > S-A6/S-A7/S-A8/S-A9, leer
 > [03-ARQUITECTURA-IA-ODIN.md](../docs/03-ARQUITECTURA-IA-ODIN.md).
 > Los prompts históricos no autorizan Claude/OpenAI, un segundo servicio Python
-> ni escrituras de O.D.I.N. El prompt ejecutable de O.D.I.N. Web se redactará
-> contra esa decisión cuando el equipo dé las indicaciones finales.
+> ni escrituras de O.D.I.N. Las indicaciones finales del MVP Web quedaron
+> consolidadas en [S-A6-odin-web.md](S-A6-odin-web.md).
 
 ## Cómo se usa
 
@@ -35,6 +35,7 @@ alcance.
 |---|---|---|---|---|
 | [S-A0-andamio.md](S-A0-andamio.md) | 🟦 A | S-A0 | 17:00 · **primero, solo** | **Todo el carril B** |
 | [S-A1-conectores.md](S-A1-conectores.md) | 🟦 A | S-A1 | 17:00–20:00 | — |
+| [S-A6-odin-web.md](S-A6-odin-web.md) | 🟦 A | S-A6 | después del núcleo | — |
 | [S-B1-pantallas-nucleo.md](S-B1-pantallas-nucleo.md) | 🟪 B | S-B1 | 17:45–22:00 | — |
 | [S-C1-matriz-mapeo.md](S-C1-matriz-mapeo.md) | 🟩 C | S-C1/C2 | **desde ya** | — |
 | [S-D1-entregables.md](S-D1-entregables.md) | 🟨 D | S-D1 | **desde ya** | — |

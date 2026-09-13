@@ -82,6 +82,21 @@ export type ResultadoRegla = {
 
 /** La identidad canónica de un equipo, con sus estados de ambas plataformas,
  * su ubicación, y el veredicto calculado. */
+/**
+ * La geocerca del proyecto asignado, con la distancia a la posición reportada.
+ *
+ * `radioMetros` es siempre `null`: `ajax/namedPlaces.php` publica el centro y el
+ * nombre, no el radio ni la forma. Sin radio **no se puede afirmar "dentro" o
+ * "fuera"**, solo a qué distancia está. El hueco se declara, no se rellena.
+ */
+export type Geocerca = {
+  nombre: Dato<string>
+  lat: Dato<number>
+  lon: Dato<number>
+  distanciaMetros: number | null
+  radioMetros: number | null
+}
+
 export type EquipoUnificado = {
   id: string
   codigoActivo: Dato<string>
@@ -93,6 +108,8 @@ export type EquipoUnificado = {
   vehiculo: EstadoOrigen | null
   tarea: EstadoOrigen | null
   ubicacion: Ubicacion | null
+  /** Opcional: solo existe si el proyecto de Prisma cruzó con una geocerca. */
+  geocercaProyecto?: Geocerca | null
   veredicto: Veredicto
   confianza: number
   reglas: ResultadoRegla[]

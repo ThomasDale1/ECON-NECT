@@ -98,6 +98,15 @@ export function ConsolaOdin({ equipos }: { equipos: EquipoOdin[] }) {
           </div>
 
           <form className="flex flex-col gap-4" onSubmit={submit}>
+            {equipos.length === 0 ? (
+              <div
+                role="status"
+                className="rounded-lg bg-veredicto-sin-evidencia-fondo px-3 py-2 text-sm text-veredicto-sin-evidencia"
+              >
+                No hay equipos disponibles en las fuentes conectadas. Revise el estado de Prisma y
+                Startrack.
+              </div>
+            ) : null}
             <div className="flex flex-col gap-1.5">
               <label htmlFor="equipo-odin" className="font-label text-sm font-bold">
                 Equipo
@@ -164,7 +173,7 @@ export function ConsolaOdin({ equipos }: { equipos: EquipoOdin[] }) {
                 </Badge>
                 {response.confidence === null ? null : (
                   <span className="font-mono text-xs text-muted-foreground">
-                    Confianza/índice: {response.confidence}
+                    Respaldo de evidencia: {response.confidence}
                   </span>
                 )}
               </div>
@@ -218,14 +227,14 @@ export function ConsolaOdin({ equipos }: { equipos: EquipoOdin[] }) {
           </CardContent>
         </Card>
 
-        <div className="rounded-xl border border-veredicto-atencion/20 bg-veredicto-atencion-fondo p-4 text-sm">
-          <p className="font-label font-bold text-veredicto-atencion">Datos de demostración</p>
+        <div className="rounded-xl border border-border bg-muted/40 p-4 text-sm">
+          <p className="font-label font-bold text-primary">Datos canónicos</p>
           <p className="mt-1 text-muted-foreground">
-            Esta pantalla usa los equipos fabricados del prototipo hasta que la ruta unificada en vivo esté disponible.
+            El navegador envía solo el identificador. El servidor relee y minimiza el estado
+            unificado de Prisma y Startrack.
           </p>
         </div>
       </aside>
     </div>
   )
 }
-

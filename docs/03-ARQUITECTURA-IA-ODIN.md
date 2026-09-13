@@ -267,12 +267,12 @@ Implementado en `codex/cmvalencia13-ia`:
 - Filtro de cifras no sustentadas y fallback determinístico explícito.
 - Ruta server-side de Next.js y consola Web con evidencia, datos faltantes y
   rechazo de solicitudes de escritura.
+- Selección de equipos y contexto obtenidos del orquestador canónico en vivo;
+  el navegador solo envía el identificador y la consulta.
 - Golden set de 15 consultas y pruebas para contratos, riesgo y políticas.
 
 Pendiente antes de usar datos reales:
 
-- Sustituir los equipos fabricados por el resultado canónico de `GET
-  /api/equipos` cuando esa ruta exista en el núcleo.
 - Auditar el dataset autorizado y mapear señales históricas de mantenimiento.
 - Medir el golden set con usuarios del equipo y registrar latencia/calidad.
 

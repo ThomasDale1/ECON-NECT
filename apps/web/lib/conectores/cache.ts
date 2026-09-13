@@ -42,6 +42,38 @@ export async function conCache<T>(
   return valor
 }
 
+/**
+ * ¿Hay una entrada vigente para esta clave?
+ *
+ * Sirve para saber, **antes** de leer, si la respuesta va a salir de memoria.
+ * Sin esto no se puede reportar latencia honesta: un acierto de caché resuelve
+ * en un milisegundo y presentarlo como "latencia de la plataforma" diría que el
+ * sandbox responde instantáneamente, que es falso.
+ */
+export function estaVigente(clave: string): boolean {
+  const entrada = almacen.get(clave)
+  return entrada !== undefined && entrada.expiraEn > Date.now()
+}
+
+/**
+ * Invalida las entradas de una plataforma sin tocar las de la otra.
+ *
+ * Las claves llevan la plataforma como prefijo (`prisma:equipos`,
+ * `startrack:ajax/...`), así que basta con el prefijo. Lo usa el botón de
+ * relectura manual del Command Center: forzar una lectura de Prisma no debería
+ * tirar también el caché de Startrack, que es la fuente lenta.
+ */
+export function invalidarPorPrefijo(prefijo: string): number {
+  let borradas = 0
+  for (const clave of [...almacen.keys()]) {
+    if (clave.startsWith(prefijo)) {
+      almacen.delete(clave)
+      borradas += 1
+    }
+  }
+  return borradas
+}
+
 /** Solo para pruebas: vacía el caché entre casos. */
 export function limpiarCache(): void {
   almacen.clear()

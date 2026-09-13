@@ -3,8 +3,8 @@ import {
   consultarOdin,
   ServicioInteligenciaNoDisponible,
 } from '@/lib/inteligencia/cliente'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { solicitudOdinSchema } from '@/lib/inteligencia/tipos'
-import { EQUIPOS_EJEMPLO } from '@/lib/tipos/ejemplo'
 
 
 export async function POST(request: Request) {
@@ -16,10 +16,10 @@ export async function POST(request: Request) {
     )
   }
 
-  // Datos fabricados para la interfaz actual. Cuando GET /api/equipos esté
-  // disponible, solo cambia esta lectura server-side; el navegador seguirá
-  // enviando exclusivamente message + assetId.
-  const equipo = EQUIPOS_EJEMPLO.find((item) => item.id === parsed.data.assetId)
+  // El navegador solo elige un identificador. El servidor vuelve a leer el
+  // estado canónico y minimiza el contexto antes de enviarlo al proceso local.
+  const { equipos } = await leerEquiposUnificados()
+  const equipo = equipos.find((item) => item.id === parsed.data.assetId)
   if (!equipo) {
     return Response.json({ error: 'Equipo no encontrado.' }, { status: 404 })
   }
@@ -44,4 +44,3 @@ export async function POST(request: Request) {
     throw error
   }
 }
-
