@@ -68,6 +68,12 @@ __pycache__/
 .venv/
 *.pyc
 
+# --- Descargas a medias del navegador --------------------------------------
+# Un .crdownload entró al repositorio una vez por un `git add -A` distraído.
+*.crdownload
+*.part
+*.download
+
 # --- Herramientas y sistema --------------------------------------------------
 .DS_Store
 Thumbs.db
