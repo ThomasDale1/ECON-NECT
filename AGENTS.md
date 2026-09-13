@@ -223,10 +223,18 @@ Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
 
 | Carril | Rol | Construye |
 |---|---|---|
-| **A · Núcleo** | Backend & Integración | Conectores, modelo canónico, reglas, rutas de API, propagación |
+| **A · Núcleo** | Backend & Integración | Conectores, unificación de identidad y estados, reglas, rutas de API, propagación |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa |
 | **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch |
+
+> **Nota de nombre:** esta capa de A (`lib/canonico/` + `lib/reglas/`) no se
+> describe como "modelo canónico" — por definición formal, un modelo canónico
+> implica una tabla/esquema maestro que se reescribe, y esto no reescribe nada:
+> lee, resuelve identidad y calcula un veredicto **en memoria**, por request, y
+> se descarta al responder. Se la nombra "unificación de identidad y estados"
+> en la prosa de este archivo para no sugerir lo contrario. La ruta de carpeta
+> (`lib/canonico/`) no cambia — es solo la palabra en la documentación.
 
 ### 4.2 Propiedad de directorios — **nadie edita territorio ajeno**
 
@@ -239,7 +247,7 @@ apps/web/
   app/api/                 A   Rutas delgadas
   lib/optimizador/         A   Fase extendida (§12). Tipos de hard/soft
                                 constraints, cliente HTTP a services/solver/,
-                                adaptador desde el modelo canónico
+                                adaptador desde el equipo unificado
   lib/betinho/             A   Fase extendida (§12). Orquestación de Betinho:
                                 triage de incidentes, forecast, redacción de
                                 escalamiento — cliente de un modelo
@@ -286,8 +294,8 @@ Root Directory = `apps/web`.
   cliente ve una credencial jamás.
 - **`lib/canonico` no conoce HTTP.** Recibe datos ya leídos y devuelve el modelo
   unificado. Es la capa que se puede probar sin red.
-- **`lib/reglas` no conoce ni HTTP ni React.** Funciones puras: entran datos
-  canónicos, sale un veredicto con su justificación.
+- **`lib/reglas` no conoce ni HTTP ni React.** Funciones puras: entran datos ya
+  unificados, sale un veredicto con su justificación.
 - **Las rutas de API son delgadas.** Ninguna lógica de reconciliación vive en una
   ruta. Reciben, validan con Zod, delegan, responden.
 - **La UI solo muestra.** Nunca recalcula reconciliación en el cliente.
