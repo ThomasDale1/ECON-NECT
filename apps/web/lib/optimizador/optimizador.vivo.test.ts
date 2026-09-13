@@ -15,7 +15,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { puedeOperar } from '@/lib/canonico/estados'
 import { idsIguales, resolverConductoresDeOperadores } from '@/lib/canonico/identidad'
 import { asegurarEntornoCargado } from '@/lib/conectores/entorno'
-import { leerConductores, leerReporteConductores } from '@/lib/conectores/startrack'
+import { leerConductores, leerEstadoVehiculo, leerReporteConductores } from '@/lib/conectores/startrack'
 import { adaptar } from './adaptador'
 import { optimizarEnSolver } from './cliente'
 import { ensamblar } from './ensamblar'
@@ -396,6 +396,61 @@ describe('optimizador — pruebas en vivo (S-A7 Paso 7 / S-A10 Paso 11)', () => 
 
     expect(sinConductorMalDeclarados, 'un operador sin conductor no tiene el peor caso declarado con motivo').toBe(0)
     expect(sinActividadMalDeclarados, 'un operador unido sin actividad no quedó en 0 h reales').toBe(0)
+  })
+
+  it('9b. horas de operador: contador acumulado en horas (máximo de las lecturas), igual al ign_on_time del vehículo', async () => {
+    // Corrección del 13 de septiembre de 2026: `ignOnTime` del reporte de
+    // conductores es el contador acumulado del vehículo en horas, no minutos
+    // del día. Se verifica de dos maneras, ambas con datos reales: (1) el
+    // valor adoptado es el máximo de las lecturas del conductor, nunca la
+    // suma ni la suma ÷ 60; (2) coincide con `ign_on_time` de
+    // `GET api/vehicle/{id}/status` del vehículo asignado a ese conductor.
+    const resultado = adaptar(insumosBase, peticionDefault, hoy)
+    const { conductorPorOperadorId } = resolverConductoresDeOperadores(
+      insumosBase.operadores.datos,
+      insumosBase.conductores.datos,
+    )
+    const { desde, hasta } = insumosBase.ventanaHoras
+    const lecturasPorConductor = new Map<string, number[]>()
+    for (const fila of insumosBase.reporteConductores.datos.detail) {
+      const fecha = fila.date?.slice(0, 10)
+      if (!fecha || fecha < desde || fecha > hasta || fila.ignOnTime === null) continue
+      lecturasPorConductor.set(fila.driver_id, [...(lecturasPorConductor.get(fila.driver_id) ?? []), fila.ignOnTime])
+    }
+
+    let comparados = 0
+    let distintosDelMaximo = 0
+    for (const [operadorId, objetivos] of resultado.objetivosOperadorPorId) {
+      const conductorId = conductorPorOperadorId.get(operadorId)
+      if (conductorId === undefined) continue
+      const lecturas = lecturasPorConductor.get(conductorId)
+      if (!lecturas || lecturas.length === 0) continue
+      comparados++
+      if (objetivos.horasOperador.valor !== Math.max(...lecturas)) distintosDelMaximo++
+    }
+    expect(comparados, 'ningún operador unido tiene lecturas de ignOnTime en la ventana').toBeGreaterThan(0)
+    expect(distintosDelMaximo, 'el valor de horas no es el máximo de las lecturas del conductor').toBe(0)
+
+    // (2) contra el contador del vehículo del conductor, para todos los que
+    // tengan vehículo asignado en Startrack.
+    const vehiculoPorConductor = new Map(
+      insumosBase.datos.vehiculos.datos
+        .filter((v) => v.driver_id !== null && v.driver_id !== undefined)
+        .map((v) => [String(v.driver_id), String(v.id)] as const),
+    )
+    let cruzados = 0
+    let discrepantes = 0
+    for (const [conductorId, lecturas] of lecturasPorConductor) {
+      const vehiculoId = vehiculoPorConductor.get(conductorId)
+      if (!vehiculoId) continue
+      const estado = (await leerEstadoVehiculo(vehiculoId)).datos as { ign_on_time?: unknown }
+      const contador = Number(estado.ign_on_time)
+      if (!Number.isFinite(contador)) continue
+      cruzados++
+      if (Math.abs(Math.max(...lecturas) - contador) > 0.01) discrepantes++
+    }
+    expect(cruzados, 'ningún conductor con lecturas tiene vehículo con ign_on_time').toBeGreaterThan(0)
+    expect(discrepantes, 'el máximo de ignOnTime del reporte no coincide con ign_on_time del vehículo').toBe(0)
   })
 
   it('10. APROBADA rota: vuelve a la demanda con reemplazaConfirmada y nadie usa su máquina', async () => {

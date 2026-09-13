@@ -31,7 +31,7 @@ const SUFIJO_CIFRA: Record<IdSoftConstraint, string> = {
   tarifa: 'USD/h menos',
   distancia: 'km menos',
   ratingOperador: 'pts por asignación',
-  horasOperador: 'h menos (30 d)',
+  horasOperador: 'h de motor menos (acumuladas)',
 }
 
 const REFERENCIA: Record<IdSoftConstraint, string> = {

@@ -5,9 +5,11 @@
 // reenviarla en cada llamada siguiente. No es un bearer token.
 
 import 'server-only'
+import type { DetalleEquipoPrismaCrudo } from '@/lib/canonico/tipos-crudos'
+import type { MantenimientoEquipoPrisma, ReporteFallaPrisma } from '@/lib/mantenimiento/tipos'
 import { asegurarEntornoCargado } from './entorno'
-import { ErrorConector } from './errores'
-import { conCache } from './cache'
+import { ErrorConector, ErrorEscritura } from './errores'
+import { conCache, invalidarCache } from './cache'
 import { envolver, type RespuestaConector } from './tipos'
 
 asegurarEntornoCargado()
@@ -164,4 +166,201 @@ export function leerOperadores(): Promise<RespuestaConector<unknown[]>> {
     const cuerpo = await peticionJson(endpoint)
     return envolver(extraerLista(cuerpo), PLATAFORMA, endpoint)
   })
+}
+
+// ── Mantenimiento preventivo (S-A11 Paso 3) ─────────────────────────────────
+
+function numeroONulo(valor: unknown): number | null {
+  if (typeof valor === 'number' && Number.isFinite(valor)) return valor
+  if (typeof valor === 'string' && valor.trim() !== '' && Number.isFinite(Number(valor))) return Number(valor)
+  return null
+}
+
+function textoONulo(valor: unknown): string | null {
+  if (valor === null || valor === undefined) return null
+  const texto = String(valor).trim()
+  return texto === '' ? null : texto
+}
+
+function booleanoONulo(valor: unknown): boolean | null {
+  if (typeof valor === 'boolean') return valor
+  if (valor === 1 || valor === '1' || valor === 'true') return true
+  if (valor === 0 || valor === '0' || valor === 'false') return false
+  return null
+}
+
+/** Nombres candidatos del campo que enlaza el reporte con el equipo, en
+ * orden. ⚠ Ninguno pudo observarse: el sandbox tenía 0 reportes el 13 de
+ * septiembre de 2026 y la parte visible del esquema de la UI de Prisma
+ * empieza en `descripcion`. Nunca se une por `maquinaria_nombre` ni `clave`. */
+const CAMPOS_ENLACE_REPORTE = ['maquinaria_id', 'equipo_id', 'machinery_id'] as const
+
+export type LecturaReportesFalla = {
+  reportes: ReporteFallaPrisma[]
+  /** "el reporte no expone el id del equipo; no se une", cuando aplica. */
+  advertencias: string[]
+}
+
+/**
+ * Reportes de falla proyectados. Envuelve `leerFallas()` (mismo caché).
+ * `operator_name`, `approver_name`, `descripcion`, `observaciones` y
+ * `approver_comment` **no salen del conector**: nombres y texto libre de
+ * personal de ECON (AGENTS.md §1.2).
+ */
+export async function leerReportesFalla(): Promise<RespuestaConector<LecturaReportesFalla>> {
+  const respuesta = await leerFallas()
+  const reportes: ReporteFallaPrisma[] = []
+  const advertencias: string[] = []
+
+  for (const crudo of respuesta.datos) {
+    if (typeof crudo !== 'object' || crudo === null) continue
+    const fila = crudo as Record<string, unknown>
+    const id = textoONulo(fila.id)
+    if (id === null) continue
+
+    const campoEnlace = CAMPOS_ENLACE_REPORTE.find((campo) => fila[campo] !== undefined && fila[campo] !== null)
+    const maquinariaId = campoEnlace ? textoONulo(fila[campoEnlace]) : null
+    if (maquinariaId === null && advertencias.length === 0) {
+      advertencias.push(
+        `el reporte no expone el id del equipo (se probaron ${CAMPOS_ENLACE_REPORTE.join(', ')}); no se une`,
+      )
+    }
+
+    reportes.push({
+      id,
+      maquinariaId,
+      estado: textoONulo(fila.estado),
+      esParo: booleanoONulo(fila.is_paro),
+      horometroHumano: numeroONulo(fila.hour_meter),
+      categoria: textoONulo(fila.categoria_falla),
+      creadoEn: textoONulo(fila.created_at),
+      actualizadoEn: textoONulo(fila.updated_at),
+      linaje: {
+        plataforma: PLATAFORMA,
+        endpoint: respuesta.linaje.endpoint,
+        campo: 'hour_meter',
+        valorCrudo: fila.hour_meter ?? null,
+        leidoEn: respuesta.linaje.leidoEn,
+      },
+    })
+  }
+
+  return { datos: { reportes, advertencias }, linaje: respuesta.linaje }
+}
+
+/** Ventana de mantenimiento programado del equipo, desde `leerEquipo(id)`
+ * (ya cacheado por S-A7). Vacía en 17/17 hasta que P4 la escriba. */
+export async function leerMantenimientoEquipo(id: string): Promise<RespuestaConector<MantenimientoEquipoPrisma>> {
+  const respuesta = await leerEquipo(id)
+  const detalle = (respuesta.datos ?? {}) as Partial<DetalleEquipoPrismaCrudo>
+  return {
+    datos: {
+      fechaInicio: textoONulo(detalle.mantenimiento_fecha_inicio),
+      fechaFin: textoONulo(detalle.mantenimiento_fecha_fin),
+      notas: textoONulo(detalle.mantenimiento_notas),
+      linaje: {
+        plataforma: PLATAFORMA,
+        endpoint: respuesta.linaje.endpoint,
+        campo: 'mantenimiento_fecha_fin',
+        valorCrudo: detalle.mantenimiento_fecha_fin ?? null,
+        leidoEn: respuesta.linaje.leidoEn,
+      },
+    },
+    linaje: respuesta.linaje,
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura — Propagación P4 (S-A11 Paso 3c). Primera escritura de este
+// conector. Mismas reglas que `crearTarea` en startrack.ts: sin reintento
+// salvo 401 explícito, sin caché, verificación por GET después del PATCH, y
+// `ErrorEscritura` con el detalle de la plataforma tal cual.
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** Límite del formulario de Prisma para `mantenimiento_notas`. */
+export const MAX_NOTAS_MANTENIMIENTO = 500
+
+export type OrdenMantenimientoPrisma = {
+  fechaInicio: string // AAAA-MM-DD
+  fechaFin: string // AAAA-MM-DD
+  notas: string
+}
+
+export type RastroMantenimientoPrisma = {
+  endpoint: string
+  metodo: 'PATCH'
+  campos: string[]
+  hora: string
+  verificado: MantenimientoEquipoPrisma
+}
+
+/**
+ * `PATCH /api/maquinaria/equipos/{id}` con las tres fechas/notas de
+ * mantenimiento, y `GET` de verificación: los tres campos persistieron. Si el
+ * PATCH responde 2xx pero el GET no refleja las fechas, se lanza
+ * `ErrorEscritura` — **no** se intenta `…/estado` ni otro cuerpo por cuenta
+ * propia: se reporta y el usuario decide.
+ */
+export async function programarMantenimiento(
+  id: string,
+  orden: OrdenMantenimientoPrisma,
+): Promise<RastroMantenimientoPrisma> {
+  const { baseUrl } = config()
+  const endpoint = `/api/maquinaria/equipos/${id}`
+  if (!cookieSesion) await iniciarSesion()
+
+  const cuerpo = {
+    mantenimiento_fecha_inicio: orden.fechaInicio,
+    mantenimiento_fecha_fin: orden.fechaFin,
+    mantenimiento_notas: orden.notas.slice(0, MAX_NOTAS_MANTENIMIENTO),
+  }
+
+  const intentar = async (): Promise<Response> =>
+    fetch(`${baseUrl}${endpoint}`, {
+      method: 'PATCH',
+      headers: { Cookie: cookieSesion!, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(cuerpo),
+    })
+
+  let respuesta = await intentar()
+  if (respuesta.status === 401) {
+    await iniciarSesion()
+    respuesta = await intentar()
+  }
+
+  let json: unknown = null
+  try {
+    json = await respuesta.json()
+  } catch {
+    // Sin cuerpo: el GET de verificación decide.
+  }
+  const comoObjeto = (json ?? {}) as Record<string, unknown>
+  if (!respuesta.ok) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `status ${respuesta.status}: ${String(comoObjeto.error ?? comoObjeto.message ?? 'sin detalle')}`,
+    )
+  }
+
+  // El detalle está cacheado por S-A7: se invalida antes de verificar para
+  // leer lo que Prisma tiene ahora, no lo que tenía hace 45 s.
+  invalidarCache(`prisma:equipo:${id}`)
+  invalidarCache('prisma:equipos')
+  const verificado = await leerMantenimientoEquipo(id)
+  const persistio =
+    verificado.datos.fechaInicio === cuerpo.mantenimiento_fecha_inicio &&
+    verificado.datos.fechaFin === cuerpo.mantenimiento_fecha_fin &&
+    (verificado.datos.notas ?? '') === cuerpo.mantenimiento_notas
+  if (!persistio) {
+    throw new ErrorEscritura(PLATAFORMA, endpoint, 'el PATCH no persistió las fechas de mantenimiento')
+  }
+
+  return {
+    endpoint,
+    metodo: 'PATCH',
+    campos: Object.keys(cuerpo),
+    hora: new Date().toISOString(),
+    verificado: verificado.datos,
+  }
 }

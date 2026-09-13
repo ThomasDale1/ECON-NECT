@@ -24,7 +24,11 @@ export type IdSoftConstraint = (typeof SOFT_CONSTRAINTS)[number]
 export const PRIORIDADES_PILA = ['cobertura', ...SOFT_CONSTRAINTS, 'ordenLlegada'] as const
 export type IdPrioridad = (typeof PRIORIDADES_PILA)[number]
 
-/** Ventana de horas trabajadas: 30 días que terminan hoy (inclusive), America/El_Salvador. */
+/** Ventana de lectura del reporte de conductores: 30 días que terminan hoy
+ * (inclusive), America/El_Salvador. ⚠ El `ignOnTime` que devuelve es el
+ * contador acumulado de horas de motor del vehículo, no horas del día
+ * (verificado el 13 de septiembre de 2026): la ventana decide qué filas se
+ * leen, no qué se suma. */
 export const DIAS_VENTANA_HORAS = 30
 
 /** La cobertura tiene que estar en la pila y antes que distancia, tarifa,

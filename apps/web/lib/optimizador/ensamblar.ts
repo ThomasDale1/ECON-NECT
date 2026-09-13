@@ -8,7 +8,6 @@ import type { OperadorPrismaCrudo } from '@/lib/canonico/tipos-crudos'
 import type { Dato } from '@/lib/tipos/canonico'
 import { clavePar, type ResultadoAdaptador } from './adaptador'
 import {
-  DIAS_VENTANA_HORAS,
   type AsignacionPlanAnterior,
   type AsignacionPropuesta,
   type CambioPlan,
@@ -25,7 +24,7 @@ const UNIDAD_POR_NIVEL: Record<NivelLexicografico['objetivo'], string> = {
   distancia: 'km',
   tarifa: 'USD/h',
   ratingOperador: 'pts (suma)',
-  horasOperador: `h (suma, ${DIAS_VENTANA_HORAS} d)`,
+  horasOperador: 'h de motor acumuladas (suma del plan)',
   ordenLlegada: 'solicitudes cubiertas (en orden de llegada)',
 }
 
@@ -34,7 +33,7 @@ function convertirValorNivel(objetivo: NivelLexicografico['objetivo'], valorCrud
   if (objetivo === 'distancia') return valorCrudo / 1000 // metros → km
   if (objetivo === 'tarifa') return valorCrudo / 100 // centavos → USD/h
   if (objetivo === 'ratingOperador') return valorCrudo / 10 // décimas → pts
-  if (objetivo === 'horasOperador') return valorCrudo / 60 // minutos → h
+  if (objetivo === 'horasOperador') return valorCrudo / 60 // minutos enteros del solver → h
   return valorCrudo
 }
 

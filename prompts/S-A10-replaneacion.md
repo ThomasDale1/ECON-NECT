@@ -5,6 +5,13 @@
 **Si compite por la misma hora de Carril A con S-A4 (propagación P1), P1 va
 primero. Siempre.**
 
+> ⚠ **Corrección del 13 de septiembre de 2026 (aplicada en código durante la
+> planeación de S-A11):** el `ignOnTime` del reporte de conductores es el
+> **contador acumulado de horas de motor del vehículo**, no minutos del día.
+> Donde este prompt diga "Σ … ÷ 60" o "minutos, inferida", lo vigente es
+> "máximo de las lecturas, en horas" (ver AGENTS.md §7.1 y
+> `lib/optimizador/adaptador.ts`).
+>
 > Leé [AGENTS.md](../AGENTS.md) (§1, §4.3, §7.1, §9, §12),
 > [ui-registry.md](../ui-registry.md) completo y este prompt **completo** antes
 > de escribir código. Reemplaza en parte a [S-A7](S-A7-optimizador.md),

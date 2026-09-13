@@ -320,13 +320,13 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
   {
     modulo: 'Conductores',
     campoPrisma: null,
-    campoStartrack: 'Horas con motor encendido por conductor y día — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)',
+    campoStartrack: 'Horas de motor acumuladas del vehículo del conductor — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)',
     tipoRelacion: 'solo en Startrack',
     transformacion:
-      'Unidad minutos, inferida. Para las horas trabajadas de un operador se suman las filas de su conductor en los últimos 30 días y se dividen entre 60.',
+      'Unidad horas, contador acumulado desde la instalación del GPS. Para las horas de motor de un operador se toma la lectura más alta de su conductor en la ventana de 30 días; nunca la suma ni una división entre 60.',
     evidencia:
-      'Verificado contra la API real el 13 de septiembre de 2026: `detail[]` trae una fila por conductor y día (`driver_id`, `vehicle_id`, `date`, `ignOnTime`, `movingTime`, `distance`…), con actividad para 10 conductores. La unidad no está declarada: se infiere minutos porque todos los valores observados son ≤ 1440 y la web de Startrack los muestra en horas y minutos.',
-    confianza: 'media',
+      'Verificado contra la API real el 13 de septiembre de 2026 (corregido esa misma madrugada): `detail[]` trae una fila por conductor y día con actividad (`driver_id`, `vehicle_id`, `date`, `ignOnTime`, `movingTime`, `distance`…). `ignOnTime` coincide al cuarto decimal con `ign_on_time` de `api/vehicle/{id}/status` (acumulado) en 6 de 6 vehículos comparados y no con `stat_ign_on_time` (del día); la suma de la serie diaria del reporte 3 (`ignOnTime` en segundos) ÷ 3600 reproduce ese acumulado en 14 de 14. La inferencia anterior ("minutos, ≤ 1440") solo era compatible con seis días de GPS instalado.',
+    confianza: 'alta',
     critico: false,
   },
   {

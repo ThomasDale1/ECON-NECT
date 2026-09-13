@@ -102,7 +102,7 @@ export const CATALOGO_KPI: Kpi[] = [
     id: 'ahorro-por-objetivo-optimizador',
     nombre: 'Ahorro del plan frente a la peor opción válida',
     queMide:
-      'Por cada solicitud que el plan cubre, cuánto mejor es la máquina y el operador elegidos que la peor opción que también cumplía todas las restricciones duras de esa solicitud, en tarifa efectiva (USD/h), distancia al proyecto (km), rating del operador (pts, Startrack) y horas trabajadas del operador (h con motor encendido, últimos 30 días).',
+      'Por cada solicitud que el plan cubre, cuánto mejor es la máquina y el operador elegidos que la peor opción que también cumplía todas las restricciones duras de esa solicitud, en tarifa efectiva (USD/h), distancia al proyecto (km), rating del operador (pts, Startrack) y horas de motor acumuladas del vehículo que conduce el operador (h, contador de Startrack).',
     porQueImporta:
       'Muestra el costo de asignar sin criterio dentro de lo que es válido: la diferencia entre la mejor y la peor decisión posible con la flota y la gente disponibles hoy. Es el argumento de costo por hora, traslado, seguridad y reparto de carga, con su cobertura a la vista.',
     formula:
