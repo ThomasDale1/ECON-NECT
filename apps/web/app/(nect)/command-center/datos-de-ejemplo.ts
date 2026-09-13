@@ -7,13 +7,18 @@
 // archivo se borra y la página lee del servidor.
 // ═══════════════════════════════════════════════════════════════════════════
 
-import type { ObjetoDescrito, Veredicto } from '@/lib/tipos/canonico'
-
-/** Un estado de origen más la etiqueta de qué objeto describe (ui-registry §3.4). */
-export type ValorObservado = {
-  valor: string | null
-  objeto: ObjetoDescrito
-}
+/**
+ * Enlace al registro del equipo en Startrack.
+ *
+ * TODO: falta la URL. El conector solo conoce la superficie `ajax/*.php`, que es
+ * la API, no la pantalla. Para construirlo hacen falta dos cosas que hoy no
+ * tenemos: el host real (`STARTRACK_BASE_URL` vive en `.env.local`, que no
+ * existe) y la ruta de la ficha del vehículo en la interfaz.
+ *
+ * Mientras sea `null` el badge se dibuja sin enlace, que es lo correcto: mandar
+ * a alguien a una URL inventada es peor que no enlazar.
+ */
+type EnlaceStartrack = string | null
 
 export type ActivoEnCurso = {
   id: string
@@ -25,6 +30,7 @@ export type ActivoEnCurso = {
   destino: string
   estado: string
   etaMinutos: number
+  urlStartrack: EnlaceStartrack
 }
 
 export type ViolacionGeocerca = {
@@ -36,22 +42,7 @@ export type ViolacionGeocerca = {
   geocerca: string
   hora: string
   severidad: string
-}
-
-export type FilaExcepcion = {
-  id: string
-  veredicto: Veredicto
-  codigo: string
-  nombre: string
-  modelo: string
-  clase: string
-  proyecto: string
-  prisma: ValorObservado
-  startrack: ValorObservado
-  confianza: number
-  accionSugerida: string
-  /** TODO carril C — S-C3: sale de `lib/gobernanza/raci.ts`, no se escribe a mano. */
-  responsable: string
+  urlStartrack: EnlaceStartrack
 }
 
 export const ACTIVOS_EN_CURSO: ActivoEnCurso[] = [
@@ -65,6 +56,7 @@ export const ACTIVOS_EN_CURSO: ActivoEnCurso[] = [
     destino: 'Proyecto Épsilon',
     estado: 'En curso',
     etaMinutos: 22,
+    urlStartrack: null,
   },
   {
     id: 'CF-07',
@@ -76,6 +68,7 @@ export const ACTIVOS_EN_CURSO: ActivoEnCurso[] = [
     destino: 'Proyecto Delta',
     estado: 'En curso',
     etaMinutos: 48,
+    urlStartrack: null,
   },
   {
     id: 'MIX-12',
@@ -87,6 +80,7 @@ export const ACTIVOS_EN_CURSO: ActivoEnCurso[] = [
     destino: 'Proyecto Épsilon',
     estado: 'En curso',
     etaMinutos: 9,
+    urlStartrack: null,
   },
 ]
 
@@ -100,6 +94,7 @@ export const VIOLACIONES_GEOCERCA: ViolacionGeocerca[] = [
     geocerca: 'Proyecto Épsilon — La Libertad',
     hora: '14:29:04',
     severidad: 'Crítico',
+    urlStartrack: null,
   },
   {
     id: 'EXC-05',
@@ -110,6 +105,7 @@ export const VIOLACIONES_GEOCERCA: ViolacionGeocerca[] = [
     geocerca: 'Proyecto Delta — San Miguel',
     hora: '14:17:52',
     severidad: 'Crítico',
+    urlStartrack: null,
   },
   {
     id: 'MOT-005',
@@ -120,51 +116,6 @@ export const VIOLACIONES_GEOCERCA: ViolacionGeocerca[] = [
     geocerca: 'Proyecto Delta — San Miguel',
     hora: '13:58:31',
     severidad: 'Crítico',
-  },
-]
-
-export const EXCEPCIONES: FilaExcepcion[] = [
-  {
-    id: 'RE-02',
-    veredicto: 'ATENCION',
-    codigo: 'RE-02',
-    nombre: 'Retroexcavadora',
-    modelo: 'CAT 320D',
-    clase: 'Maquinaria pesada',
-    proyecto: 'Proyecto Épsilon',
-    prisma: { valor: 'Solicitud aprobada', objeto: 'tarea' },
-    startrack: { valor: 'Detenido, sin telemetría', objeto: 'recurso' },
-    confianza: 90,
-    accionSugerida: 'Confirmar con el operador si la unidad está en espera.',
-    responsable: 'Logística',
-  },
-  {
-    id: 'MOT-005',
-    veredicto: 'EN_RIESGO',
-    codigo: 'MOT-005',
-    nombre: 'Motoniveladora',
-    modelo: 'John Deere 670G',
-    clase: 'Flota',
-    proyecto: 'Proyecto Delta',
-    prisma: { valor: 'Mantenimiento programado', objeto: 'falla' },
-    startrack: { valor: 'Activa y en movimiento', objeto: 'tarea' },
-    confianza: 98,
-    accionSugerida: 'Detener la unidad y validar el permiso de seguridad.',
-    responsable: 'Mantenimiento',
-  },
-  {
-    id: 'MIX-12',
-    veredicto: 'SIN_EVIDENCIA',
-    codigo: 'MIX-12',
-    nombre: 'Camión mezclador',
-    modelo: 'Mack Granite',
-    clase: 'Transporte',
-    proyecto: 'Proyecto Épsilon',
-    // `null` = no se pudo leer. La tabla lo escribe como "Sin registro" (§3.4).
-    prisma: { valor: null, objeto: 'recurso' },
-    startrack: { valor: 'GPS dentro de la geocerca', objeto: 'recurso' },
-    confianza: 64,
-    accionSugerida: 'Revisar el despliegue no registrado en Prisma.',
-    responsable: 'Maquinaria y Equipo',
+    urlStartrack: null,
   },
 ]

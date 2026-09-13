@@ -1,5 +1,6 @@
 import { Exo, Lato, Roboto_Condensed } from 'next/font/google'
 import { BarraLateral } from '@/components/comando/barra-lateral'
+import type { SaludFuente } from '@/lib/tipos/canonico'
 
 /**
  * Envoltorio de las pantallas de ECON NECT: barra lateral fija + área de trabajo.
@@ -21,12 +22,21 @@ const robotoCondensed = Roboto_Condensed({
   display: 'swap',
 })
 
+// DATOS FABRICADOS — no provienen del sandbox de ECON.
+// TODO carril A: reemplazar por la salud real de cada conector cuando exista la
+// ruta de API. La barra lateral ya consume el tipo del contrato, así que el
+// cambio es sustituir esta constante por la lectura del servidor.
+const SALUD: SaludFuente[] = [
+  { plataforma: 'prisma', estado: 'ok', ultimaLecturaBuena: null, latenciaMs: null },
+  { plataforma: 'startrack', estado: 'ok', ultimaLecturaBuena: null, latenciaMs: null },
+]
+
 export default function NectLayout({ children }: { children: React.ReactNode }) {
   return (
     <div
       className={`${exo.variable} ${lato.variable} ${robotoCondensed.variable} flex min-h-screen bg-background font-sans text-foreground antialiased`}
     >
-      <BarraLateral />
+      <BarraLateral salud={SALUD} />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>
   )

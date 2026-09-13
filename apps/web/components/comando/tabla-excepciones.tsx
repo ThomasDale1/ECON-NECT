@@ -1,7 +1,7 @@
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BarraConfianza } from '@/components/nect/barra-confianza'
 import { Button } from '@/components/ui/button'
-import type { FilaExcepcion, ValorObservado } from '@/app/(nect)/command-center/datos-de-ejemplo'
+import type { EquipoUnificado, EstadoOrigen, ResultadoRegla, Rol } from '@/lib/tipos/canonico'
 
 /**
  * Excepciones prioritarias — ui-registry.md §3.4.
@@ -9,18 +9,42 @@ import type { FilaExcepcion, ValorObservado } from '@/app/(nect)/command-center/
  * No es una lista de errores: es una cola de trabajo, ordenada por severidad y
  * con el responsable de cada fila.
  *
+ * Consume `EquipoUnificado` directamente: el veredicto, la confianza y las
+ * reglas vienen ya calculados. Acá no se reconcilia nada, solo se proyecta —
+ * la UI solo muestra (S-B1).
+ *
  * Las dos columnas del medio son el corazón del Caso de Uso 02 de ECON: cada
  * valor lleva debajo la etiqueta de **qué objeto describe**. Un recurso ocupado
  * y una tarea completada pueden ser ambos correctos porque describen objetos
  * distintos; sin esa etiqueta la tabla no resuelve el caso.
  */
-const OBJETO: Record<ValorObservado['objeto'], string> = {
+const OBJETO: Record<EstadoOrigen['objeto'], string> = {
   recurso: 'describe el recurso',
   tarea: 'describe la tarea',
   falla: 'describe la falla',
 }
 
-export function TablaExcepciones({ filas }: { filas: FilaExcepcion[] }) {
+const ROL: Record<Rol, string> = {
+  PROYECTOS: 'Proyectos',
+  LOGISTICA: 'Logística',
+  MANTENIMIENTO: 'Mantenimiento',
+  COSTOS: 'Control de costos',
+  DIRECCION: 'Dirección',
+}
+
+/** Orden de la cola: primero lo que puede incumplirse, al final lo coherente. */
+const PRIORIDAD: Record<EquipoUnificado['veredicto'], number> = {
+  EN_RIESGO: 0,
+  ATENCION: 1,
+  SIN_EVIDENCIA: 2,
+  COHERENTE: 3,
+}
+
+export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
+  const filas = [...equipos].sort(
+    (a, b) => PRIORIDAD[a.veredicto] - PRIORIDAD[b.veredicto] || a.confianza - b.confianza,
+  )
+
   return (
     <section className="flex flex-col gap-5 rounded-xl bg-card p-7 shadow-card">
       <div className="flex items-center justify-between">
@@ -56,34 +80,58 @@ export function TablaExcepciones({ filas }: { filas: FilaExcepcion[] }) {
               </tr>
             </thead>
             <tbody>
-              {filas.map((fila) => (
-                <tr
-                  key={fila.id}
-                  className="border-b border-muted transition-colors last:border-0 hover:bg-muted/60"
-                >
-                  <td className="py-3.5 pl-4 align-middle">
-                    <BadgeVeredicto veredicto={fila.veredicto} />
-                  </td>
-                  <td className="py-3.5 align-middle">
-                    <span className="block font-heading text-[13px] font-bold">
-                      {fila.codigo} {fila.nombre}
-                    </span>
-                    <span className="block font-label text-[11px] text-muted-foreground">
-                      {fila.modelo} · {fila.clase}
-                    </span>
-                  </td>
-                  <td className="py-3.5 align-middle font-label text-[13px]">{fila.proyecto}</td>
-                  <Celda valor={fila.prisma} />
-                  <Celda valor={fila.startrack} />
-                  <td className="py-3.5 align-middle">
-                    <BarraConfianza porcentaje={fila.confianza} />
-                  </td>
-                  <td className="py-3.5 pr-4 align-middle font-label text-[13px] text-muted-foreground">
-                    {fila.accionSugerida}
-                  </td>
-                  <td className="py-3.5 pr-4 align-middle font-label text-[13px]">{fila.responsable}</td>
-                </tr>
-              ))}
+              {filas.map((equipo) => {
+                // La regla que produjo el veredicto es la primera que lo comparte.
+                const regla: ResultadoRegla | undefined =
+                  equipo.reglas.find((r) => r.veredicto === equipo.veredicto) ?? equipo.reglas[0]
+
+                return (
+                  <tr
+                    key={equipo.id}
+                    className="border-b border-muted transition-colors last:border-0 hover:bg-muted/60"
+                  >
+                    <td className="py-3.5 pl-4 align-middle">
+                      <BadgeVeredicto veredicto={equipo.veredicto} />
+                    </td>
+                    <td className="py-3.5 pr-3 align-middle">
+                      <span className="block font-heading text-[13px] font-bold">
+                        {equipo.codigoActivo.valor ?? 'Sin código'}
+                      </span>
+                      <span className="block font-label text-[11px] text-muted-foreground">
+                        {equipo.nombre.valor ?? 'Sin registro'}
+                        {!equipo.identidadResuelta && ' · sin contraparte'}
+                      </span>
+                    </td>
+                    <td className="py-3.5 pr-3 align-middle">
+                      {equipo.ubicacion?.descripcion.valor ? (
+                        <>
+                          <span className="block font-label text-[13px]">
+                            {equipo.ubicacion.descripcion.valor}
+                          </span>
+                          <span className="block font-label text-[10px] text-muted-foreground">
+                            ubicación nivel {equipo.ubicacion.nivel} de 3
+                          </span>
+                        </>
+                      ) : (
+                        <SinRegistro />
+                      )}
+                    </td>
+                    {/* Prisma describe el recurso; si hay falla activa, manda la falla. */}
+                    <Celda estado={equipo.falla ?? equipo.solicitud ?? equipo.equipo} />
+                    {/* Startrack describe la tarea de traslado; si no hay, el vehículo. */}
+                    <Celda estado={equipo.tarea ?? equipo.vehiculo} />
+                    <td className="py-3.5 pr-3 align-middle">
+                      <BarraConfianza porcentaje={equipo.confianza} />
+                    </td>
+                    <td className="py-3.5 pr-3 align-middle font-label text-[13px] text-muted-foreground">
+                      {regla ? regla.accionSugerida : <SinRegistro />}
+                    </td>
+                    <td className="py-3.5 pr-4 align-middle font-label text-[13px]">
+                      {regla ? ROL[regla.rolResponsable] : <SinRegistro />}
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -93,20 +141,28 @@ export function TablaExcepciones({ filas }: { filas: FilaExcepcion[] }) {
 }
 
 /**
- * Un valor observado con su etiqueta de objeto.
+ * Un estado de origen con su etiqueta de qué objeto describe.
  *
  * El dato ausente se escribe, no se omite: `Sin registro` en muted, nunca una
  * celda vacía ni un cero inventado (ui-registry §1.4).
  */
-function Celda({ valor }: { valor: ValorObservado }) {
+function Celda({ estado }: { estado: EstadoOrigen | null }) {
   return (
-    <td className="py-3.5 pr-4 align-middle">
-      {valor.valor === null ? (
-        <span className="font-label text-[13px] italic text-muted-foreground">Sin registro</span>
+    <td className="py-3.5 pr-3 align-middle">
+      {estado === null ? (
+        <SinRegistro />
       ) : (
-        <span className="block font-label text-[13px]">{valor.valor}</span>
+        <>
+          <span className="block font-label text-[13px]">{estado.valor}</span>
+          <span className="block font-label text-[10px] text-muted-foreground">
+            {OBJETO[estado.objeto]}
+          </span>
+        </>
       )}
-      <span className="block font-label text-[10px] text-muted-foreground">{OBJETO[valor.objeto]}</span>
     </td>
   )
+}
+
+function SinRegistro() {
+  return <span className="font-label text-[13px] italic text-muted-foreground">Sin registro</span>
 }

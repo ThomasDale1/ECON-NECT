@@ -59,7 +59,12 @@ export function PanelEnCurso({ activos }: { activos: ActivoEnCurso[] }) {
               ~{activo.etaMinutos} min
             </span>
           </span>
-          <BadgeOrigen plataforma="startrack" corto />
+          <BadgeOrigen
+            plataforma="startrack"
+            corto
+            href={activo.urlStartrack}
+            equipo={activo.codigo}
+          />
         </div>
       </article>
     </PanelSituacion>
@@ -112,7 +117,12 @@ export function PanelFueraDeGeocerca({ violaciones }: { violaciones: ViolacionGe
             <X aria-hidden className="size-2.5" strokeWidth={3} />
             {violacion.severidad}
           </span>
-          <BadgeOrigen plataforma="startrack" corto />
+          <BadgeOrigen
+            plataforma="startrack"
+            corto
+            href={violacion.urlStartrack}
+            equipo={violacion.codigo}
+          />
         </div>
       </article>
     </PanelSituacion>

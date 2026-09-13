@@ -2,7 +2,8 @@ import type { Metadata } from 'next'
 import { BarraSuperior } from '@/components/comando/barra-superior'
 import { PanelEnCurso, PanelFueraDeGeocerca } from '@/components/comando/paneles-situacion'
 import { TablaExcepciones } from '@/components/comando/tabla-excepciones'
-import { ACTIVOS_EN_CURSO, EXCEPCIONES, VIOLACIONES_GEOCERCA } from './datos-de-ejemplo'
+import { EQUIPOS_EJEMPLO } from '@/lib/tipos/ejemplo'
+import { ACTIVOS_EN_CURSO, VIOLACIONES_GEOCERCA } from './datos-de-ejemplo'
 
 export const metadata: Metadata = {
   title: 'Centro de comando operativo · ECON NECT',
@@ -12,10 +13,18 @@ export const metadata: Metadata = {
 /**
  * Centro de comando operativo.
  *
- * La UI solo muestra: el veredicto y la confianza vienen calculados, acá no se
- * recalcula nada. Hoy lee de `datos-de-ejemplo.ts`; cuando el carril A publique
- * las rutas de API ese import se cambia por la lectura del servidor y el resto
- * de la pantalla no se toca.
+ * La UI solo muestra: el veredicto, la confianza y las reglas vienen calculados,
+ * acá no se recalcula nada.
+ *
+ * **De dónde sale cada cosa hoy:**
+ *
+ * - La tabla de excepciones lee `EQUIPOS_EJEMPLO`, que ya cumple el contrato
+ *   `EquipoUnificado`. Cuando el carril A publique la ruta de API, se cambia ese
+ *   import por la lectura del servidor y la tabla no se toca.
+ * - Los dos carruseles todavía leen un fixture propio, porque el contrato no
+ *   tiene los campos que necesitan: la tarea de traslado con origen, destino y
+ *   tiempo estimado, y el resultado de evaluar la geocerca. Están pedidos al
+ *   carril A; hasta entonces no se puede derivar sin inventar.
  */
 export default function CommandCenterPage() {
   return (
@@ -32,7 +41,7 @@ export default function CommandCenterPage() {
           <PanelFueraDeGeocerca violaciones={VIOLACIONES_GEOCERCA} />
         </div>
 
-        <TablaExcepciones filas={EXCEPCIONES} />
+        <TablaExcepciones equipos={EQUIPOS_EJEMPLO} />
       </main>
     </>
   )
