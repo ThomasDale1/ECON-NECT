@@ -4,7 +4,7 @@ import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { ContenidoMapeo } from './contenido'
 
 export const metadata: Metadata = {
-  title: 'Matriz de mapeo, RACI y KPIs · ECON NECT',
+  title: 'Mapeo, responsabilidades y KPIs · ECON NECT',
   description: 'Los entregables tipados del carril C, renderizados desde el código.',
 }
 
@@ -22,7 +22,7 @@ export default async function MapeoPage() {
   const { salud, leidoEn } = await leerEquiposUnificados()
 
   return (
-    <Marco titulo="Matriz de mapeo, RACI y KPIs" salud={salud} leidoEn={leidoEn}>
+    <Marco titulo="Mapeo, responsabilidades y KPIs" salud={salud} leidoEn={leidoEn}>
       <ContenidoMapeo />
     </Marco>
   )

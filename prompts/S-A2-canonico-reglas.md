@@ -188,7 +188,7 @@ type Regla = {
 solicitudes, catálogo de clases, tipos de tarea). Un `index.ts` lista las 8.
 
 Cada regla, un archivo (`r1-estados-compatibles.ts`, …), con caso que dispara y
-caso que no. **Rol responsable = enum `Rol` del contrato**; el enlace a la RACI lo
+caso que no. **Rol responsable = enum `Rol` del contrato**; el enlace a la matriz de responsabilidades lo
 hace C leyendo ese `Rol` (no lo dupliques acá).
 
 | Id | Nombre | Dispara cuando | Veredicto · Severidad | Rol | Caso vivo hoy |

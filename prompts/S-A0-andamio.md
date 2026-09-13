@@ -192,7 +192,7 @@ línea por tipo que diga qué es en lenguaje de negocio:
 - `Severidad` — `'alta' | 'media' | 'baja'`. Independiente del veredicto: dos
   reglas con el mismo veredicto pueden tener distinta urgencia.
 - `Rol` — `'PROYECTOS' | 'LOGISTICA' | 'MANTENIMIENTO' | 'COSTOS' | 'DIRECCION'`.
-  Es el vocabulario compartido entre reglas (A), RACI (C) y acceso (C).
+  Es el vocabulario compartido entre reglas (A), responsabilidades (C) y acceso (C).
 - `Linaje` — de dónde vino un valor: `plataforma`, `endpoint`, `campo`,
   `valorCrudo: unknown`, `leidoEn` (ISO 8601).
 - `Dato<T>` — un valor con su linaje: `{ valor: T | null; linaje: Linaje }`.

@@ -14,7 +14,7 @@ de solo lectura.
 1. `/flota`: seleccionar cualquier equipo leído de las fuentes conectadas.
 2. `/equipo/<id>`: revisar estado, ubicación, discrepancias, faltantes y linaje.
 3. `/command-center`: revisar las excepciones prioritarias.
-4. `/mapeo`: inspeccionar y exportar las matrices de mapeo, RACI y KPI.
+4. `/mapeo`: inspeccionar y exportar la matriz de mapeo, la matriz de responsabilidades y el catálogo KPI.
 5. `/odin`: consultar estado, incoherencias o riesgo de mantenimiento con Qwen
    local. O.D.I.N. recomienda, pero no aprueba ni modifica operaciones.
 

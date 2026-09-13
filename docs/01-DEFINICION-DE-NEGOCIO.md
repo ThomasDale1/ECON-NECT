@@ -145,7 +145,7 @@ inventamos nada. Cuando el jurado sospeche, se lo demostramos en un clic.
 
 ### C.5 El prototipo y la documentación son el mismo objeto
 
-La matriz de mapeo y la matriz RACI **no son archivos aparte**. Son estructuras
+La matriz de mapeo y la matriz de responsabilidades **no son archivos aparte**. Son estructuras
 tipadas en el código, que se renderizan como pantallas y se exportan desde ahí.
 
 Motivo: el jurado va a intentar romper la consistencia entre documento y
@@ -230,7 +230,7 @@ entre los dos últimos es el diferenciador del equipo:
 > que confiesa lo que no sabe es más confiable que uno que siempre responde.
 
 **Las reglas** se escriben una por archivo, con nombre, descripción en lenguaje
-de negocio, severidad, campos de entrada y rol responsable (enlazado a la RACI).
+de negocio, severidad, campos de entrada y rol responsable (enlazado a la matriz de responsabilidades).
 Sin heurísticas implícitas ni números mágicos enterrados en el código.
 
 **La bandeja de incoherencias** muestra toda la flota ordenada por severidad, con
@@ -524,7 +524,7 @@ uno, ese equipo cae a nivel 2/3 sin tumbar el resto.
 |---|---|---|
 | **01 — Solicitud y traslado** | Consultar de forma unificada la solicitud en Prisma y el traslado relacionado en Startrack | La ficha unificada muestra en una pantalla la solicitud, su estado y período, junto a la tarea de traslado, su estado y destino — con el origen de cada dato a un clic |
 | **02 — Consistencia de estados** | Presentar e interpretar estados que describen objetos distintos | Los dos estados se muestran lado a lado, **cada uno etiquetado con qué objeto describe**, y el veredicto explica por qué ambos pueden ser correctos. La regla se nombra en pantalla |
-| **03 — Maquinaria no disponible** | Detectar la condición de riesgo y advertir | Una regla detecta "tarea de traslado viva sobre un equipo que no puede operar", la eleva a la bandeja con severidad alta, nombra al rol responsable según la RACI y propone la acción |
+| **03 — Maquinaria no disponible** | Detectar la condición de riesgo y advertir | Una regla detecta "tarea de traslado viva sobre un equipo que no puede operar", la eleva a la bandeja con severidad alta, nombra a la unidad responsable según la matriz y propone la acción |
 
 ---
 
@@ -536,7 +536,7 @@ Todos vencen el **domingo 13 de septiembre a las 10:00**.
 |---|---|---|---|
 | 1 | Inventario de campos/términos nuevos creados por el equipo | Sección de la matriz de mapeo | C.5 |
 | 2 | Matriz de mapeo de campos | Estructura tipada → pantalla → exportación | C.5 |
-| 3 | Matriz de responsabilidades (RACI) | Estructura tipada → pantalla → exportación | C.5 |
+| 3 | Matriz de responsabilidades | Estructura tipada → pantalla → exportación | C.5 |
 | 4 | Prototipo navegable | La aplicación desplegada, con clave por rol | D.5 |
 | 5 | Diagrama de arquitectura | Pantalla del prototipo, exportable | C.5 |
 | 6 | Documento de decisiones técnicas (máx. 2 pág.) | Redactado desde la Parte E | C.1 |
@@ -639,7 +639,7 @@ código para sistemas que no existen.
 | 3.1 Funciona en vivo con consulta del jurado | 5 | Lectura en vivo de las APIs reales, no mockup |
 | 3.2 Refleja una discrepancia resuelta con regla clara | 5 | Bandeja con reglas nombradas (D.4) sobre un caso real y vivo (E.9) |
 | 3.3 Pensado para quien lo usaría de verdad | 5 | D.5 + acción recomendada con responsable |
-| 3.4 RACI clara y utilizable | 5 | Matriz tipada, enlazada a las incoherencias |
+| 3.4 Matriz de responsabilidades clara y utilizable | 5 | Matriz tipada, enlazada a las incoherencias |
 | 4.1 Claridad del pitch | 7.5 | La bisagra, las líneas punteadas, y el cierre del ciclo en vivo (D.6) |
 | 4.2 Bloque de reflexión de aprendizaje | 7.5 | Sección obligatoria del deck (G) |
 | 5.1 y 5.2 Power skills | 15 | Checkpoints 1 y 2 con avance real; recorte planificado de antemano |

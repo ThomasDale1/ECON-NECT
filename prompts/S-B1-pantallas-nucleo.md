@@ -85,7 +85,7 @@ los campos crudos.
 4. **Solicitud y tarea de traslado** relacionadas, con sus fechas.
 5. **Ubicación**, declarando qué nivel de la cascada está usando:
    *"Ubicación derivada de la geocerca del proyecto (nivel 3 de 3)."*
-6. **Acción sugerida + rol responsable** (viene de la RACI del carril C).
+6. **Acción sugerida + rol responsable** (viene de la matriz de responsabilidades del carril C).
 
 **Cada dato con su `VerOrigen`.** Es lo que hace auditable la afirmación de que no
 inventamos nada — cuando el jurado sospeche, se lo demostramos en un clic.

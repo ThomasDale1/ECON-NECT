@@ -1,23 +1,28 @@
 'use client'
 
-// Pantalla mínima para el Checkpoint 1: matriz de mapeo, RACI y catálogo de
+// Pantalla mínima para el Checkpoint 1: matriz de mapeo, responsabilidades y catálogo de
 // KPIs, tal como los produce el carril C (lib/mapeo, lib/gobernanza, lib/kpi).
 //
 // Nota de propiedad de directorio (AGENTS.md §4.2): `app/(nect)/` es
 // territorio del carril B. Esta página cruza esa línea por pedido explícito
 // del usuario en la sesión de implementación de S-C1/S-C2, para que la matriz
-// y la RACI se puedan enseñar en el CP1 sin esperar a B. Es un cruce
+// y las responsabilidades se puedan enseñar en el CP1 sin esperar a B. Es un cruce
 // autorizado puntualmente, no una apropiación del directorio: B puede
 // moverla, integrarla a su navegación, o reemplazarla sin pedir permiso.
 
 import { useMemo, useState } from 'react'
 import {
+  ALCANCE_MATRIZ_MAPEO,
   MATRIZ_MAPEO,
   TERMINOS_NUEVOS,
   matrizACsv,
   type TipoRelacion,
 } from '@/lib/mapeo/matriz'
-import { AGENTES, RACI_PROCESO, raciACsv, type Asignacion } from '@/lib/gobernanza/raci'
+import {
+  GERENCIAS_OBLIGATORIAS,
+  MATRIZ_RESPONSABILIDADES,
+  responsabilidadesACsv,
+} from '@/lib/gobernanza/responsabilidades'
 import { CATALOGO_KPI, catalogoKpiACsv } from '@/lib/kpi/catalogo'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -60,13 +65,6 @@ const COLOR_TIPO: Record<TipoRelacion, string> = {
   'solo en Prisma': '#2563eb',
   'solo en Startrack': '#ea580c',
   'sin equivalencia directa': '#7c3aed',
-}
-
-const RACI_LETRA: Record<Exclude<Asignacion, null>, { nombre: string; clase: string }> = {
-  R: { nombre: 'responsable', clase: 'bg-primary text-primary-foreground' },
-  A: { nombre: 'aprueba', clase: 'bg-foreground text-background' },
-  C: { nombre: 'consulta', clase: 'bg-muted text-foreground' },
-  I: { nombre: 'informa', clase: 'border border-border bg-card text-muted-foreground' },
 }
 
 function descargarCsv(nombreArchivo: string, contenido: string) {
@@ -176,7 +174,7 @@ export function ContenidoMapeo() {
       <Tabs defaultValue="matriz">
         <TabsList>
           <TabsTrigger value="matriz">Matriz de mapeo</TabsTrigger>
-          <TabsTrigger value="raci">RACI</TabsTrigger>
+          <TabsTrigger value="responsabilidades">Matriz de responsabilidades</TabsTrigger>
           <TabsTrigger value="kpi">Catálogo de KPIs</TabsTrigger>
         </TabsList>
 
@@ -196,13 +194,6 @@ export function ContenidoMapeo() {
               ))}
             </div>
             <div className="flex flex-wrap gap-2">
-              <a
-                href="/econnect-mapeo-raci.pdf"
-                download
-                className="inline-flex h-7 items-center rounded-lg border border-border bg-background px-2.5 text-[0.8rem] font-medium hover:bg-muted"
-              >
-                Descargar PDF
-              </a>
               <Button
                 variant="outline"
                 size="sm"
@@ -218,15 +209,27 @@ export function ContenidoMapeo() {
             de relación pesa tanto como el contenido (AGENTS.md §1.1).
           </p>
 
+          <div className="rounded-xl border border-border bg-card p-4 text-sm">
+            <p className="font-semibold">{ALCANCE_MATRIZ_MAPEO.estado}</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {ALCANCE_MATRIZ_MAPEO.modulos.join(' · ')}. {ALCANCE_MATRIZ_MAPEO.limite}
+            </p>
+          </div>
+
           <div className="overflow-x-auto rounded-xl border border-border">
-            <Table className="min-w-[1500px]">
+            <Table className="min-w-[2350px]">
               <TableHeader>
                 <TableRow>
                   <TableHead scope="col" className="w-[110px]">Módulo</TableHead>
                   <TableHead scope="col" className="w-[190px]">Campo Prisma</TableHead>
+                  <TableHead scope="col" className="w-[150px]">Tipo Prisma</TableHead>
+                  <TableHead scope="col" className="w-[220px]">Ejemplo Prisma</TableHead>
                   <TableHead scope="col" className="w-[190px]">Campo Startrack</TableHead>
+                  <TableHead scope="col" className="w-[150px]">Tipo Startrack</TableHead>
+                  <TableHead scope="col" className="w-[220px]">Ejemplo Startrack</TableHead>
+                  <TableHead scope="col" className="w-[110px]">Cardinalidad</TableHead>
                   <TableHead scope="col" className="w-[150px]">Tipo de relación</TableHead>
-                  <TableHead scope="col" className="w-[330px]">Transformación</TableHead>
+                  <TableHead scope="col" className="w-[330px]">Transformación o conciliación</TableHead>
                   <TableHead scope="col" className="w-[380px]">Evidencia</TableHead>
                   <TableHead scope="col" className="w-[100px]">Confianza</TableHead>
                   <TableHead scope="col" className="w-[80px]">Crítico</TableHead>
@@ -241,10 +244,25 @@ export function ContenidoMapeo() {
                         <span className="text-muted-foreground">Sin registro</span>
                       )}
                     </TableCell>
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">
+                      {fila.prisma.tipoDato}
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">
+                      {fila.prisma.ejemplo}
+                    </TableCell>
                     <TableCell className="max-w-64 whitespace-normal">
                       {fila.campoStartrack ?? (
                         <span className="text-muted-foreground">Sin registro</span>
                       )}
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">
+                      {fila.startrack.tipoDato}
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">
+                      {fila.startrack.ejemplo}
+                    </TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      <Badge variant="outline">{fila.cardinalidad}</Badge>
                     </TableCell>
                     <TableCell className="whitespace-nowrap">
                       <Badge
@@ -294,17 +312,23 @@ export function ContenidoMapeo() {
           </div>
         </TabsContent>
 
-        {/* ── RACI ─────────────────────────────────────────────────────── */}
-        <TabsContent value="raci" className="flex flex-col gap-4 pt-4">
+        {/* ── Matriz de responsabilidades ─────────────────────────────── */}
+        <TabsContent value="responsabilidades" className="flex flex-col gap-4 pt-4">
           <div className="flex items-center justify-between gap-3">
             <p className="text-xs text-muted-foreground">
               Quién mueve el equipo (Logística) vs quién lo pide (Proyecto) vs quién lo repara
-              (Mantenimiento).
+              (Mantenimiento). Las atribuciones permanecen como propuestas hasta
+              que una fuente autorizada de ECON las confirme.
             </p>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => descargarCsv('raci.csv', raciACsv(RACI_PROCESO))}
+              onClick={() =>
+                descargarCsv(
+                  'matriz-de-responsabilidades.csv',
+                  responsabilidadesACsv(MATRIZ_RESPONSABILIDADES),
+                )
+              }
             >
               Exportar CSV
             </Button>
@@ -315,65 +339,47 @@ export function ContenidoMapeo() {
             validadas por mentor).
           </div>
 
-          <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-5 shadow-card">
-            <ul className="flex flex-wrap gap-2">
-              {(Object.keys(RACI_LETRA) as Array<keyof typeof RACI_LETRA>).map((letra) => (
-                <li key={letra} className="flex items-center gap-1.5 font-label text-[11px]">
-                  <span
-                    className={`inline-flex size-6 items-center justify-center rounded-full text-[10px] font-extrabold ${RACI_LETRA[letra].clase}`}
-                  >
-                    {letra}
-                  </span>
-                  <span className="text-muted-foreground">{RACI_LETRA[letra].nombre}</span>
-                </li>
-              ))}
-            </ul>
-
-            <ul className="flex flex-col divide-y divide-border">
-              {RACI_PROCESO.map((fila) => (
-                <li key={fila.paso} className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="font-heading text-[13px] font-bold text-foreground">{fila.paso}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {AGENTES.map((agente) => {
-                      const letra = fila.asignaciones[agente]
-                      if (!letra) return null
-                      const estilo = RACI_LETRA[letra]
-                      return (
-                        <span
-                          key={agente}
-                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-label text-[10px] font-bold ${estilo.clase}`}
-                        >
-                          <span>{letra}</span>
-                          <span className="font-medium">{agente}</span>
-                        </span>
-                      )
-                    })}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </section>
-
           <div className="overflow-x-auto rounded-xl border border-border">
-            <Table className="min-w-[1100px]">
+            <Table className="min-w-[1900px]">
               <TableHeader>
                 <TableRow>
-                  <TableHead scope="col" className="w-[260px]">Paso del proceso</TableHead>
-                  {AGENTES.map((agente) => (
-                    <TableHead key={agente} scope="col" className="whitespace-normal">
-                      {agente}
+                  <TableHead scope="col" className="w-[220px]">Paso del proceso</TableHead>
+                  <TableHead scope="col" className="w-[280px]">Situación actual (AS-IS)</TableHead>
+                  <TableHead scope="col" className="w-[300px]">Con la plataforma integrada (TO-BE)</TableHead>
+                  {GERENCIAS_OBLIGATORIAS.map((gerencia) => (
+                    <TableHead key={gerencia} scope="col" className="w-[300px] whitespace-normal">
+                      {gerencia}
                     </TableHead>
                   ))}
+                  <TableHead scope="col" className="w-[260px]">Otros actores</TableHead>
                   <TableHead scope="col">Estado</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {RACI_PROCESO.map((fila) => (
+                {MATRIZ_RESPONSABILIDADES.map((fila) => (
                   <TableRow key={fila.paso}>
                     <TableCell className="whitespace-normal font-medium">{fila.paso}</TableCell>
-                    {AGENTES.map((agente) => (
-                      <CeldaRaci key={agente} letra={fila.asignaciones[agente]} />
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">
+                      {fila.situacionActual}
+                    </TableCell>
+                    <TableCell className="whitespace-normal text-xs">
+                      {fila.conPlataformaIntegrada}
+                    </TableCell>
+                    {GERENCIAS_OBLIGATORIAS.map((gerencia) => (
+                      <TableCell key={gerencia} className="whitespace-normal align-top">
+                        <div className="flex flex-col gap-2">
+                          <Badge variant="outline" className="w-fit">
+                            {fila.responsabilidades[gerencia].participacion}
+                          </Badge>
+                          <span className="text-xs text-muted-foreground">
+                            {fila.responsabilidades[gerencia].detalle}
+                          </span>
+                        </div>
+                      </TableCell>
                     ))}
+                    <TableCell className="whitespace-normal text-xs text-muted-foreground">
+                      {fila.otrosActores}
+                    </TableCell>
                     <TableCell className="whitespace-nowrap">
                       <Badge variant="outline">{fila.estado}</Badge>
                     </TableCell>
@@ -384,10 +390,10 @@ export function ContenidoMapeo() {
           </div>
 
           <div className="flex flex-col gap-3">
-            {RACI_PROCESO.filter((fila) => fila.preguntaRelacionada).map((fila) => (
+            {MATRIZ_RESPONSABILIDADES.filter((fila) => fila.preguntaPendiente).map((fila) => (
               <p key={fila.paso} className="text-xs text-muted-foreground">
                 <span className="font-medium text-foreground">{fila.paso}:</span>{' '}
-                {fila.preguntaRelacionada}
+                {fila.preguntaPendiente}
               </p>
             ))}
           </div>
@@ -467,26 +473,5 @@ function HistoriaCard({ titulo, texto }: { titulo: string; texto: string }) {
       <h3 className="font-heading text-sm font-bold text-primary">{titulo}</h3>
       <p className="font-label text-[13px] leading-snug text-foreground">{texto}</p>
     </article>
-  )
-}
-
-
-function CeldaRaci({ letra }: { letra: Asignacion }) {
-  if (!letra) {
-    return (
-      <TableCell className="text-center">
-        <span className="text-muted-foreground">—</span>
-      </TableCell>
-    )
-  }
-  return (
-    <TableCell className="p-1.5 text-center">
-      <span
-        className={`inline-flex size-7 items-center justify-center rounded-md text-[12px] font-extrabold ${RACI_LETRA[letra].clase}`}
-        title={RACI_LETRA[letra].nombre}
-      >
-        {letra}
-      </span>
-    </TableCell>
   )
 }

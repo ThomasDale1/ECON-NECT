@@ -11,7 +11,7 @@ import type { Regla } from './tipos'
 export type { Regla, ContextoReglas } from './tipos'
 
 /** Las 8 reglas de coherencia (S-A2 §lib/reglas/), en el orden de la tabla
- * del prompt. El rol responsable de cada una es el enlace a la RACI de C
+ * del prompt. El rol responsable de cada una enlaza la matriz de responsabilidades de C
  * (no se duplica acá). */
 export const REGLAS: Regla[] = [
   r1EstadosCompatibles,

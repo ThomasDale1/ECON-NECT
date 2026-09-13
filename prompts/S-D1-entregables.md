@@ -21,7 +21,7 @@ los organigramas y los hallazgos ya verificados de la Parte E.
 
 Llevá **escritas** las preguntas para los mentores de proceso
 ([02 §3](../docs/02-ROADMAP.md)) y **anotá las respuestas textuales** — son la fuente
-de la RACI, y citar a un mentor en el pitch vale más que una opinión nuestra.
+de la matriz de responsabilidades, y citar a un mentor en el pitch vale más que una opinión nuestra.
 
 **La pregunta de oro:**
 > *"¿Cuánto tiempo pasa hoy, en promedio, entre que se aprueba una solicitud y
@@ -53,7 +53,7 @@ títulos a las 16:00 es lo que evita un entregable ausente a las 10:00.
 |---|---|---|---|
 | 1 | Inventario de campos/términos nuevos | Carril C (sección de la matriz) | Vos verificás que exista |
 | 2 | Matriz de mapeo | Carril C → exportada del prototipo | Vos verificás que exporte |
-| 3 | Matriz RACI | Carril C + **tus entrevistas** | Vos sos la fuente |
+| 3 | Matriz de responsabilidades | Carril C + **tus entrevistas** | Vos sos la fuente |
 | 4 | Prototipo navegable | Carriles A y B | Vos hacés el QA contra la rúbrica |
 | 5 | **Diagrama de arquitectura** | **Vos** | Ver §4 |
 | 6 | **Documento de decisiones técnicas** (máx. 2 pág.) | **Vos** | Ver §5 |
@@ -132,8 +132,8 @@ Recorré esta lista con el prototipo abierto:
 - [ ] ¿Cada incoherencia tiene una explicación en lenguaje de negocio?
 - [ ] ¿Cada explicación puede señalar de qué endpoint salió su evidencia?
 - [ ] ¿`SIN_EVIDENCIA` se distingue visualmente de `EN_RIESGO`, y **no es rojo**?
-- [ ] ¿Cada acción sugerida tiene un responsable, y sale de la RACI?
-- [ ] ¿La RACI en pantalla coincide con la del documento? (deberían ser el mismo
+- [ ] ¿Cada acción sugerida tiene un responsable, y sale de la matriz de responsabilidades?
+- [ ] ¿La matriz en pantalla coincide con la del documento? (deberían ser el mismo
       objeto)
 - [ ] ¿Cada KPI tiene fórmula escrita y acción que dispara?
 - [ ] ¿Se marca cuando un KPI **no** es calculable?
@@ -160,7 +160,7 @@ Recorré esta lista con el prototipo abierto:
 
 - ❌ No dejes ningún entregable para el final. Ese es el riesgo número uno del
   carril.
-- ❌ No presentes la RACI como validada si no hablaste con un mentor.
+- ❌ No presentes las responsabilidades como validadas si no hablaste con un mentor.
 - ❌ No prometas un KPI que no se calcula.
 - ❌ No pegues datos del sandbox en el deck ni en las capturas
   ([AGENTS.md §1.2](../AGENTS.md)). Ni una placa, ni un correo, ni una
