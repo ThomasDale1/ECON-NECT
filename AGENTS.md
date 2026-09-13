@@ -223,7 +223,7 @@ Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
 
 | Carril | Rol | Construye |
 |---|---|---|
-| **A · Núcleo** | Backend & Integración | Conectores, unificación de identidad y estados, reglas, rutas de API, propagación |
+| **A · Núcleo** | Backend & Integración | Conectores, mapeo de datos en vivo, reglas, rutas de API, propagación |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa |
 | **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch |
@@ -232,8 +232,11 @@ Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
 > describe como "modelo canónico" — por definición formal, un modelo canónico
 > implica una tabla/esquema maestro que se reescribe, y esto no reescribe nada:
 > lee, resuelve identidad y calcula un veredicto **en memoria**, por request, y
-> se descarta al responder. Se la nombra "unificación de identidad y estados"
-> en la prosa de este archivo para no sugerir lo contrario. La ruta de carpeta
+> se descarta al responder. Se la nombra **"mapeo de datos en vivo"** en la
+> prosa de este archivo. El calificativo "en vivo" es a propósito: distingue
+> esta capa de la **matriz de mapeo de campos** de C (Entregable 2,
+> `lib/mapeo/`), que es estática y tipada — esta otra corre por request, sobre
+> los datos reales de cada equipo, y no persiste nada. La ruta de carpeta
 > (`lib/canonico/`) no cambia — es solo la palabra en la documentación.
 
 ### 4.2 Propiedad de directorios — **nadie edita territorio ajeno**
@@ -247,7 +250,7 @@ apps/web/
   app/api/                 A   Rutas delgadas
   lib/optimizador/         A   Fase extendida (§12). Tipos de hard/soft
                                 constraints, cliente HTTP a services/solver/,
-                                adaptador desde el equipo unificado
+                                adaptador desde el mapeo de datos en vivo
   lib/betinho/             A   Fase extendida (§12). Orquestación de Betinho:
                                 triage de incidentes, forecast, redacción de
                                 escalamiento — cliente de un modelo
@@ -529,6 +532,14 @@ pruebas relevantes. Agregar `build` cuando cambien rutas o configuración.
 > de recorte, y no reemplaza ni un solo ítem obligatorio de §§1–11. Detalle de
 > sprints, orden y "termina cuando" en
 > [02-ROADMAP.md, sprints S-A7 a S-A9, S-B4 y S-C4](02-ROADMAP.md).
+>
+> **Repriorizado con S-C2 ya cerrado:** el optimizador (§12.1) dejó de ser "si
+> sobra tiempo al final" — se construye **apenas termina S-C2**, antes que
+> S-A3/S-C3/S-A4/S-B2. Sigue siendo stretch en el sentido de la escalera de
+> recorte (§0.5 de 02-ROADMAP): si compite por la misma hora de Carril A que
+> S-A4 (propagación P1), **P1 va primero, siempre.** Betinho (§12.2) y el
+> canal de incidentes (§12.3) no cambiaron: siguen para el tramo final de la
+> noche, lo primero que se corta.
 
 **Por qué existe esta sección y no contradice a H.3 de 01:** el 01 (Parte H.3)
 dice hoy "no corre un solver", "no tiene canal de WhatsApp", "no usa ML" — eso
@@ -538,7 +549,7 @@ una **capa nueva y separada**, explícitamente marcada como propuesta que se
 intenta si sobra tiempo, nunca como reemplazo del motor determinístico que gana
 el criterio de honestidad.
 
-### 12.1 El optimizador de planeación (S-A7 + S-B4 + S-C4) — **prioridad alta dentro de lo extendido**
+### 12.1 El optimizador de planeación (S-A7 + S-B4 + S-C4) — **se construye apenas termina S-C2**
 
 Un microservicio Python (`services/solver/`, FastAPI + OR-Tools CP-SAT) que
 propone **a quién, con qué máquina, dónde y cuánto tiempo**, sobre una UI de
@@ -612,10 +623,16 @@ ECON (C.2) — nunca se persiste.
 **Prioridad más baja de la escalera extendida**, junto con Betinho — es de lo
 primero que se corta si el reloj aprieta.
 
-### 12.4 Dónde entran en la escalera de recorte
+### 12.4 Dónde entran en la escalera de recorte, y cuándo se construyen
 
 Ver la escalera actualizada en [02-ROADMAP.md §0.5](02-ROADMAP.md). En breve:
 el optimizador y sus KPIs de ahorro (§12.1) se insertan **justo debajo de la
-línea roja** — se cortan después que el mapa (S-B3) y las propagaciones P2/P3
-(S-A5). Betinho (§12.2) y el canal de incidentes (§12.3) van **al fondo de
-toda la escalera** — son lo primero que se corta de todo el proyecto.
+línea roja** — si el reloj aprieta, se cortan después que el mapa (S-B3) y las
+propagaciones P2/P3 (S-A5), y **nunca** a costa de S-A4 (propagación P1: si
+compiten por la misma hora de Carril A, P1 va primero, siempre). Eso es
+prioridad de **corte**; la prioridad de **construcción** es distinta y más
+alta: S-A7/S-B4/S-C4 arrancan **apenas cierra S-C2**, antes que S-A3, S-C3,
+S-A4 y S-B2 en el orden del documento (ver [02-ROADMAP.md §1](02-ROADMAP.md)).
+Betinho (§12.2) y el canal de incidentes (§12.3) no cambiaron: van **al fondo
+de toda la escalera**, tanto en corte como en construcción — son lo primero
+que se corta y lo último que se intenta.

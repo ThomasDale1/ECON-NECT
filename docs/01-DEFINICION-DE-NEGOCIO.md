@@ -167,7 +167,7 @@ difieran.
 │  D.4  VEREDICTO · EXCEPCIONES · INDICADORES                    │
 │  Reglas de coherencia · Bandeja · KPIs con acción              │
 ├────────────────────────────────────────────────────────────────┤
-│  D.3  MODELO CANÓNICO                                          │
+│  D.3  MAPEO DE DATOS EN VIVO                                   │
 │  Identidad · Estados (sin fusionar) · Linaje campo por campo   │
 ├────────────────────────────────────────────────────────────────┤
 │  D.2  CONECTORES        (única puerta al mundo exterior)       │
@@ -193,9 +193,12 @@ navegador, nunca se escriben en el repositorio.
 > puede basarse en el código HTTP.** Ver E.7 antes de escribir el conector de
 > Startrack.
 
-### D.3 Modelo canónico
+### D.3 Mapeo de datos en vivo
 
-El corazón del producto. Tres trabajos:
+El corazón del producto. Tres trabajos: **no es** la matriz de mapeo de campos
+del Entregable 2 (esa es estática y de C, ver Parte G) — esta capa resuelve,
+para cada equipo real, su identidad y sus estados **en memoria, por request**;
+no reescribe ninguna tabla ni persiste nada.
 
 **Resolución de identidad.** Decidir que el equipo X de Prisma y el vehículo Y de
 Startrack son la misma máquina. La llave verificada es el código de activo, con
@@ -203,11 +206,11 @@ cadena de respaldo documentada. El mapeo por nombre de proyecto está
 **descartado por evidencia** (E.4).
 
 **Normalización de estados.** Prisma y Startrack tienen catálogos distintos que
-además describen objetos distintos. El modelo canónico no los fusiona: conserva
+además describen objetos distintos. Este mapeo no los fusiona: conserva
 ambos, etiquetados con **qué objeto describe cada uno** (recurso / tarea / falla),
 y deriva de ahí la situación operativa.
 
-**Linaje.** Todo campo canónico recuerda su procedencia. Es lo que alimenta el
+**Linaje.** Todo campo mapeado recuerda su procedencia. Es lo que alimenta el
 "ver origen" de C.4.
 
 ### D.4 Veredicto, excepciones e indicadores

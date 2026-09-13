@@ -20,7 +20,7 @@ propiedad disjunta, los conflictos de merge casi desaparecen.
 
 | Carril | Rol | Qué construye | **Directorios que le pertenecen** |
 |---|---|---|---|
-| **A · Núcleo** | Backend & Integración | Conectores → modelo canónico → reglas → rutas de API → propagación | `lib/conectores/` · `lib/canonico/` · `lib/reglas/` · `lib/tipos/` · `app/api/` |
+| **A · Núcleo** | Backend & Integración | Conectores → mapeo de datos en vivo → reglas → rutas de API → propagación | `lib/conectores/` · `lib/canonico/` · `lib/reglas/` · `lib/tipos/` · `app/api/` |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa | `components/` · `app/(nect)/` · `app/globals.css` |
 | **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol | `lib/mapeo/` · `lib/gobernanza/` · `lib/kpi/` · `lib/acceso/` |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch | `docs/entregables/` — **ningún archivo de código** |
@@ -54,7 +54,8 @@ datos, el diagrama TO-BE y los hallazgos ya verificados de
 [01 Parte E](01-DEFINICION-DE-NEGOCIO.md). Pueden tener el 60 % de su entregable
 listo antes de que exista la primera línea de código.
 
-**La dependencia crítica, y cómo se rompe:** B necesita el modelo canónico de A.
+**La dependencia crítica, y cómo se rompe:** B necesita el mapeo de datos en
+vivo de A.
 Para que B no espere, **la primera entrega de A no es la implementación sino el
 contrato**: los tipos en `lib/tipos/canonico.ts` más un objeto de ejemplo
 fabricado que los cumpla, mergeado antes de las **17:30**. B construye contra el
@@ -105,7 +106,7 @@ la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
   0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4 — fase
                                                       extendida, ver AGENTS.md §12)
   ── LÍNEA ROJA: nada de aquí para arriba se corta ──
-      Conectores · modelo canónico · reglas · ficha unificada ·
+      Conectores · mapeo de datos en vivo · reglas · ficha unificada ·
       bandeja de incoherencias · matriz de mapeo · RACI ·
       propagación P1 · los 7 entregables
 ```
@@ -117,12 +118,21 @@ como propuesta.
 
 **Los ítems 0, 8 y 9 son fases extendidas (AGENTS.md §12), agregadas después de
 la definición original del roadmap.** Se reparten dentro de los cuatro carriles
-existentes — no hay carril E — y por eso compiten por las mismas horas que S-A5,
-S-B3 y S-A6. El optimizador (ítem 0) es el único de los tres que el equipo marcó
-como prioritario dentro de lo extendido: se cortaría recién después que el mapa
-y las propagaciones P2/P3, nunca antes. Betinho y el canal de incidentes
-(ítems 8 y 9) son lo primero que se corta de **todo** el proyecto si el reloj
-aprieta — ni siquiera compiten con el copiloto S-A6.
+existentes — no hay carril E.
+
+**El optimizador (ítem 0) se repriorizó:** ya no espera al hueco de S-A5/S-B3;
+se ataca **justo después de S-C2** (sprints S-A7 + S-B4 + S-C4, ver §1, antes
+del Checkpoint 2), en paralelo con lo que a cada carril le toque de la línea
+roja. Que se construya antes no cambia dónde vive en esta escalera: si el
+reloj aprieta y hay que elegir, se sigue cortando recién después que el mapa
+(S-B3) y las propagaciones P2/P3 (S-A5) — y **nunca** a costa de S-A4
+(propagación P1, que va primero siempre que compitan por la misma hora de
+Carril A).
+
+Betinho y el canal de incidentes (ítems 8 y 9) siguen siendo lo último de la
+escalera: lo primero que se corta de **todo** el proyecto si el reloj aprieta
+— ni siquiera compiten con el copiloto S-A6, y siguen programados para el
+tramo final de la noche, no antes.
 
 ### 0.6 Agenda del evento — lo que no es negociable
 
@@ -306,7 +316,7 @@ bandeja muestra la discrepancia real que hoy está viva en el sandbox.
 
 ---
 
-### 🟦 S-A2 — Modelo canónico y motor de reconciliación · 17:30–21:00 · Carril A
+### 🟦 S-A2 — Mapeo de datos en vivo y motor de reconciliación · 17:30–21:00 · Carril A
 
 **Objetivo:** el corazón del producto.
 
@@ -358,6 +368,93 @@ que lo produjo en cada caso.
   referencia, **acción que dispara**, y por qué ninguna plataforma lo ve sola.
   Si no es calculable con lo que hay, se declara y se dice qué dato falta.
 - Exportación a CSV de la matriz y de la RACI desde la pantalla.
+
+---
+
+> **Reprioritizado el 12 de septiembre de 2026, con S-C2 ya cerrado.** Los tres
+> sprints que siguen (S-A7, S-B4, S-C4 — el optimizador) eran fase extendida de
+> menor urgencia; el equipo decidió subirlos de prioridad y atacarlos **apenas
+> termina S-C2**, antes que S-A3/S-C3/S-A4/S-B2. Siguen siendo fase extendida
+> (AGENTS.md §12): **no desplazan ni retrasan a S-A4 — propagación P1 sigue
+> siendo el momento que gana el pitch y va primero si hay que elegir.** Si
+> Carril A no llega a las dos cosas a la vez, P1 pasa adelante y S-A7 continúa
+> después, en el hueco que deje S-A5 o S-A6 (§0.5).
+
+### 🟦 S-A7 — Optimizador: microservicio y adaptador · *fase extendida, priorizada tras S-C2* · Carril A
+
+**Objetivo:** dado un conjunto de tareas por asignar, proponer quién, con qué
+máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
+
+- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT), fuera
+  de `apps/web`, con un único endpoint `POST /optimizar`. Entrada: equipos
+  disponibles, operadores disponibles, ventanas horarias, lowboys disponibles
+  (si la máquina los requiere para trasladarse), tareas a asignar y la **pila
+  ordenada de soft constraints** que mandó el usuario. Salida: una asignación
+  válida, o `infactible` con el motivo.
+- **Hard constraints** (nunca se violan; si no hay solución que las respete
+  todas, el servicio devuelve infactible, no una asignación forzada):
+  disponibilidad real de la máquina (cruce de las tres máquinas de estado de
+  Prisma, no solo el campo `estado` — [01 E.2](01-DEFINICION-DE-NEGOCIO.md)),
+  disponibilidad del operador, horas laborales permitidas, disponibilidad de
+  lowboy + cabezal si la máquina necesita transporte.
+- **Soft constraints**, optimizadas en orden **lexicográfico** según la pila
+  que mande el usuario (distancia, precio, tiempo, y las que agregue): se
+  optimiza al máximo la de mayor prioridad, se fija ese óptimo (o una
+  tolerancia explícita) como restricción, y recién ahí se optimiza la
+  siguiente. Una constraint de menor prioridad nunca empeora a una de mayor
+  prioridad para mejorarse a sí misma.
+- `lib/optimizador/tipos.ts`: contrato de request/response con el
+  microservicio. `lib/optimizador/cliente.ts`: cliente HTTP, `server-only`,
+  hacia `SOLVER_BASE_URL`.
+- `app/api/optimizar/route.ts`: ruta delgada — valida con Zod, delega al
+  cliente, responde. **Ninguna lógica de optimización vive en la ruta**, mismo
+  principio que ya rige para la reconciliación (§4.3 de AGENTS.md).
+- Los datos de ejemplo para probar el solver son **inventados y marcados como
+  tales** (igual que el objeto de ejemplo de S-A0) — nunca un volcado del
+  sandbox.
+
+**Termina cuando:** con un conjunto de ejemplo, el servicio devuelve una
+asignación que respeta las cuatro hard constraints, y un caso imposible (p. ej.
+cero operadores disponibles en la ventana pedida) devuelve infactible con el
+motivo.
+
+---
+
+### 🟪 S-B4 — Calendario de planeación (UI estilo Notion) · *fase extendida, priorizada tras S-C2* · Carril B
+
+Contra el contrato de `lib/optimizador/tipos.ts` de A.
+
+- `components/calendario/`: vista tipo calendario (columnas por máquina u
+  operador, filas por tiempo) con las asignaciones propuestas.
+- Panel de **pila de prioridades**: lista reordenable de soft constraints —
+  "más arriba se protege primero" tiene que ser legible sin explicación.
+- Botón de re-optimizar, que llama a `POST /api/optimizar` y refresca el
+  calendario con el resultado.
+- **Estado de infactible es un estado de UI de primera clase** (mismo espíritu
+  que `SIN_EVIDENCIA` en D.4 de 01): nunca se fuerza una tarjeta a un lugar que
+  rompe una hard constraint; se muestra el motivo que devolvió el solver.
+
+**Termina cuando:** se puede reordenar la pila, pedir una re-optimización, ver
+el resultado en el calendario y ver el motivo si el solver dice infactible.
+
+---
+
+### 🟩 S-C4 — KPIs de ahorro del optimizador · *fase extendida, priorizada tras S-C2* · Carril C
+
+Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)) —
+mismos seis campos, sin excepción.
+
+- Dos KPIs nuevos en `lib/kpi/catalogo.ts`: **ahorro proyectado por asignación
+  óptima** (costo de la asignación manual observada vs. la que propone el
+  optimizador) y **costo evitado de transporte redundante** (viajes de lowboy
+  que la asignación óptima evita).
+- Si no hay histórico suficiente para el comparativo, o el optimizador no
+  corrió en la sesión, el KPI dice qué dato falta — nunca inventa una cifra
+  (C.1).
+
+**Termina cuando:** el tile existe y, tras correr el optimizador al menos una
+vez, muestra la cifra con su fórmula visible en "ver origen"; si no corrió,
+dice que falta.
 
 ---
 
@@ -503,92 +600,17 @@ estamos usando como diferenciador.
 
 ---
 
-## 1.1 Fases extendidas — solo si el reloj lo permite
+## 1.1 Fases extendidas — Betinho y Twilio, solo si el reloj lo permite
 
 > **Agregadas el 12 de septiembre de 2026, después de la definición original de
 > este roadmap.** Detalle de reglas de producto, principios y por qué no
 > contradicen a 01/H.3 en [AGENTS.md §12](../AGENTS.md). Se reparten dentro de
 > los cuatro carriles existentes (§0.1) — no hay carril E — y van **debajo** de
-> la línea roja (§0.5). Ninguna arranca hasta que su carril termine lo que la
-> línea roja le exige primero.
-
----
-
-### 🟦 S-A7 — Optimizador: microservicio y adaptador · *fase extendida, prioridad alta dentro de lo extendido* · Carril A
-
-**Objetivo:** dado un conjunto de tareas por asignar, proponer quién, con qué
-máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
-
-- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT), fuera
-  de `apps/web`, con un único endpoint `POST /optimizar`. Entrada: equipos
-  disponibles, operadores disponibles, ventanas horarias, lowboys disponibles
-  (si la máquina los requiere para trasladarse), tareas a asignar y la **pila
-  ordenada de soft constraints** que mandó el usuario. Salida: una asignación
-  válida, o `infactible` con el motivo.
-- **Hard constraints** (nunca se violan; si no hay solución que las respete
-  todas, el servicio devuelve infactible, no una asignación forzada):
-  disponibilidad real de la máquina (cruce de las tres máquinas de estado de
-  Prisma, no solo el campo `estado` — [01 E.2](01-DEFINICION-DE-NEGOCIO.md)),
-  disponibilidad del operador, horas laborales permitidas, disponibilidad de
-  lowboy + cabezal si la máquina necesita transporte.
-- **Soft constraints**, optimizadas en orden **lexicográfico** según la pila
-  que mande el usuario (distancia, precio, tiempo, y las que agregue): se
-  optimiza al máximo la de mayor prioridad, se fija ese óptimo (o una
-  tolerancia explícita) como restricción, y recién ahí se optimiza la
-  siguiente. Una constraint de menor prioridad nunca empeora a una de mayor
-  prioridad para mejorarse a sí misma.
-- `lib/optimizador/tipos.ts`: contrato de request/response con el
-  microservicio. `lib/optimizador/cliente.ts`: cliente HTTP, `server-only`,
-  hacia `SOLVER_BASE_URL`.
-- `app/api/optimizar/route.ts`: ruta delgada — valida con Zod, delega al
-  cliente, responde. **Ninguna lógica de optimización vive en la ruta**, mismo
-  principio que ya rige para la reconciliación (§4.3 de AGENTS.md).
-- Los datos de ejemplo para probar el solver son **inventados y marcados como
-  tales** (igual que el objeto de ejemplo de S-A0) — nunca un volcado del
-  sandbox.
-
-**Termina cuando:** con un conjunto de ejemplo, el servicio devuelve una
-asignación que respeta las cuatro hard constraints, y un caso imposible (p. ej.
-cero operadores disponibles en la ventana pedida) devuelve infactible con el
-motivo.
-
----
-
-### 🟪 S-B4 — Calendario de planeación (UI estilo Notion) · *fase extendida* · Carril B
-
-Contra el contrato de `lib/optimizador/tipos.ts` de A.
-
-- `components/calendario/`: vista tipo calendario (columnas por máquina u
-  operador, filas por tiempo) con las asignaciones propuestas.
-- Panel de **pila de prioridades**: lista reordenable de soft constraints —
-  "más arriba se protege primero" tiene que ser legible sin explicación.
-- Botón de re-optimizar, que llama a `POST /api/optimizar` y refresca el
-  calendario con el resultado.
-- **Estado de infactible es un estado de UI de primera clase** (mismo espíritu
-  que `SIN_EVIDENCIA` en D.4 de 01): nunca se fuerza una tarjeta a un lugar que
-  rompe una hard constraint; se muestra el motivo que devolvió el solver.
-
-**Termina cuando:** se puede reordenar la pila, pedir una re-optimización, ver
-el resultado en el calendario y ver el motivo si el solver dice infactible.
-
----
-
-### 🟩 S-C4 — KPIs de ahorro del optimizador · *fase extendida* · Carril C
-
-Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)) —
-mismos seis campos, sin excepción.
-
-- Dos KPIs nuevos en `lib/kpi/catalogo.ts`: **ahorro proyectado por asignación
-  óptima** (costo de la asignación manual observada vs. la que propone el
-  optimizador) y **costo evitado de transporte redundante** (viajes de lowboy
-  que la asignación óptima evita).
-- Si no hay histórico suficiente para el comparativo, o el optimizador no
-  corrió en la sesión, el KPI dice qué dato falta — nunca inventa una cifra
-  (C.1).
-
-**Termina cuando:** el tile existe y, tras correr el optimizador al menos una
-vez, muestra la cifra con su fórmula visible en "ver origen"; si no corrió,
-dice que falta.
+> la línea roja (§0.5). El optimizador (S-A7 + S-B4 + S-C4) ya no está en esta
+> sección: se repriorizó y se construye justo después de S-C2 (ver arriba,
+> antes del Checkpoint 2). Lo que sigue —Betinho y el canal de incidentes— es
+> lo último de la escalera: ninguno arranca hasta que su carril termine lo que
+> la línea roja le exige primero.
 
 ---
 
