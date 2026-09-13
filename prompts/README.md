@@ -44,6 +44,21 @@ reinstala por su cuenta. Los nombres exactos que queden instalados se anotan en
 **Git:** el agente no commitea, no pushea y no mergea por su cuenta en ninguna
 sesión. Lo pide el usuario, o no pasa.
 
+## Fase extendida — optimizador (tras S-C2)
+
+Planeados el 12 de septiembre de 2026 contra la cobertura real del sandbox. Solo
+datos en vivo: sin lowboy ni horario laboral (no existen en el sandbox), clima
+como alerta. Ver [AGENTS.md §12.1](../AGENTS.md).
+
+| Archivo | Carril | Sprint | Cuándo | Bloquea a |
+|---|---|---|---|---|
+| [S-A7-optimizador.md](S-A7-optimizador.md) | 🟦 A | S-A7 | tras S-C2 · **Paso 1 (contrato) primero** · P1 (S-A4) le gana si compiten | B y C, hasta que exista `lib/optimizador/tipos.ts` |
+| [S-B4-calendario.md](S-B4-calendario.md) | 🟪 B | S-B4 | en cuanto exista el contrato | — |
+| [S-C4-kpis-optimizador.md](S-C4-kpis-optimizador.md) | 🟩 C | S-C4 | en cuanto exista el contrato | A conecta los KPIs al final |
+
+⚠ **Sin datos de ejemplo en ninguno de los tres.** B construye contra los tipos y
+verifica contra la ruta real; las pruebas corren en vivo con `npm run test:vivo`.
+
 ## Reglas que aplican a todos
 
 - Nadie edita un directorio que no es de su carril ([AGENTS.md §4.2](../AGENTS.md)).

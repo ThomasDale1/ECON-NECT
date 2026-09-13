@@ -364,6 +364,13 @@ esa sección nombra — nunca dentro de `apps/web`:**
 - **Python 3 + FastAPI + OR-Tools (CP-SAT)**, únicamente en `services/solver/`
   (S-A7). Se comunica con Next.js por HTTP; no se importa como librería de
   Node.
+- **Open-Meteo** (API pública de clima, sin clave), únicamente en
+  `lib/conectores/clima.ts` (S-A7): `server-only`, coordenada redondeada a 1
+  decimal y sin logs. No es un dato de ECON; es una fuente externa que solo
+  alimenta una alerta.
+- **@dnd-kit** (`core`, `sortable`, `utilities`), únicamente en
+  `components/calendario/` (S-B4), para la pila de prioridades reordenable. La
+  instala A en S-A7.
 - **Twilio** (SDK de Node), únicamente en `lib/conectores/twilio.ts` (S-A9) —
   sigue siendo `server-only`, como todo `lib/conectores/`.
 - **Un cliente HTTP a un modelo open-source autoalojado** (p. ej. servido con
@@ -474,9 +481,12 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 
 **Si se construyen las fases extendidas de §12, además:**
 
-6. **El optimizador nunca viola una hard constraint.** Un caso sin solución
-   factible (p. ej. ningún operador disponible en el horario pedido) devuelve
-   **infactible con la razón**, nunca una asignación forzada que la incumpla.
+6. **El optimizador nunca viola una hard constraint.** Una solicitud sin opción
+   devuelve **"sin asignación posible" con la razón** (e `infactible` global si
+   no se asigna ninguna), nunca una asignación forzada que la incumpla. Estas
+   pruebas corren **en vivo** (`npm run test:vivo`) contra el sandbox y el
+   solver local, **sin datos inventados**: el caso infactible se arma filtrando
+   insumos reales, y no se usan snapshots, que serían volcados (§1.2).
 7. **Twilio y Betinho nunca ejecutan una acción por su cuenta.** Mismo
    principio C.3 que P1: Betinho sugiere y reenvía; el jefe confirma; recién
    ahí se actualiza un dato. Prueba de que una sugerencia sin confirmar no
@@ -498,6 +508,8 @@ npm run test          # Vitest
 npm run build         # build de producción
 npm run dev           # servidor de desarrollo
 npm run leer          # lee ambas plataformas en vivo e imprime el inventario
+npm run test:vivo     # pruebas en vivo (sandbox + solver local); no corren en `test`
+npm run optimizar     # corre el optimizador en vivo; imprime estado, conteos y niveles
 ```
 
 Después de cada implementación, correr como mínimo `typecheck`, `lint` y las
@@ -552,21 +564,46 @@ el criterio de honestidad.
 ### 12.1 El optimizador de planeación (S-A7 + S-B4 + S-C4) — **se construye apenas termina S-C2**
 
 Un microservicio Python (`services/solver/`, FastAPI + OR-Tools CP-SAT) que
-propone **a quién, con qué máquina, dónde y cuánto tiempo**, sobre una UI de
-calendario estilo Notion.
+propone, **para cada solicitud real de Prisma, qué máquina y qué operador**
+asignar en las fechas pedidas. La UI es un timeline estilo Notion, con filas
+por máquina y columnas por día. Prompts: [S-A7](prompts/S-A7-optimizador.md) ·
+[S-B4](prompts/S-B4-calendario.md) · [S-C4](prompts/S-C4-kpis-optimizador.md).
 
-**Hard constraints** (si no se cumplen, la asignación no es válida — el solver
-la descarta, no la sugiere):
+> **Replaneado el 12 de septiembre de 2026 contra la cobertura real del
+> sandbox.** Solo datos en vivo, también en las pruebas. **Lo que el sandbox no
+> expone no entra:** lowboy, cabezal, horario laboral, velocidad de traslado y
+> certificación de operador no existen en Prisma ni en Startrack. La operación
+> es en **El Salvador**: los montos van en USD con la nota "moneda inferida"
+> (Prisma no declara moneda), y las fechas en `America/El_Salvador`.
+
+**Hard constraints** (si no se cumplen, la asignación no es válida: el solver
+la descarta, no la sugiere, y un verificador del lado de Node revisa cada
+respuesta antes de devolverla):
+- Clase compatible: `solicitud.tipo` = `clase_equipo`.
 - Disponibilidad real de la máquina (cruce de las tres máquinas de estado de
-  Prisma, [01 E.2](01-DEFINICION-DE-NEGOCIO.md), no solo el campo `estado`).
-- Disponibilidad del operador.
-- Horas laborales permitidas.
-- Disponibilidad de lowboy + cabezal para transportar la máquina, si la máquina
-  lo requiere para moverse.
+  Prisma, [01 E.2](01-DEFINICION-DE-NEGOCIO.md), no solo el campo `estado`),
+  sin chocar con su ventana `fecha_inicio_uso`/`fecha_fin_uso` ni con otra
+  propuesta.
+- Disponibilidad del operador: activo, y libre fuera de la ventana de la
+  máquina a la que está asociado.
 
-**Soft constraints** (preferencias, se optimizan sin violar ninguna hard
-constraint): distancia, precio/costo, tiempo estimado, y las que el usuario
-agregue.
+Las fechas de la solicitud son fijas. Una solicitud sin opción queda como **"sin
+asignación posible", con su motivo**; `infactible` global solo si no se asigna
+ninguna.
+
+**Soft constraints** (preferencias que se optimizan sin violar ninguna hard
+constraint). Solo entran las que salen de campos reales:
+- distancia en línea recta entre geocercas (origen desconocido = **peor caso
+  declarado**);
+- tarifa efectiva en USD/h (sin dato = peor caso declarado);
+- continuidad de operador;
+- holgura antes del inicio.
+
+**Clima, solo como alerta.** No entra a la pila ni mueve fechas. Se consulta a
+Open-Meteo desde `lib/conectores/clima.ts`, con la coordenada redondeada a 1
+decimal y sin logs. Un día de lluvia es probabilidad ≥ 50 %. Las clases
+sensibles las marca el usuario: es criterio del planificador, no un dato de
+ECON.
 
 **La pila de prioridades es del usuario, no nuestra.** La UI deja reordenar las
 soft constraints en una pila (drag-and-drop). El solver optimiza la de más
@@ -574,18 +611,25 @@ arriba **al máximo** antes de sacrificar algo de ella para mejorar una de más
 abajo — es decir, una constraint de menor prioridad solo cede terreno a una de
 mayor prioridad, nunca al revés. Esto es lexicográfico, no un promedio
 ponderado a ciegas: hay que decirlo así en la documentación técnica para que
-sea defendible en Q&A.
+sea defendible en Q&A. Tolerancia 0: el óptimo de cada nivel se fija antes de
+optimizar el siguiente. Siempre, antes que la pila, se maximiza la cantidad de
+solicitudes cubiertas.
 
-**KPIs nuevos de C** (con sus cinco campos de [01 D.7](01-DEFINICION-DE-NEGOCIO.md),
-igual que cualquier otro KPI del catálogo): ahorro proyectado de la asignación
-óptima vs. la asignación manual observada, y costo evitado de transporte
-redundante (lowboy). **Si no hay suficiente histórico para calcular el
-comparativo, el KPI dice qué dato falta — igual que cualquier otro** (C.1).
+**KPIs nuevos de C** (con sus seis campos de [01 D.7](01-DEFINICION-DE-NEGOCIO.md),
+igual que cualquier otro KPI del catálogo):
+- ahorro proyectado por objetivo: asignación manual observada vs. propuesta,
+  solo donde ambas tienen dato real y con la cobertura a la vista;
+- asignaciones con lluvia probable en clases sensibles;
+- cobertura del plan.
+
+El KPI de transporte (lowboy) salió: el sandbox no modela transporte. **Si un
+comparativo no tiene dato, el KPI dice qué dato falta, igual que cualquier
+otro** (C.1).
 
 **No hace lo que H.3 seguía prohibiendo para el resto del producto:** el
-solver no reasigna nada por su cuenta. Propone; el humano confirma en la UI;
-recién ahí, si corresponde, se dispara una propagación (P1/P2 ya existentes) —
-mismo principio C.3.
+solver no reasigna nada por su cuenta. **En S-A7/S-B4 solo propone**, y la UI lo
+dice. Cuando exista P1, otro prompt conecta la confirmación humana a la
+propagación, bajo el mismo principio C.3.
 
 ### 12.2 Betinho (S-A8) — agente local, modelo open-source
 

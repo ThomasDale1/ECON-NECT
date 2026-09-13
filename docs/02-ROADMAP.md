@@ -382,79 +382,118 @@ que lo produjo en cada caso.
 
 ### 🟦 S-A7 — Optimizador: microservicio y adaptador · *fase extendida, priorizada tras S-C2* · Carril A
 
-**Objetivo:** dado un conjunto de tareas por asignar, proponer quién, con qué
-máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
+**Objetivo:** para cada solicitud de maquinaria real de Prisma, proponer qué
+máquina y qué operador asignar en las fechas que pidió el solicitante,
+respetando siempre las hard constraints, optimizando la pila de prioridades del
+usuario y diciendo por qué cuando una solicitud no se puede cubrir. **Solo
+propone: no escribe nada.** Prompt: [prompts/S-A7-optimizador.md](../prompts/S-A7-optimizador.md).
 
-- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT), fuera
-  de `apps/web`, con un único endpoint `POST /optimizar`. Entrada: equipos
-  disponibles, operadores disponibles, ventanas horarias, lowboys disponibles
-  (si la máquina los requiere para trasladarse), tareas a asignar y la **pila
-  ordenada de soft constraints** que mandó el usuario. Salida: una asignación
-  válida, o `infactible` con el motivo.
-- **Hard constraints** (nunca se violan; si no hay solución que las respete
-  todas, el servicio devuelve infactible, no una asignación forzada):
-  disponibilidad real de la máquina (cruce de las tres máquinas de estado de
-  Prisma, no solo el campo `estado` — [01 E.2](01-DEFINICION-DE-NEGOCIO.md)),
-  disponibilidad del operador, horas laborales permitidas, disponibilidad de
-  lowboy + cabezal si la máquina necesita transporte.
-- **Soft constraints**, optimizadas en orden **lexicográfico** según la pila
-  que mande el usuario (distancia, precio, tiempo, y las que agregue): se
-  optimiza al máximo la de mayor prioridad, se fija ese óptimo (o una
-  tolerancia explícita) como restricción, y recién ahí se optimiza la
-  siguiente. Una constraint de menor prioridad nunca empeora a una de mayor
-  prioridad para mejorarse a sí misma.
-- `lib/optimizador/tipos.ts`: contrato de request/response con el
-  microservicio. `lib/optimizador/cliente.ts`: cliente HTTP, `server-only`,
-  hacia `SOLVER_BASE_URL`.
-- `app/api/optimizar/route.ts`: ruta delgada — valida con Zod, delega al
-  cliente, responde. **Ninguna lógica de optimización vive en la ruta**, mismo
-  principio que ya rige para la reconciliación (§4.3 de AGENTS.md).
-- Los datos de ejemplo para probar el solver son **inventados y marcados como
-  tales** (igual que el objeto de ejemplo de S-A0) — nunca un volcado del
-  sandbox.
+> **Replaneado el 12 de septiembre de 2026 contra la cobertura real del
+> sandbox** (medida en vivo, solo conteos). Quedó fuera todo lo que el sandbox no
+> expone: **lowboy, cabezal, horario laboral y velocidad de traslado.** Ninguno
+> existe en Prisma ni en Startrack, y un supuesto inventado se vería como dato en
+> la demo (C.1). La única fuente externa es el clima, y solo como alerta.
 
-**Termina cuando:** con un conjunto de ejemplo, el servicio devuelve una
-asignación que respeta las cuatro hard constraints, y un caso imposible (p. ej.
-cero operadores disponibles en la ventana pedida) devuelve infactible con el
-motivo.
+- **Solo datos en vivo, también en las pruebas: nada inventado.** Los insumos
+  son:
+  - las solicitudes PENDIENTE y APROBADA (la demanda: clase, período y proyecto
+    → geocerca);
+  - los equipos, con su disponibilidad real;
+  - los operadores.
+
+  Planea sobre toda la flota visible, en solo lectura. Las fechas de la
+  solicitud son fijas, con granularidad de día.
+- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT) fuera de
+  `apps/web`, con `POST /optimizar`. Recibe **solo ids y enteros**, sin nombres
+  ni coordenadas. Corre en local con un Dockerfile; el hosting se decide en
+  S-TODOS.
+- **Hard constraints:**
+  - clase compatible (`solicitud.tipo` = `clase_equipo`);
+  - disponibilidad real de la máquina (estado × falla × paro,
+    [01 E.2](01-DEFINICION-DE-NEGOCIO.md)), sin chocar con su ventana
+    `fecha_inicio_uso`/`fecha_fin_uso`;
+  - operador activo y libre fuera de la ventana de la máquina a la que está
+    asociado.
+
+  El prefiltrado vive en `lib/optimizador`, el solver impide choques entre
+  propuestas, y un verificador revisa cada respuesta antes de devolverla.
+- **Infactible por solicitud:** primero se cubre la mayor cantidad posible.
+  Cada solicitud sin opción queda como "sin asignación posible", con su motivo.
+  `infactible` global solo si no se asigna ninguna.
+- **Soft constraints lexicográficas, con tolerancia 0**, en el orden que elige
+  el usuario:
+  - distancia en línea recta entre geocercas (origen desconocido = peor caso
+    declarado);
+  - tarifa efectiva, en USD/h (moneda inferida: la operación es en El Salvador);
+  - continuidad de operador (`associated_operators`);
+  - holgura antes del inicio.
+
+  Una de menor prioridad nunca empeora a una de mayor.
+- **Clima:** alerta en la tarjeta, no mueve nada.
+  - Fuente: Open-Meteo, con la coordenada redondeada a 1 decimal y sin logs.
+  - Día de lluvia = probabilidad ≥ 50 %.
+  - Las clases sensibles las marca el usuario.
+- Archivos: `lib/optimizador/` (contrato, adaptador, cliente, verificador,
+  orquestador) + `lib/conectores/clima.ts` + `app/api/optimizar/route.ts` (ruta
+  delgada).
+
+**Termina cuando:** con el sandbox vivo, `POST /api/optimizar` devuelve una
+propuesta que el verificador aprueba. Además, `npm run test:vivo` demuestra tres
+cosas: que nunca se viola una hard constraint, que un caso armado filtrando
+datos reales devuelve "sin asignación posible" con su motivo, y que la pila es
+lexicográfica.
 
 ---
 
 ### 🟪 S-B4 — Calendario de planeación (UI estilo Notion) · *fase extendida, priorizada tras S-C2* · Carril B
 
-Contra el contrato de `lib/optimizador/tipos.ts` de A.
+Contra el contrato de `lib/optimizador/tipos.ts` de A y contra la ruta real,
+**sin datos de ejemplo**. Prompt: [prompts/S-B4-calendario.md](../prompts/S-B4-calendario.md).
 
-- `components/calendario/`: vista tipo calendario (columnas por máquina u
-  operador, filas por tiempo) con las asignaciones propuestas.
-- Panel de **pila de prioridades**: lista reordenable de soft constraints —
-  "más arriba se protege primero" tiene que ser legible sin explicación.
-- Botón de re-optimizar, que llama a `POST /api/optimizar` y refresca el
-  calendario con el resultado.
-- **Estado de infactible es un estado de UI de primera clase** (mismo espíritu
-  que `SIN_EVIDENCIA` en D.4 de 01): nunca se fuerza una tarjeta a un lugar que
-  rompe una hard constraint; se muestra el motivo que devolvió el solver.
+- `app/(nect)/planeacion` + `components/calendario/`: timeline estilo Notion,
+  con **filas por máquina y columnas por día**. La ocupación real va en gris y
+  las propuestas encima; un carril superior muestra "sin asignación posible"
+  con el motivo.
+- Panel de **pila de prioridades** reordenable (@dnd-kit + botones ↑↓): "más
+  arriba se protege primero" tiene que ser legible sin explicación.
+- Casillas de **clases sensibles a la lluvia** (criterio del planificador) y
+  alerta de lluvia en la tarjeta.
+- Re-optimizar llama a `POST /api/optimizar` y refresca el calendario.
+- **"Sin asignación posible" es un estado de UI de primera clase** (mismo
+  espíritu que `SIN_EVIDENCIA`): nunca se fuerza una tarjeta. Es neutro, nunca
+  rojo.
+- Aviso fijo: *"Propuesta del optimizador — no se escribe nada en Prisma ni
+  Startrack."* Sin botón de aceptar hasta que exista P1.
+- Los tiles de los KPIs de S-C4 van en la misma página.
 
-**Termina cuando:** se puede reordenar la pila, pedir una re-optimización, ver
-el resultado en el calendario y ver el motivo si el solver dice infactible.
+**Termina cuando:** se puede reordenar la pila, re-optimizar, ver el resultado
+en el calendario, ver el motivo de cada solicitud sin asignación y ver los tiles
+con su cifra o su dato faltante.
 
 ---
 
-### 🟩 S-C4 — KPIs de ahorro del optimizador · *fase extendida, priorizada tras S-C2* · Carril C
+### 🟩 S-C4 — KPIs del optimizador · *fase extendida, priorizada tras S-C2* · Carril C
 
-Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)) —
-mismos seis campos, sin excepción.
+Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)):
+mismos seis campos, sin excepción. Prompt: [prompts/S-C4-kpis-optimizador.md](../prompts/S-C4-kpis-optimizador.md).
 
-- Dos KPIs nuevos en `lib/kpi/catalogo.ts`: **ahorro proyectado por asignación
-  óptima** (costo de la asignación manual observada vs. la que propone el
-  optimizador) y **costo evitado de transporte redundante** (viajes de lowboy
-  que la asignación óptima evita).
-- Si no hay histórico suficiente para el comparativo, o el optimizador no
-  corrió en la sesión, el KPI dice qué dato falta — nunca inventa una cifra
-  (C.1).
+- Tres KPIs nuevos en `lib/kpi/catalogo.ts`, con su cálculo puro en
+  `lib/kpi/optimizador.ts`:
+  - **Ahorro proyectado por objetivo:** compara la asignación manual observada
+    de las solicitudes aprobadas contra la propuesta, objetivo por objetivo, solo
+    donde ambas tienen dato real y con la cobertura a la vista.
+  - **Asignaciones con lluvia probable en clases sensibles.**
+  - **Cobertura del plan:** solicitudes con asignación posible sobre el total
+    evaluable.
+- El "costo evitado de transporte (lowboy)" **salió**: el sandbox no modela
+  transporte.
+- La moneda es **USD, inferida** (la operación es en El Salvador; Prisma no la
+  declara). También se corrige el texto "quetzales" del catálogo existente.
+- Si un comparativo no tiene dato, el KPI dice qué falta. Nunca inventa una
+  cifra (C.1).
 
-**Termina cuando:** el tile existe y, tras correr el optimizador al menos una
-vez, muestra la cifra con su fórmula visible en "ver origen"; si no corrió,
-dice que falta.
+**Termina cuando:** tras correr el optimizador, los tres tiles muestran su cifra
+con la fórmula visible, o dicen qué dato falta.
 
 ---
 
@@ -518,7 +557,8 @@ Contra el catálogo de C (`lib/kpi/catalogo.ts`). Cada tile muestra el número
 
 Los cuatro que importan:
 
-1. **Tiempo muerto en quetzales** — horas mínimas contratadas no alcanzadas ×
+1. **Tiempo muerto en USD** (moneda inferida: la operación es en El Salvador;
+   Prisma no la declara) — horas mínimas contratadas no alcanzadas ×
    tarifa vigente. Es el argumento de reducción de tiempos muertos con cifra
    (E.6). *Acción: reasignar o renegociar el mínimo.*
 2. **Latencia solicitud aprobada → tarea de traslado**, en horas. Es el puente

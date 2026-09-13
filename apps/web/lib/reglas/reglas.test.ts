@@ -78,6 +78,8 @@ function equipoCrudo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string
     active_failure_status: null,
     active_failure_is_paro: null,
     fallas_count: null,
+    fecha_inicio_uso: null,
+    fecha_fin_uso: null,
     ...parcial,
   }
 }
@@ -118,6 +120,7 @@ function solicitudCruda(parcial: Partial<SolicitudPrismaCruda> & { id: number | 
     fecha_inicio: null,
     fecha_fin: null,
     created_at: null,
+    project_name: null,
     ...parcial,
   }
 }

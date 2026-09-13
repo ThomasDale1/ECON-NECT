@@ -423,8 +423,9 @@ Prisma:
 - A nivel de proyecto: presupuesto total, presupuesto usado, avance porcentual y
   un desglose de costo directo, indirecto, utilidad e IVA.
 
-**Consecuencia:** el tiempo muerto se puede expresar **en quetzales**, no en
-adjetivos. *"Horas mínimas contratadas que no se alcanzaron × tarifa vigente"* es
+**Consecuencia:** el tiempo muerto se puede expresar **en dinero (USD, moneda
+inferida: la operación es en El Salvador y Prisma no declara la moneda de la
+tarifa)**, no en adjetivos. *"Horas mínimas contratadas que no se alcanzaron × tarifa vigente"* es
 dinero que ya se pagó y no se usó. Y la latencia entre que se aprueba una
 solicitud y que nace su traslado, multiplicada por la tarifa, es el costo de la
 coordinación manual.
@@ -608,7 +609,7 @@ código para sistemas que no existen.
 | Criterio | Pts | Qué lo ataca |
 |---|---|---|
 | 1.1 Propuesta de valor más allá de lo obligatorio | 10 | El encuadre de las líneas punteadas (B) · la recomendación `remote_id` (E.5) |
-| 1.1 Argumento de reducción de tiempos muertos | 10 | El tiempo muerto **en quetzales** (E.6), con su fórmula a la vista |
+| 1.1 Argumento de reducción de tiempos muertos | 10 | El tiempo muerto **en USD** (E.6, moneda inferida), con su fórmula a la vista |
 | 1.2 Relevancia para las tres gerencias | 10 | Vistas y claves por rol (D.5), sobre los seis agentes del TO-BE |
 | 2.1 Matriz de mapeo completa y honesta | 10 | Principio C.1 + hallazgos E.2, E.4, E.8 |
 | 2.2 Arquitectura defendible en Q&A | 10 | C.2, C.3, el 200-en-fallo-de-auth (E.7) y la respuesta `remote_id` |

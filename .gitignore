@@ -63,6 +63,11 @@ next-env.d.ts
 # --- Vercel ------------------------------------------------------------------
 .vercel/
 
+# --- Python / services/solver (S-A7) -----------------------------------------
+__pycache__/
+.venv/
+*.pyc
+
 # --- Herramientas y sistema --------------------------------------------------
 .DS_Store
 Thumbs.db

@@ -33,7 +33,7 @@ export function normalizarCodigoActivo(valorCrudo: string): string {
   return match ? match[0] : normalizado
 }
 
-function idsIguales(a: number | string | null | undefined, b: number | string | null | undefined): boolean {
+export function idsIguales(a: number | string | null | undefined, b: number | string | null | undefined): boolean {
   if (a == null || b == null) return false
   return String(a).trim() === String(b).trim()
 }
@@ -183,15 +183,34 @@ export function geocercaDeTarea(
 
 const PATRON_CODIGO_PROYECTO = /PROY-\d+/i
 
+/** El código `PROY-###` embebido en un nombre de proyecto o de geocerca, o
+ * `null` si no aparece (01 E.4). Exportado para que `SolicitudPlan.codigoProyecto`
+ * (S-A7 Paso 1/4d) use la misma extracción que la unión de identidad. */
+export function extraerCodigoProyecto(nombre: string | null): string | null {
+  if (!nombre) return null
+  return nombre.match(PATRON_CODIGO_PROYECTO)?.[0]?.toUpperCase() ?? null
+}
+
+/** Geocerca cuyo nombre trae el código `PROY-###` de un nombre de proyecto
+ * dado (01 E.4/E.10): se une por ese código, nunca por el nombre completo
+ * (frágil, 01 E.4). Extraída de `geocercaDeProyecto` en S-A7 Paso 4b para que
+ * el adaptador del optimizador (que resuelve el destino de una *solicitud*,
+ * no de un equipo) pueda reusar la misma regla de unión sin duplicarla. */
+export function geocercaPorCodigoProyecto(
+  nombreProyecto: string | null,
+  geocercas: GeocercaStartrackCruda[],
+): GeocercaStartrackCruda | null {
+  const codigo = extraerCodigoProyecto(nombreProyecto)
+  if (!codigo) return null
+  return geocercas.find((g) => g.name?.toUpperCase().includes(codigo)) ?? null
+}
+
 /** Geocerca del proyecto asignado al equipo (nivel 3 de la cascada de
- * ubicación): el nombre de geocerca trae el código `PROY-###` (01 E.4/E.10);
- * se une por ese código, nunca por el nombre completo (frágil, 01 E.4). */
+ * ubicación). Ver `geocercaPorCodigoProyecto`: el comportamiento no cambió,
+ * solo se extrajo la regla de unión (S-A7 Paso 4b). */
 export function geocercaDeProyecto(
   equipo: EquipoPrismaCrudo,
   geocercas: GeocercaStartrackCruda[],
 ): GeocercaStartrackCruda | null {
-  if (!equipo.project_name) return null
-  const codigo = equipo.project_name.match(PATRON_CODIGO_PROYECTO)?.[0]?.toUpperCase()
-  if (!codigo) return null
-  return geocercas.find((g) => g.name?.toUpperCase().includes(codigo)) ?? null
+  return geocercaPorCodigoProyecto(equipo.project_name, geocercas)
 }

@@ -32,6 +32,10 @@ export type EquipoPrismaCrudo = {
   active_failure_is_paro: boolean | null
   fallas_count: number | null
   occupied_without_project?: boolean | null
+  // Agregados S-A7 Paso 4a — observados con `npm run leer` el 12 de septiembre
+  // de 2026, en 7/16 equipos.
+  fecha_inicio_uso: string | null
+  fecha_fin_uso: string | null
 }
 
 export type SolicitudPrismaCruda = {
@@ -48,6 +52,32 @@ export type SolicitudPrismaCruda = {
   fecha_inicio: string | null
   fecha_fin: string | null
   created_at: string | null
+  // Agregado S-A7 Paso 4a: la geocerca de destino de la solicitud se resuelve
+  // por el código PROY-### embebido en este nombre (mismo patrón que
+  // `equipo.project_name` en identidad.ts).
+  project_name: string | null
+}
+
+// Agregados S-A7 Paso 4a — observados con `npm run leer` el 12 de septiembre
+// de 2026 contra `/api/maquinaria/operadores`.
+export type OperadorPrismaCrudo = {
+  id: number | string
+  cod_trabajador: string | null
+  // ⚠ Nunca sale del servidor (AGENTS.md §12.1, decisión de planeación):
+  // "Operador en pantalla: solo cod_trabajador."
+  nombre: string | null
+  is_active: boolean | null
+  active_assignment_count: number | null
+}
+
+// Observado con `npm run leer equipo(id)` (S-A7 Paso 4a) contra
+// `/api/maquinaria/equipos/{id}`.
+export type DetalleEquipoPrismaCrudo = {
+  id: number | string
+  effective_precio_x_hora: number | null
+  associated_operators:
+    | { id: number | string; nombre: string | null; cod_trabajador: string | null; is_active: boolean | null }[]
+    | null
 }
 
 export type VehiculoStartrackCrudo = {

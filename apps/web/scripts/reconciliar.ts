@@ -7,11 +7,11 @@ import { asegurarEntornoCargado } from '../lib/conectores/entorno'
 
 asegurarEntornoCargado()
 
+import { comoFuente } from '../lib/canonico/fuentes'
 import { reconciliar } from '../lib/canonico/reconciliacion'
 import type {
   DatosCrudos,
   EquipoPrismaCrudo,
-  FuenteCruda,
   GeocercaStartrackCruda,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
@@ -20,19 +20,6 @@ import type {
 } from '../lib/canonico/tipos-crudos'
 import * as prisma from '../lib/conectores/prisma'
 import * as startrack from '../lib/conectores/startrack'
-import type { RespuestaConector } from '../lib/conectores/tipos'
-
-/** Adapta la envoltura de conector (`{ datos, linaje }`) a `FuenteCruda<T>`,
- * la forma que espera `reconciliar()` — lib/canonico no conoce esta capa
- * (AGENTS.md §4.3), así que el ensamblado vive acá, en el orquestador. */
-function comoFuente<T>(respuesta: RespuestaConector<unknown[]>): FuenteCruda<T> {
-  return {
-    datos: respuesta.datos as T[],
-    plataforma: respuesta.linaje.plataforma,
-    endpoint: respuesta.linaje.endpoint,
-    leidoEn: respuesta.linaje.leidoEn,
-  }
-}
 
 async function main() {
   console.log('ECON NECT — reconciliación en vivo\n')
