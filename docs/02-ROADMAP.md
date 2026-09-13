@@ -93,6 +93,8 @@ la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
 
 ```
   se corta primero  ↓
+  9.  Canal de incidentes: Twilio + Betinho          (S-A9 — fase extendida)
+  8.  Forecast de mantenimiento preventivo (Betinho) (S-A8 — fase extendida)
   7.  Copiloto de consulta en lenguaje natural      (S-A6 — estiramiento puro)
   6.  Propagación P3 — mantenimiento                (S-A5)
   5.  Propagación P2 — estado de vuelta a Prisma    (S-A5)
@@ -100,6 +102,8 @@ la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
+  0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4 — fase
+                                                      extendida, ver AGENTS.md §12)
   ── LÍNEA ROJA: nada de aquí para arriba se corta ──
       Conectores · modelo canónico · reglas · ficha unificada ·
       bandeja de incoherencias · matriz de mapeo · RACI ·
@@ -110,6 +114,15 @@ la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
 pitch y ya está verificado contra la API. P2 y P3 están debajo porque son la
 misma idea repetida: si no dan tiempo, se explican en el diagrama y se muestran
 como propuesta.
+
+**Los ítems 0, 8 y 9 son fases extendidas (AGENTS.md §12), agregadas después de
+la definición original del roadmap.** Se reparten dentro de los cuatro carriles
+existentes — no hay carril E — y por eso compiten por las mismas horas que S-A5,
+S-B3 y S-A6. El optimizador (ítem 0) es el único de los tres que el equipo marcó
+como prioritario dentro de lo extendido: se cortaría recién después que el mapa
+y las propagaciones P2/P3, nunca antes. Betinho y el canal de incidentes
+(ítems 8 y 9) son lo primero que se corta de **todo** el proyecto si el reloj
+aprieta — ni siquiera compiten con el copiloto S-A6.
 
 ### 0.6 Agenda del evento — lo que no es negociable
 
@@ -490,6 +503,142 @@ estamos usando como diferenciador.
 
 ---
 
+## 1.1 Fases extendidas — solo si el reloj lo permite
+
+> **Agregadas el 12 de septiembre de 2026, después de la definición original de
+> este roadmap.** Detalle de reglas de producto, principios y por qué no
+> contradicen a 01/H.3 en [AGENTS.md §12](../AGENTS.md). Se reparten dentro de
+> los cuatro carriles existentes (§0.1) — no hay carril E — y van **debajo** de
+> la línea roja (§0.5). Ninguna arranca hasta que su carril termine lo que la
+> línea roja le exige primero.
+
+---
+
+### 🟦 S-A7 — Optimizador: microservicio y adaptador · *fase extendida, prioridad alta dentro de lo extendido* · Carril A
+
+**Objetivo:** dado un conjunto de tareas por asignar, proponer quién, con qué
+máquina, dónde y cuánto tiempo — respetando siempre las hard constraints.
+
+- `services/solver/`: microservicio Python (FastAPI + OR-Tools CP-SAT), fuera
+  de `apps/web`, con un único endpoint `POST /optimizar`. Entrada: equipos
+  disponibles, operadores disponibles, ventanas horarias, lowboys disponibles
+  (si la máquina los requiere para trasladarse), tareas a asignar y la **pila
+  ordenada de soft constraints** que mandó el usuario. Salida: una asignación
+  válida, o `infactible` con el motivo.
+- **Hard constraints** (nunca se violan; si no hay solución que las respete
+  todas, el servicio devuelve infactible, no una asignación forzada):
+  disponibilidad real de la máquina (cruce de las tres máquinas de estado de
+  Prisma, no solo el campo `estado` — [01 E.2](01-DEFINICION-DE-NEGOCIO.md)),
+  disponibilidad del operador, horas laborales permitidas, disponibilidad de
+  lowboy + cabezal si la máquina necesita transporte.
+- **Soft constraints**, optimizadas en orden **lexicográfico** según la pila
+  que mande el usuario (distancia, precio, tiempo, y las que agregue): se
+  optimiza al máximo la de mayor prioridad, se fija ese óptimo (o una
+  tolerancia explícita) como restricción, y recién ahí se optimiza la
+  siguiente. Una constraint de menor prioridad nunca empeora a una de mayor
+  prioridad para mejorarse a sí misma.
+- `lib/optimizador/tipos.ts`: contrato de request/response con el
+  microservicio. `lib/optimizador/cliente.ts`: cliente HTTP, `server-only`,
+  hacia `SOLVER_BASE_URL`.
+- `app/api/optimizar/route.ts`: ruta delgada — valida con Zod, delega al
+  cliente, responde. **Ninguna lógica de optimización vive en la ruta**, mismo
+  principio que ya rige para la reconciliación (§4.3 de AGENTS.md).
+- Los datos de ejemplo para probar el solver son **inventados y marcados como
+  tales** (igual que el objeto de ejemplo de S-A0) — nunca un volcado del
+  sandbox.
+
+**Termina cuando:** con un conjunto de ejemplo, el servicio devuelve una
+asignación que respeta las cuatro hard constraints, y un caso imposible (p. ej.
+cero operadores disponibles en la ventana pedida) devuelve infactible con el
+motivo.
+
+---
+
+### 🟪 S-B4 — Calendario de planeación (UI estilo Notion) · *fase extendida* · Carril B
+
+Contra el contrato de `lib/optimizador/tipos.ts` de A.
+
+- `components/calendario/`: vista tipo calendario (columnas por máquina u
+  operador, filas por tiempo) con las asignaciones propuestas.
+- Panel de **pila de prioridades**: lista reordenable de soft constraints —
+  "más arriba se protege primero" tiene que ser legible sin explicación.
+- Botón de re-optimizar, que llama a `POST /api/optimizar` y refresca el
+  calendario con el resultado.
+- **Estado de infactible es un estado de UI de primera clase** (mismo espíritu
+  que `SIN_EVIDENCIA` en D.4 de 01): nunca se fuerza una tarjeta a un lugar que
+  rompe una hard constraint; se muestra el motivo que devolvió el solver.
+
+**Termina cuando:** se puede reordenar la pila, pedir una re-optimización, ver
+el resultado en el calendario y ver el motivo si el solver dice infactible.
+
+---
+
+### 🟩 S-C4 — KPIs de ahorro del optimizador · *fase extendida* · Carril C
+
+Contra la doctrina de KPI ya vigente ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)) —
+mismos seis campos, sin excepción.
+
+- Dos KPIs nuevos en `lib/kpi/catalogo.ts`: **ahorro proyectado por asignación
+  óptima** (costo de la asignación manual observada vs. la que propone el
+  optimizador) y **costo evitado de transporte redundante** (viajes de lowboy
+  que la asignación óptima evita).
+- Si no hay histórico suficiente para el comparativo, o el optimizador no
+  corrió en la sesión, el KPI dice qué dato falta — nunca inventa una cifra
+  (C.1).
+
+**Termina cuando:** el tile existe y, tras correr el optimizador al menos una
+vez, muestra la cifra con su fórmula visible en "ver origen"; si no corrió,
+dice que falta.
+
+---
+
+### 🟦 S-A8 — Betinho: forecast de mantenimiento preventivo · *fase extendida, se corta primero* · Carril A
+
+- `lib/betinho/forecast.ts`: cliente hacia `BETINHO_MODEL_BASE_URL` (modelo
+  open-source autoalojado, nunca un proveedor de IA en la nube — §1.5 de
+  AGENTS.md). Entrada: las señales que el sandbox **realmente exponga**
+  (kilometraje, horas de motor encendido, temperatura, y lo que aparezca al
+  verificar — no se asume ninguna antes de comprobarla).
+- Si una señal no está disponible, el forecast lo dice explícitamente — mismo
+  principio de honestidad que ya rige la matriz de mapeo (C.1), aplicado acá a
+  un análisis nuevo.
+- Salida: una recomendación en lenguaje llano con su justificación ("alta
+  probabilidad de falla en los próximos N días, según estas señales") — nunca
+  una cifra sin poder señalar de dónde salió.
+
+**Termina cuando:** para un equipo con historial suficiente, Betinho produce
+una recomendación justificada; para uno sin historial, dice que no puede
+concluir.
+
+---
+
+### 🟦 S-A9 — Betinho + Twilio: canal de incidentes de campo · *fase extendida, se corta primero* · Carril A (+ panel de B)
+
+- `lib/conectores/twilio.ts`: `server-only`, recibe el webhook de un mensaje
+  entrante (SMS o WhatsApp de prueba de Twilio) — vive en `lib/conectores/`
+  porque es exactamente eso: una puerta más al mundo exterior.
+- `app/api/incidentes/route.ts`: ruta delgada, valida el webhook, delega.
+- `lib/betinho/incidentes.ts`: clasifica el incidente (severidad, tipo, rol
+  responsable — reutiliza la RACI de C si ya existe) y redacta el reenvío.
+  **Nunca decide ni ejecuta una acción por su cuenta.**
+- `components/incidentes/` (B): panel donde el jefe ve la sugerencia de
+  Betinho y la confirma o la descarta. **Solo al confirmar** se actualiza un
+  dato — mismo mecanismo de confirmación explícita y rastro que ya rige P1
+  (C.3, D.6 de 01).
+- **Restricción dura, con prueba:** ninguna acción se ejecuta sin confirmación
+  explícita del jefe.
+- **Dato del incidente:** vive solo en el caché volátil en memoria, igual que
+  cualquier otro dato de ECON (C.2). Ningún número de teléfono real de un
+  trabajador entra al repositorio, a un log, ni a una captura del entregable —
+  la demo usa el número de prueba de Twilio (mismo cuidado que ya exige
+  §1.2/H.2 con las tareas y conductores de Startrack).
+
+**Termina cuando:** un mensaje de prueba de Twilio dispara una sugerencia de
+Betinho visible en el panel, y confirmarla deja rastro de qué se confirmó,
+quién y cuándo.
+
+---
+
 ## 2. Qué se prueba
 
 No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo:
@@ -503,6 +652,13 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 5. **Conectores** — reautentican ante sesión expirada, **incluido el caso del
    200 con `success:false`** (E.7). Esta prueba es obligatoria: es el fallo que
    se ve como éxito.
+
+**Si se construyen las fases extendidas (AGENTS.md §12):**
+
+6. **El optimizador nunca viola una hard constraint** — un caso sin solución
+   factible devuelve infactible con la razón, nunca una asignación forzada.
+7. **Twilio/Betinho nunca ejecutan una acción sin confirmación humana** — una
+   sugerencia sin confirmar no cambia ningún estado (mismo principio que P1).
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -551,6 +707,10 @@ nuestro indicador en dinero durante el pitch.
 | Otro equipo modifica datos compartidos del sandbox | Media | La demo se apoya en nuestros recursos; los ajenos solo se leen |
 | Los entregables se dejan para el final | **Alta** | Carril D arranca a las 15:30 y cierra a las 06:30, no a las 09:59 |
 | Dormirse y perder el pitch | Real | Alarma redundante. El pitch vale 15 pts |
+| Las fases extendidas (§1.1) le roban horas a la línea roja | Alta | Escalera §0.5 actualizada: nadie empieza S-A7/S-A8/S-A9/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
+| El microservicio Python (`services/solver/`) no despliega a tiempo o no responde desde Vercel | Media | Riesgo aceptado del stretch: si no conecta, el optimizador se explica en el diagrama como propuesta, igual que P2/P3 si no dan tiempo |
+| Verificación de número de Twilio tarda o el webhook no es alcanzable en la demo | Media | Se usa el número/sandbox de prueba de Twilio; si no queda listo, S-A9 se corta primero (es el ítem 9 de la escalera) |
+| El modelo open-source de Betinho es lento o no cabe en el hardware disponible | Media | Betinho es el ítem 8 de la escalera — se corta antes que cualquier cosa de la línea roja o de S-A5/S-A6 |
 
 ---
 

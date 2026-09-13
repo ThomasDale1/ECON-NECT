@@ -98,13 +98,14 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
   },
   {
     modulo: 'Maquinaria',
-    campoPrisma: 'Clase de equipo',
-    campoStartrack: 'Tipo (módulo Vehículos)',
-    tipoRelacion: 'exacta',
-    transformacion: null,
+    campoPrisma: 'Clase de equipo (`clase_equipo`)',
+    campoStartrack: 'Tipo (módulo Vehículos) — `veh_type`',
+    tipoRelacion: 'con transformación',
+    transformacion:
+      'Corrección verificada el 12 de septiembre contra la API real: `veh_type` en Startrack es un código entero (se observaron los valores 8, 11 y 12), no el texto de la clase que documenta el diccionario. El mapeo código→clase no está verificado — no se inventa una tabla de traducción que "suene razonable" (AGENTS.md §1.1).',
     evidencia:
-      'Diccionario de datos: hoja PRISMA (módulo Maquinaria, campo "Clase de equipo") y hoja STARTRACK (módulo Vehículos, campo "Tipo") documentan el mismo catálogo observado — Excavadora; Retroexcavadora; Motoniveladora; Minicargador; Cargador frontal.',
-    confianza: 'alta',
+      'Diccionario de datos: hoja PRISMA (módulo Maquinaria, campo "Clase de equipo") y hoja STARTRACK (módulo Vehículos, campo "Tipo") documentan el mismo catálogo nominal — Excavadora; Retroexcavadora; Motoniveladora; Minicargador; Cargador frontal. La API real expone el campo como `veh_type`: un código entero, no ese texto.',
+    confianza: 'media',
     critico: false,
   },
   {
@@ -115,7 +116,7 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     transformacion:
       'Ninguna transformación resuelve esto: describen objetos distintos con catálogos distintos. No se fusionan (01 Parte C.3) — se conservan ambos y se etiquetan con qué objeto describen.',
     evidencia:
-      '01 Parte E.2 (verificado contra la API real): el catálogo del recurso en Prisma tiene 3 valores en mayúsculas — DISPONIBLE, OCUPADA, OBSOLETA — y no incluye "en mantenimiento". El diccionario de datos (hoja PRISMA, módulo Maquinaria, campo "Estado" — "Estado operativo o de disponibilidad de la maquinaria") documenta un catálogo distinto de 5 valores en Título — Disponible; Ocupada; Mant. preventivo; Mant. correctivo; Obsoletas — que mezcla el estado del recurso con el de la máquina de estados de falla. Es evidencia directa de "dos vocabularios dentro del mismo sistema" (01 E.8). Startrack (hoja STARTRACK, módulo Vehículos, campo "Estado") documenta un catálogo distinto ("Normal" como ejemplo) que describe la salud del rastreo del activo, no su disponibilidad operativa.',
+      '01 Parte E.2 (verificado contra la API real): el catálogo del recurso en Prisma tiene 3 valores en mayúsculas — DISPONIBLE, OCUPADA, OBSOLETA — y no incluye "en mantenimiento". El diccionario de datos (hoja PRISMA, módulo Maquinaria, campo "Estado" — "Estado operativo o de disponibilidad de la maquinaria") documenta un catálogo distinto de 5 valores en Título — Disponible; Ocupada; Mant. preventivo; Mant. correctivo; Obsoletas — que mezcla el estado del recurso con el de la máquina de estados de falla. Es evidencia directa de "dos vocabularios dentro del mismo sistema" (01 E.8). Startrack (hoja STARTRACK, módulo Vehículos, campo "Estado") documenta un catálogo distinto ("Normal" como ejemplo); verificado contra la API real: el valor observado es constante ("0" en 14 de 14 registros) — describe la salud del rastreo del activo, poblado de forma uniforme, no su disponibilidad operativa.',
     confianza: 'alta',
     critico: true,
   },
@@ -144,7 +145,8 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
   {
     modulo: 'Maquinaria',
     campoPrisma: 'estado = TRASLADO_STD (objeto Falla)',
-    campoStartrack: 'Tipo (módulo Tareas), valor de catálogo "Trasalado" [sic]',
+    campoStartrack:
+      'Tipo (módulo Tareas), valor de catálogo "Traslado" (el diccionario lo escribe "Trasalado" [sic]; la API real lo devuelve bien escrito — ver fila "Tipo (módulo Tareas)")',
     tipoRelacion: 'sin equivalencia directa',
     transformacion:
       'Propuesta de arquitectura, no implementada: al entrar la falla en TRASLADO_STD, generar o verificar una tarea en Startrack con Tipo = traslado, enlazada por remote_id.',
@@ -155,13 +157,13 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
   },
   {
     modulo: 'Maquinaria',
-    campoPrisma: 'bandera de paro (nombre exacto de campo no confirmado)',
+    campoPrisma: 'bandera de paro (`active_failure_is_paro`)',
     campoStartrack: null,
     tipoRelacion: 'solo en Prisma',
     transformacion: null,
     evidencia:
-      '01 Parte E.2 (verificado contra la API real): la propia API expone una bandera para el caso de un equipo "OCUPADA" sin proyecto asignado. No aparece en el diccionario de datos compartido — se documenta su existencia y su efecto sobre el veredicto, sin inventar un nombre de columna.',
-    confianza: 'hipotesis',
+      'Corrección verificada el 12 de septiembre contra `GET /api/maquinaria/equipos` (detalle del equipo): el nombre de campo queda confirmado como `active_failure_is_paro` — indica si la falla activa del equipo fuerza un paro. En el mismo endpoint se confirman, con igual confianza, `active_failure_status` (estado de la falla activa) y `occupied_without_project` (equipo OCUPADA sin proyecto asignado, insumo de R6). Ninguno de los tres aparece en el diccionario de datos compartido — se documenta su existencia y su efecto sobre el veredicto, sin inventar nombres de columna.',
+    confianza: 'alta',
     critico: true,
   },
   {
@@ -182,7 +184,7 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     tipoRelacion: 'exacta',
     transformacion: null,
     evidencia:
-      '01 Parte E.8 (verificado): los atributos técnicos del equipo están vacíos en la totalidad de los registros observados de una plataforma y completos en la otra — el mapeo existe, el dato no. Distinta de "sin equivalencia directa": el hueco es de completitud, no de correspondencia. Diccionario de datos, hoja STARTRACK (módulo Vehículos) documenta Año, Color y Marca como campos de texto simple; el diccionario de PRISMA compartido no incluyó una fila equivalente para esta v1.',
+      '01 Parte E.8 (verificado): los atributos técnicos del equipo están vacíos en 14 de los 15 registros observados de una plataforma (poblados en 1 de 15) y completos en la otra — el mapeo existe, el dato no. Distinta de "sin equivalencia directa": el hueco es de completitud, no de correspondencia. Diccionario de datos, hoja STARTRACK (módulo Vehículos) documenta Año, Color y Marca como campos de texto simple; el diccionario de PRISMA compartido no incluyó una fila equivalente para esta v1.',
     confianza: 'alta',
     critico: false,
   },
@@ -276,7 +278,7 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     tipoRelacion: 'sin equivalencia directa',
     transformacion: null,
     evidencia:
-      'Diccionario de datos, hoja STARTRACK (módulo Tareas, fila 26): catálogo "Trasalado" [sic] y personalizable. Sin contraparte estructurada en Prisma más allá de TRASLADO_STD (ver fila de Maquinaria/Falla arriba).',
+      'Diccionario de datos, hoja STARTRACK (módulo Tareas, fila 26): catálogo "Trasalado" [sic] y personalizable. Corrección verificada contra la API real (`GET /api/job/type`): el valor de catálogo se devuelve como "Traslado", bien escrito — el typo es del diccionario, no del dato; se documentan ambas grafías con esta nota. Sin contraparte estructurada en Prisma más allá de TRASLADO_STD (ver fila de Maquinaria/Falla arriba).',
     confianza: 'media',
     critico: false,
   },
@@ -323,8 +325,8 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     transformacion:
       'Recomendación central de arquitectura: escribir el identificador de Prisma en este campo al resolver identidad, para pasar de una unión por texto a una unión determinística.',
     evidencia:
-      '01 Parte E.5 (verificado contra la API real): remote_id existe en vehículos, geocercas y tareas de Startrack, vacío en la totalidad de los registros del sandbox. Diccionario de datos, hoja STARTRACK, módulo Vehículos, fila 14 ("ID remoto" — "Identificador utilizado por la organización para relacionar el activo con reportes o integraciones"), confirma el propósito documentado del campo.',
-    confianza: 'alta',
+      'Corrección verificada el 12 de septiembre: `remote_id` no aparece en la proyección del listado de `ajax/vehicles.php` — no se ve ni poblado ni vacío ahí, la proyección simplemente no lo devuelve. Su existencia se documenta por el diccionario de datos, hoja STARTRACK, módulo Vehículos, fila 14 ("ID remoto" — "Identificador utilizado por la organización para relacionar el activo con reportes o integraciones"). No se afirma "vacío" de un campo que la proyección no expone.',
+    confianza: 'media',
     critico: false,
   },
   {
@@ -334,7 +336,7 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     tipoRelacion: 'solo en Startrack',
     transformacion: null,
     evidencia:
-      '01 Parte E.5 (verificado contra la API real): remote_id existe también en geocercas, vacío en todos los registros observados. No aparece como fila propia en el diccionario compartido (que prioriza campos por caso de uso), pero sí en la respuesta real de la API.',
+      'Corrección verificada el 12 de septiembre: `remote_id` no aparece en la proyección del listado de `ajax/namedPlaces.php` — no se ve ni poblado ni vacío ahí. No aparece como fila propia en el diccionario compartido (que prioriza campos por caso de uso). No se afirma "vacío" de un campo que la proyección no expone.',
     confianza: 'media',
     critico: false,
   },
@@ -346,7 +348,7 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     transformacion:
       'Es el campo que la propagación P1 escribe: el id de la solicitud de Prisma queda en el remote_id de la tarea creada en Startrack.',
     evidencia:
-      '01 Parte E.5 (verificado contra la API real, incluida una escritura de prueba: "creamos una tarea con remote_id poblado y el campo persistió"). No aparece como fila propia en el diccionario compartido.',
+      'Corrección verificada el 12 de septiembre contra `GET /api/job`, campo `remote_id`: ECON no lo llena en su operación; los valores presentes en el sandbox son escrituras de prueba de los equipos del hackathon — aparece poblado en parte de las tareas del pool compartido, incluida una nuestra que enlaza una solicitud por `remote_id`. La recomendación de arquitectura se mantiene y se refuerza: el mecanismo persiste, falta que Prisma lo llene sistemáticamente. No aparece como fila propia en el diccionario compartido.',
     confianza: 'alta',
     critico: true,
   },

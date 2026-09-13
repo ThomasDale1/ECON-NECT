@@ -35,7 +35,8 @@ export const CATALOGO_KPI: Kpi[] = [
     accionQueDispara: 'Reasignar el equipo a otro proyecto, o renegociar el mínimo contratado.',
     porQueNingunaPlataformaLoVeSola:
       'Prisma tiene la tarifa y el mínimo contratado; Startrack tiene las horas reales de uso del equipo en el terreno. Ninguna de las dos cruza ambas cosas hoy.',
-    datoFaltante: null,
+    datoFaltante:
+      'Horas reales de uso: no expuestas por ningún endpoint del sandbox (404 verificado en las rutas de uso/bitácora probadas: .../uso, .../usage, .../eventos, .../events, .../historial, y las de nivel de módulo). Además, `precio_x_hora` y `minimum_usage_hours` vienen poblados solo en 1 de los 15 equipos observados. La fórmula queda declarada arriba; el valor se muestra como "No disponible — falta el timestamp/horas reales", nunca un número inventado.',
   },
   {
     id: 'latencia-solicitud-traslado',
@@ -47,7 +48,7 @@ export const CATALOGO_KPI: Kpi[] = [
     formula:
       'instante de creación de la tarea en Startrack − instante en que la solicitud pasó a APROBADA en la bitácora de eventos de Prisma.',
     referencia:
-      'Contra el tiempo que un mentor de proceso declare como normal hoy (pregunta de oro, 02 Roadmap §3), y contra 0 horas una vez que P1 esté activo.',
+      'Contra el tiempo que un mentor de proceso declare como normal hoy (pregunta de oro, 02 Roadmap §3), y contra 0 horas una vez que P1 esté activo. Cobertura verificada el 12 de septiembre: calculable donde `remote_id` enlaza tarea con solicitud; hoy 1 de 5 solicitudes aprobadas — el resto espera que P1 llene `remote_id` sistemáticamente. Esa brecha de cobertura es, en sí misma, el argumento del producto.',
     accionQueDispara: 'Activar la propagación P1 para ese caso, o escalar el retraso a Logística.',
     porQueNingunaPlataformaLoVeSola:
       'El instante de aprobación vive en la bitácora de eventos de Prisma; el instante de creación de la tarea vive en Startrack. Cruzarlos es exactamente el trabajo que hoy hace una persona por teléfono.',

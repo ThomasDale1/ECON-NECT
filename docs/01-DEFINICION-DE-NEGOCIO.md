@@ -555,8 +555,11 @@ nombres de personas de ECON, volcados de respuestas de las APIs, ni los
 materiales confidenciales que ECON entregó.
 
 > Ojo concreto: el endpoint de conductores de Startrack devuelve correos,
-> teléfonos y respuestas de seguridad en texto plano de personal real. Eso no
-> toca git, ni logs, ni capturas de pantalla del entregable.
+> teléfonos y respuestas de seguridad en texto plano de personal real.
+> **El endpoint de tareas (`GET /api/job`) también** — trae `contact_name`,
+> `contact_email` y `phone_number` en texto plano (verificado el 12 de
+> septiembre de 2026, S-A2). Ninguno de los dos toca git, ni logs, ni
+> capturas de pantalla del entregable.
 
 Las afirmaciones de evidencia se expresan como **hechos estructurales**
 ("coincide en 14 de 15 registros observados", "vacío en la totalidad de los
@@ -569,13 +572,24 @@ registros"), no pegando el dato.
   y deja rastro (C.3). Un "sync bidireccional automático" es exactamente el
   producto que no estamos haciendo.
 - No persiste datos de ECON en ninguna base de datos (C.2).
-- No planifica ni reasigna por su cuenta. **Optimizar aquí significa hacer
-  evidente el desperdicio y ponerle precio**, no correr un solver.
-- No tiene app móvil nativa ni canal de WhatsApp. Eso es propuesta de
-  escalabilidad, no código.
-- No usa ML. La confianza es una heurística determinística, auditable y
-  documentada. Venderla como IA nos hunde en el criterio de honestidad que
-  estamos usando como diferenciador.
+- **El motor de veredicto/reconciliación no usa ML.** La confianza que produce
+  `lib/reglas/` sigue siendo una heurística determinística, auditable y
+  documentada — esa línea roja no se toca. Venderla como IA nos hunde en el
+  criterio de honestidad que estamos usando como diferenciador.
+- No tiene app móvil nativa. Eso sigue siendo propuesta de escalabilidad, no
+  código.
+
+> **Actualizado el 12 de septiembre de 2026, con el reloj corriendo.** Las tres
+> líneas de arriba ya no dicen "no planifica, no corre un solver" ni "no tiene
+> canal de WhatsApp" a secas: el equipo decidió intentar, **como fases
+> extendidas y por fuera de la línea roja**, un optimizador de planeación
+> (CP-SAT), un agente local (Betinho) con forecast de mantenimiento preventivo,
+> y un canal de incidentes de campo por Twilio. Ninguna de las tres reemplaza
+> ni toca el motor de veredicto determinístico de arriba; las tres siguen el
+> mismo principio C.3 (el humano confirma, el sistema propaga y deja rastro) y
+> se cortan primero que cualquier ítem obligatorio si el reloj aprieta. Detalle
+> completo, reglas de producto y por qué no contradicen esta parte:
+> [AGENTS.md §12](../AGENTS.md) y [02-ROADMAP.md §1.1](02-ROADMAP.md).
 
 ### H.4 Escalabilidad: se propone, no se construye
 
