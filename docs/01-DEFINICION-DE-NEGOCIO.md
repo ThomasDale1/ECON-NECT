@@ -582,17 +582,18 @@ registros"), no pegando el dato.
 - No tiene app móvil nativa. Eso sigue siendo propuesta de escalabilidad, no
   código.
 
-> **Actualizado el 12 de septiembre de 2026, con el reloj corriendo.** Las tres
-> líneas de arriba ya no dicen "no planifica, no corre un solver" ni "no tiene
-> canal de WhatsApp" a secas: el equipo decidió intentar, **como fases
-> extendidas y por fuera de la línea roja**, un optimizador de planeación
-> (CP-SAT), un agente local (Betinho) con forecast de mantenimiento preventivo,
-> y un canal de incidentes de campo por Twilio. Ninguna de las tres reemplaza
-> ni toca el motor de veredicto determinístico de arriba; las tres siguen el
-> mismo principio C.3 (el humano confirma, el sistema propaga y deja rastro) y
-> se cortan primero que cualquier ítem obligatorio si el reloj aprieta. Detalle
-> completo, reglas de producto y por qué no contradicen esta parte:
-> [AGENTS.md §12](../AGENTS.md) y [02-ROADMAP.md §1.1](02-ROADMAP.md).
+> **Decisión de IA vigente:** el núcleo anterior sigue siendo determinístico.
+> Por fuera de él, el equipo implementará un único servicio FastAPI con un Qwen
+> local y dos perfiles de solo lectura: O.D.I.N. Web primero y O.D.I.N. Campo por
+> Twilio después. El riesgo de mantenimiento empieza como índice explicable y
+> solo se entrena si una auditoría demuestra que existe una etiqueta histórica
+> válida; la asignación opcional usa CP-SAT. Ningún perfil de O.D.I.N. escribe en
+> Prisma/Startrack. P1 continúa como flujo independiente de UI, con confirmación
+> humana y autorización del servidor. ECON autorizó el entrenamiento local de
+> un modelo propio con el dataset entregado para ese fin; artefactos de datos y
+> entrenamiento quedan fuera de git, y todo tercero requiere autorización
+> independiente. Detalle vinculante:
+> [03-ARQUITECTURA-IA-ODIN.md](03-ARQUITECTURA-IA-ODIN.md).
 
 ### H.4 Escalabilidad: se propone, no se construye
 

@@ -14,10 +14,12 @@ existe en ninguna de las dos, lo mide, y **devuelve la decisión confirmada a la
 plataforma que manda en ese dominio**.
 
 **Fuentes de verdad del producto — leerlas antes de cualquier sesión:**
-- [01-DEFINICION-DE-NEGOCIO.md](01-DEFINICION-DE-NEGOCIO.md) — qué es, principios,
+- [01-DEFINICION-DE-NEGOCIO.md](docs/01-DEFINICION-DE-NEGOCIO.md) — qué es, principios,
   arquitectura, hallazgos verificados, **Parte H = fuera de alcance vinculante**
-- [02-ROADMAP.md](02-ROADMAP.md) — los cuatro carriles, sprints por hora de reloj,
+- [02-ROADMAP.md](docs/02-ROADMAP.md) — los cuatro carriles, sprints por hora de reloj,
   escalera de recorte, guion de demo
+- [docs/03-ARQUITECTURA-IA-ODIN.md](docs/03-ARQUITECTURA-IA-ODIN.md) —
+  decisión vigente y vinculante para toda la IA de O.D.I.N.
 - [prompts/](prompts/) — los prompts de implementación aprobados en sesión de
   planeación
 - [ui-registry.md](ui-registry.md) — sistema de diseño y registro de componentes
@@ -93,27 +95,31 @@ de una ruta de API, nunca en el navegador. **Ninguna variable lleva prefijo
 `NEXT_PUBLIC_`.** Si necesitás una credencial y no la tenés, **pedila y esperá** —
 no inventes ni un valor de prueba que parezca real.
 
-### 1.5 No metas material confidencial en una herramienta de IA
+### 1.5 IA local autorizada no significa publicación ni nube autorizadas
 
-El NDA prohíbe cargar información confidencial de ECON o sus aliados en
-asistentes de IA. La autorización general para usar IA **no** autoriza esto.
+El equipo confirmó que ECON permite entrenar un modelo propio y mantener el
+trabajo en un repositorio privado. Esa autorización cubre el procesamiento
+**local** del dataset que ECON haya entregado explícitamente para este propósito;
+no autoriza datos productivos, fuentes externas ni envíos a terceros.
 
-No se construye una zona gris: no sirve renombrar campos, partir el contenido en
-varios prompts, convertirlo a captura o resumen, ni pedirle a un modelo que lo
-transforme primero. Lo que sí se puede compartir: **código propio, contratos
-genéricos, nombres de campo y estructura** — lo mismo del punto 1.2.
+Datasets, pesos, adaptadores, checkpoints y evaluaciones con registros reales se
+tratan como confidenciales: viven fuera de git y nunca se publican. Claude,
+OpenAI, Hugging Face alojado, Twilio u otro servicio externo requieren una
+autorización independiente antes de recibir datos operativos. La ausencia de
+respuesta no equivale a autorización.
 
-Esto aplica igual al copiloto S-A6 si llega a construirse: lo que se manda al
-proveedor de LLM se revisa contra esta regla antes de escribir la primera línea.
+O.D.I.N. corre localmente, recibe el mínimo dato autorizado y no registra el
+contenido. Código propio, contratos genéricos, nombres de campo y estructura sí
+pueden documentarse. El detalle está en
+[docs/03](docs/03-ARQUITECTURA-IA-ODIN.md).
 
-Ante duda, se aplica la interpretación más restrictiva. La ausencia de respuesta
-no equivale a autorización.
+Ante duda, se aplica la interpretación más restrictiva.
 
 ---
 
 # 2. Principios de producto que gobiernan el código
 
-Detalle completo en [01, Parte C](01-DEFINICION-DE-NEGOCIO.md). Resumen operativo:
+Detalle completo en [01, Parte C](docs/01-DEFINICION-DE-NEGOCIO.md). Resumen operativo:
 
 1. **Honestidad sobre completitud.** Un hueco documentado vale más que un relleno.
 2. **Lectura en vivo, no migración.** Cero persistencia de datos de ECON. Sin base
@@ -128,7 +134,7 @@ Detalle completo en [01, Parte C](01-DEFINICION-DE-NEGOCIO.md). Resumen operativ
    la RACI y el catálogo de KPIs son estructuras tipadas que se renderizan y se
    exportan. No pueden contradecirse porque son la misma fuente.
 6. **Un KPI que no dispara una acción es adorno.** Ninguno entra sin sus seis
-   campos ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)).
+   campos ([01 D.7](docs/01-DEFINICION-DE-NEGOCIO.md)).
 
 ---
 
@@ -159,7 +165,7 @@ propia sesión de implementación con `/code-review`.
 ### 3.1 Planeación — cómo se escribe un prompt
 
 1. Leer este archivo, y las partes relevantes de 01 y 02.
-2. Verificar contra [01 Parte H](01-DEFINICION-DE-NEGOCIO.md) (fuera de alcance)
+2. Verificar contra [01 Parte H](docs/01-DEFINICION-DE-NEGOCIO.md) (fuera de alcance)
    y contra la Sección 1 de aquí.
 3. Leer las skills necesarias (Sección 5).
 4. Inspeccionar el código existente y **saber de qué carril es** lo que se va a
@@ -203,12 +209,12 @@ el caché volátil en memoria.
 
 **Segundo caso previsto:** si un lector de Startrack devuelve vacío sin error,
 **no asumas que no hay datos.** Revisá `success` en el cuerpo antes que el código
-HTTP ([01 E.7](01-DEFINICION-DE-NEGOCIO.md)).
+HTTP ([01 E.7](docs/01-DEFINICION-DE-NEGOCIO.md)).
 
 ### 3.4 Recortar alcance es parte del trabajo
 
 La rúbrica premia *"capacidad de recortar alcance a tiempo"*. La escalera de
-recorte está en [02 §0.5](02-ROADMAP.md). **Si algo obligatorio está incompleto,
+recorte está en [02 §0.5](docs/02-ROADMAP.md). **Si algo obligatorio está incompleto,
 se corta lo deseable sin discutirlo.** Proponer el recorte a tiempo es hacer bien
 el trabajo, no fallar.
 
@@ -217,7 +223,7 @@ el trabajo, no fallar.
 # 4. Los cuatro carriles
 
 Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
-[02 §0](02-ROADMAP.md).
+[02 §0](docs/02-ROADMAP.md).
 
 ### 4.1 Quién hace qué
 
@@ -248,14 +254,9 @@ apps/web/
   lib/reglas/              A   Reglas de coherencia, una por archivo
   lib/tipos/               A   El contrato. Congelado a las 17:30
   app/api/                 A   Rutas delgadas
-  lib/optimizador/         A   Fase extendida (§12). Tipos de hard/soft
-                                constraints, cliente HTTP a services/solver/,
-                                adaptador desde el mapeo de datos en vivo
-  lib/betinho/             A   Fase extendida (§12). Orquestación de Betinho:
-                                triage de incidentes, forecast, redacción de
-                                escalamiento — cliente de un modelo
-                                open-source autoalojado, nunca de un
-                                proveedor en la nube
+  lib/inteligencia/        A   Adaptador HTTP server-only hacia el servicio de
+                                inteligencia. No contiene el runtime ni lógica
+                                de agente, forecast u optimización
   components/              B   UI
   app/(nect)/              B   Rutas de vista
   app/globals.css          B   Design system
@@ -269,11 +270,10 @@ apps/web/
   lib/acceso/              C   Verificación de clave por rol
 docs/entregables/          D   Diagrama, decisiones, deck, README
 prompts/                   —   Prompts de implementación (sesión 1)
-services/solver/           A   Fase extendida (§12). Microservicio Python
-                                (FastAPI + OR-Tools/CP-SAT). Único código
-                                Python del repo — no es parte de apps/web,
-                                se despliega aparte y solo se toca al
-                                construir S-A7
+services/intelligence/     A   Único servicio Python/FastAPI de IA. Contiene
+                                módulos separados odin/, forecast/ y
+                                optimizer/; no duplica conectores ni posee
+                                credenciales de Prisma/Startrack
 ```
 
 **Archivos compartidos, con dueño único:** `package.json` (el de `apps/web` y el
@@ -302,6 +302,9 @@ Root Directory = `apps/web`.
 - **Las rutas de API son delgadas.** Ninguna lógica de reconciliación vive en una
   ruta. Reciben, validan con Zod, delegan, responden.
 - **La UI solo muestra.** Nunca recalcula reconciliación en el cliente.
+- **El servicio de inteligencia recibe resultados mínimos y estructurados.**
+  Nunca llama directamente a Prisma/Startrack y nunca expone una herramienta de
+  escritura a O.D.I.N.
 - **No hay base de datos.** Si alguien propone agregar una para datos de ECON, la
   respuesta es no (principio 2.2).
 
@@ -344,8 +347,8 @@ quedó instalado.)*
 
 | Skill | Origen | Para qué |
 |---|---|---|
-| `or-tools` | externa, `npx skills find or-tools` | Único uso: `services/solver/` (S-A7) — CP-SAT, hard/soft constraints. Nunca dentro de `apps/web` |
-| `whatsapp` | externa, `npx skills find whatsapp` | Único uso: si S-A9 necesita el webhook de WhatsApp de Twilio. Si S-A9 no arranca, no se instala nada de esto |
+| `or-tools` | externa, `npx skills find or-tools` | Único uso: `services/intelligence/app/optimizer/` (S-A7) — CP-SAT, hard/soft constraints |
+| `whatsapp` | externa, `npx skills find whatsapp` | Único uso: perfil O.D.I.N. Campo de S-A9; si no arranca, no se instala |
 
 **Retiradas del proyecto** (no las invoques): `supabase`, `speech-to-text`, `n8n`,
 `mcp-sdk`, `claude-api`.
@@ -355,28 +358,20 @@ quedó instalado.)*
 # 6. Stack
 
 **Usar:** Next.js 16 · TypeScript · Tailwind · shadcn/ui · Zod · MapLibre GL
-(sin deck.gl; se pide si S-B3 lo necesita) · Recharts · Vitest · **OpenAI API,
-solo si se construye S-A6** (el SDK `openai` no se instala hasta entonces) ·
-Vercel.
+(sin deck.gl; se pide si S-B3 lo necesita) · Recharts · Vitest · Vercel.
 
-**Usar, solo para las fases extendidas de §12, y solo en los directorios que
-esa sección nombra — nunca dentro de `apps/web`:**
-- **Python 3 + FastAPI + OR-Tools (CP-SAT)**, únicamente en `services/solver/`
-  (S-A7). Se comunica con Next.js por HTTP; no se importa como librería de
-  Node.
-- **Twilio** (SDK de Node), únicamente en `lib/conectores/twilio.ts` (S-A9) —
-  sigue siendo `server-only`, como todo `lib/conectores/`.
-- **Un cliente HTTP a un modelo open-source autoalojado** (p. ej. servido con
-  Ollama u otro runtime local/propio), únicamente en `lib/betinho/` (S-A8).
-  **No es** "otro proveedor de LLM" en el sentido de la regla de abajo: corre
-  fuera de la nube de un tercero, que es justamente lo que evita el problema
-  de NDA de la §1.5.
+**Usar, solo para la arquitectura de IA de [docs/03](docs/03-ARQUITECTURA-IA-ODIN.md):**
+- **Python 3 + FastAPI**, únicamente en `services/intelligence/`.
+- **Qwen3 4B Instruct servido localmente con Ollama (`qwen3:4b-instruct`)**, como único runtime
+  LLM para los perfiles Web y Campo.
+- **OR-Tools (CP-SAT)**, únicamente en `services/intelligence/app/optimizer/`
+  y solo cuando se implemente S-A7.
+- **Twilio**, únicamente para el perfil Campo de S-A9 y con su sandbox de prueba.
 
 **No usar, en el alcance base (línea roja + escalera §0.5 de 02-ROADMAP):**
 - Ninguna base de datos, ni Supabase ni otra, para datos de ECON.
-- Otro proveedor de LLM en la nube que no sea OpenAI para el copiloto S-A6.
-  **Ningún SDK de LLM en la nube entra al `package.json` antes de que S-A6
-  arranque.**
+- Claude, OpenAI u otro proveedor de LLM en la nube para O.D.I.N. Ningún SDK de
+  LLM en la nube entra al proyecto.
 - Twilio, WhatsApp, OR-Tools, Python, puppeteer, qrcode — **excepto** donde
   §12 y la excepción de arriba lo autorizan explícitamente para una fase
   extendida concreta.
@@ -386,16 +381,17 @@ esa sección nombra — nunca dentro de `apps/web`:**
   determinística y documentada — es la línea roja de honestidad (C.1, H.3 de
   01). Venderla como IA nos hunde en el criterio de honestidad que usamos como
   diferenciador. **Fuera de esa capa**, en las fases extendidas explícitamente
-  marcadas como asesoría (forecast de Betinho), sí se permite un modelo
-  estadístico o heurística de ML — siempre etiquetado como predicción y nunca
-  mezclado ni presentado como el veredicto determinístico.
+  marcadas como asesoría, se empieza con `MaintenanceRiskIndex` determinístico.
+  Un modelo estadístico solo se permite si supera la auditoría de datos de
+  [docs/03 §2.3](docs/03-ARQUITECTURA-IA-ODIN.md); siempre se etiqueta como
+  predicción y nunca como el veredicto determinístico.
 
 ---
 
 # 7. Las dos plataformas
 
 Ambas exponen API REST real y utilizable, verificado el 12 de septiembre de 2026.
-Detalle completo en [01 Parte E](01-DEFINICION-DE-NEGOCIO.md).
+Detalle completo en [01 Parte E](docs/01-DEFINICION-DE-NEGOCIO.md).
 
 | | Prisma | Startrack |
 |---|---|---|
@@ -448,11 +444,9 @@ en `.env.local`, que está en `.gitignore`.
 | `NECT_CLAVE_COSTOS` | Clave de acceso, Control de Costos |
 | `NECT_CLAVE_DIRECCION` | Clave de acceso, Dirección de Operaciones |
 | `NECT_EQUIPO_PROPIO` · `NECT_PROYECTO_PROPIO` | Recursos sobre los que se permite propagar (S-A4) |
-| `OPENAI_API_KEY` | Solo si se construye el copiloto (S-A6) |
-| `SOLVER_BASE_URL` | Solo si se construye el optimizador (S-A7): URL del microservicio Python de `services/solver/` |
+| `INTELLIGENCE_BASE_URL` | URL del servicio FastAPI único de `services/intelligence/` |
 | `TWILIO_ACCOUNT_SID` · `TWILIO_AUTH_TOKEN` · `TWILIO_FROM_NUMBER` | Solo si se construye el canal de incidentes (S-A9). El número es el de prueba de Twilio, nunca uno real de un trabajador |
-| `BETINHO_MODEL_BASE_URL` · `BETINHO_MODEL_NAME` | Solo si se construye Betinho (S-A8): endpoint del modelo open-source autoalojado |
-| `NECT_CONTACTOS_ESCALAMIENTO` | Solo si se construye S-A9: a qué rol (no a qué persona) reenvía Betinho un incidente triado. Nunca un número o correo real de ECON — eso es dato de sandbox/personal y cae bajo §1.2 |
+| `ODIN_MODEL_BASE_URL` · `ODIN_MODEL_NAME` · `ODIN_MODEL_TIMEOUT_SECONDS` | Endpoint local de Ollama, nombre del único modelo Qwen de O.D.I.N. y timeout antes del fallback |
 
 *(Agregar aquí y en `.env.example` cada variable nueva.)*
 
@@ -461,7 +455,7 @@ en `.env.local`, que está en `.gitignore`.
 # 9. Pruebas
 
 No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
-(detalle en [02 §2](02-ROADMAP.md)):
+(detalle en [02 §2](docs/02-ROADMAP.md)):
 
 1. **Resolución de identidad** — une lo que debe y **reporta el huérfano** en vez
    de forzarlo.
@@ -477,10 +471,10 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 6. **El optimizador nunca viola una hard constraint.** Un caso sin solución
    factible (p. ej. ningún operador disponible en el horario pedido) devuelve
    **infactible con la razón**, nunca una asignación forzada que la incumpla.
-7. **Twilio y Betinho nunca ejecutan una acción por su cuenta.** Mismo
-   principio C.3 que P1: Betinho sugiere y reenvía; el jefe confirma; recién
-   ahí se actualiza un dato. Prueba de que una sugerencia sin confirmar no
-   cambia ningún estado.
+7. **Twilio y O.D.I.N. son estrictamente de solo lectura respecto a Prisma y
+   Startrack.** No existe herramienta de escritura registrada; una sugerencia o
+   confirmación en el chat nunca cambia ningún estado. P1 es un flujo de UI
+   separado y conserva sus propias pruebas de autorización.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -510,7 +504,8 @@ pruebas relevantes. Agregar `build` cuando cambien rutas o configuración.
 
 1. Contra el reloj: son las horas que quedan hasta el domingo 10:00.
 2. No inventes una equivalencia. Nunca. Documentá el hueco.
-3. Ningún dato del sandbox entra al repositorio, ni a una herramienta de IA.
+3. Ningún dato del sandbox entra al repositorio ni a un tercero; el modelo local
+   recibe solo el mínimo dataset/resultado explícitamente autorizado (§1.5).
 4. Los entregables van antes que las funciones. Siete, todos a las 10:00.
 5. Si algo obligatorio peligra, aplicá la escalera de recorte sin discutirla.
 6. Si algo se rompe dos veces, diagnosticá en vez de parchar.
@@ -518,121 +513,33 @@ pruebas relevantes. Agregar `build` cuando cambien rutas o configuración.
 8. No edites un directorio que no es de tu carril.
 9. Un KPI que no dispara una acción no entra.
 10. Dormir entre 06:30 y 08:00 es parte del plan, no una concesión.
-11. El optimizador, Betinho y el canal de incidentes (§12) son fases
-    extendidas: se cortan **antes** que cualquier ítem de la línea roja o de
-    la escalera base §0.5 de 02-ROADMAP.
+11. La IA sigue [docs/03](docs/03-ARQUITECTURA-IA-ODIN.md): un Qwen local,
+    O.D.I.N. de solo lectura y un servicio FastAPI; nunca desplaza la línea roja.
 
 ---
 
-# 12. Fases extendidas — optimizador, Betinho y canal de incidentes
+# 12. Arquitectura de IA — resumen vinculante
 
-> Agregado el 12 de septiembre de 2026, con el reloj corriendo. **Todo lo de
-> esta sección es stretch**: se reparte dentro de los cuatro carriles
-> existentes (no hay carril E), va **debajo** de la línea roja de la escalera
-> de recorte, y no reemplaza ni un solo ítem obligatorio de §§1–11. Detalle de
-> sprints, orden y "termina cuando" en
-> [02-ROADMAP.md, sprints S-A7 a S-A9, S-B4 y S-C4](02-ROADMAP.md).
->
-> **Repriorizado con S-C2 ya cerrado:** el optimizador (§12.1) dejó de ser "si
-> sobra tiempo al final" — se construye **apenas termina S-C2**, antes que
-> S-A3/S-C3/S-A4/S-B2. Sigue siendo stretch en el sentido de la escalera de
-> recorte (§0.5 de 02-ROADMAP): si compite por la misma hora de Carril A que
-> S-A4 (propagación P1), **P1 va primero, siempre.** Betinho (§12.2) y el
-> canal de incidentes (§12.3) no cambiaron: siguen para el tramo final de la
-> noche, lo primero que se corta.
+La especificación completa, el orden de implementación, las fronteras de datos
+y los criterios de aceptación están en
+[docs/03-ARQUITECTURA-IA-ODIN.md](docs/03-ARQUITECTURA-IA-ODIN.md). Esta
+sección solo fija las reglas que cualquier agente debe recordar al trabajar:
 
-**Por qué existe esta sección y no contradice a H.3 de 01:** el 01 (Parte H.3)
-dice hoy "no corre un solver", "no tiene canal de WhatsApp", "no usa ML" — eso
-sigue siendo cierto **para el motor de veredicto/reconciliación** (línea roja,
-`lib/canonico/` + `lib/reglas/`), que no se toca. Lo que agrega esta sección es
-una **capa nueva y separada**, explícitamente marcada como propuesta que se
-intenta si sobra tiempo, nunca como reemplazo del motor determinístico que gana
-el criterio de honestidad.
-
-### 12.1 El optimizador de planeación (S-A7 + S-B4 + S-C4) — **se construye apenas termina S-C2**
-
-Un microservicio Python (`services/solver/`, FastAPI + OR-Tools CP-SAT) que
-propone **a quién, con qué máquina, dónde y cuánto tiempo**, sobre una UI de
-calendario estilo Notion.
-
-**Hard constraints** (si no se cumplen, la asignación no es válida — el solver
-la descarta, no la sugiere):
-- Disponibilidad real de la máquina (cruce de las tres máquinas de estado de
-  Prisma, [01 E.2](01-DEFINICION-DE-NEGOCIO.md), no solo el campo `estado`).
-- Disponibilidad del operador.
-- Horas laborales permitidas.
-- Disponibilidad de lowboy + cabezal para transportar la máquina, si la máquina
-  lo requiere para moverse.
-
-**Soft constraints** (preferencias, se optimizan sin violar ninguna hard
-constraint): distancia, precio/costo, tiempo estimado, y las que el usuario
-agregue.
-
-**La pila de prioridades es del usuario, no nuestra.** La UI deja reordenar las
-soft constraints en una pila (drag-and-drop). El solver optimiza la de más
-arriba **al máximo** antes de sacrificar algo de ella para mejorar una de más
-abajo — es decir, una constraint de menor prioridad solo cede terreno a una de
-mayor prioridad, nunca al revés. Esto es lexicográfico, no un promedio
-ponderado a ciegas: hay que decirlo así en la documentación técnica para que
-sea defendible en Q&A.
-
-**KPIs nuevos de C** (con sus cinco campos de [01 D.7](01-DEFINICION-DE-NEGOCIO.md),
-igual que cualquier otro KPI del catálogo): ahorro proyectado de la asignación
-óptima vs. la asignación manual observada, y costo evitado de transporte
-redundante (lowboy). **Si no hay suficiente histórico para calcular el
-comparativo, el KPI dice qué dato falta — igual que cualquier otro** (C.1).
-
-**No hace lo que H.3 seguía prohibiendo para el resto del producto:** el
-solver no reasigna nada por su cuenta. Propone; el humano confirma en la UI;
-recién ahí, si corresponde, se dispara una propagación (P1/P2 ya existentes) —
-mismo principio C.3.
-
-### 12.2 Betinho (S-A8) — agente local, modelo open-source
-
-Un agente que corre con un **modelo open-source autoalojado** (nunca un
-proveedor de IA en la nube — así se evita el problema de NDA de §1.5, no se
-sortea).
-
-- **Forecast de mantenimiento preventivo**, a partir de kilometraje, horas de
-  motor encendido, temperatura y las demás señales que el sandbox exponga
-  realmente. **Si el sandbox no expone una señal, el forecast lo dice — no se
-  inventa un sensor que no existe** (mismo principio que C.1: honestidad sobre
-  completitud). Es un modelo estadístico/ML explícitamente etiquetado como
-  predicción, nunca mezclado con el veredicto determinístico de `lib/reglas/`.
-- Puede leer las sugerencias del optimizador (§12.1) y redactarlas en lenguaje
-  llano para quien decide.
-
-**Prioridad más baja de la escalera extendida** — es lo primero que se corta
-si el reloj aprieta.
-
-### 12.3 Canal de incidentes de campo (S-A9) — Twilio + Betinho
-
-Un trabajador en campo reporta un incidente por Twilio (SMS/WhatsApp de
-prueba). Betinho lo analiza y **redacta un reenvío** al jefe correspondiente
-según el tipo de incidente — nunca decide ni ejecuta nada por su cuenta.
-**El jefe confirma** (o pide otra sugerencia) y **entonces** se actualiza el
-dato correspondiente en Prisma/Startrack, con el mismo mecanismo de
-confirmación explícita y rastro que ya rige toda propagación (C.3, D.6 de 01).
-
-**Reglas de datos, iguales a las de §1.2:** ningún número de teléfono real de
-un trabajador de ECON entra al repositorio, a un log, ni a una captura del
-entregable. La demo usa el número de prueba de Twilio. El texto del incidente
-vive solo en el caché volátil en memoria — igual que cualquier otro dato de
-ECON (C.2) — nunca se persiste.
-
-**Prioridad más baja de la escalera extendida**, junto con Betinho — es de lo
-primero que se corta si el reloj aprieta.
-
-### 12.4 Dónde entran en la escalera de recorte, y cuándo se construyen
-
-Ver la escalera actualizada en [02-ROADMAP.md §0.5](02-ROADMAP.md). En breve:
-el optimizador y sus KPIs de ahorro (§12.1) se insertan **justo debajo de la
-línea roja** — si el reloj aprieta, se cortan después que el mapa (S-B3) y las
-propagaciones P2/P3 (S-A5), y **nunca** a costa de S-A4 (propagación P1: si
-compiten por la misma hora de Carril A, P1 va primero, siempre). Eso es
-prioridad de **corte**; la prioridad de **construcción** es distinta y más
-alta: S-A7/S-B4/S-C4 arrancan **apenas cierra S-C2**, antes que S-A3, S-C3,
-S-A4 y S-B2 en el orden del documento (ver [02-ROADMAP.md §1](02-ROADMAP.md)).
-Betinho (§12.2) y el canal de incidentes (§12.3) no cambiaron: van **al fondo
-de toda la escalera**, tanto en corte como en construcción — son lo primero
-que se corta y lo último que se intenta.
+1. Hay **un solo runtime local Qwen** y dos perfiles: O.D.I.N. Web primero;
+   O.D.I.N. Campo/WhatsApp después. No hay un copiloto Claude/OpenAI separado.
+2. Todo vive en un único `services/intelligence/` FastAPI con módulos
+   `odin/`, `forecast/` y `optimizer/`. Next.js conserva los conectores y
+   envía únicamente resultados mínimos y estructurados.
+3. O.D.I.N. consulta, explica, recomienda y redacta. **Nunca escribe** en Prisma
+   ni Startrack y no dispone de herramientas de mutación. P1 sigue siendo un
+   flujo separado de UI con autorización de servidor y confirmación humana.
+4. El riesgo empieza como índice determinístico con
+   `is_trained_probability: false`. Solo se entrena si una auditoría demuestra
+   etiqueta, volumen, fechas y utilidad operativa suficientes.
+5. La asignación usa OR-Tools/CP-SAT, no el LLM. Es opcional, explicable y nunca
+   ejecuta la propuesta.
+6. RAG, QLoRA, Twilio y el predictor entrenado están fuera del MVP. El canal de
+   campo usa el mismo Qwen y únicamente el sandbox de Twilio.
+7. Toda la IA está debajo de la línea roja. Dentro de IA, el primer valor a
+   entregar es O.D.I.N. Web; el orden de construcción y recorte exacto está en
+   [docs/03 §6](docs/03-ARQUITECTURA-IA-ODIN.md).

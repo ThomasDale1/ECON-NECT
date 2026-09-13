@@ -3,6 +3,13 @@
 Esta carpeta es la salida de la **sesión 1 (Planeación)** y la entrada de la
 **sesión 2 (Implementación)**. Ver [AGENTS.md §3](../AGENTS.md).
 
+> **Decisión vigente para IA:** antes de crear o ejecutar cualquier prompt de
+> S-A6/S-A7/S-A8/S-A9, leer
+> [03-ARQUITECTURA-IA-ODIN.md](../docs/03-ARQUITECTURA-IA-ODIN.md).
+> Los prompts históricos no autorizan Claude/OpenAI, un segundo servicio Python
+> ni escrituras de O.D.I.N. El prompt ejecutable de O.D.I.N. Web se redactará
+> contra esa decisión cuando el equipo dé las indicaciones finales.
+
 ## Cómo se usa
 
 1. **Sesión 1 (Planeación)** discute, pregunta lo que no esté decidido, y escribe

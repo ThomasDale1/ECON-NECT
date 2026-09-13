@@ -1,5 +1,8 @@
+'use client'
+
 import Link from 'next/link'
-import { BarChart2, Cpu, Cuboid, LayoutDashboard, List, PanelLeftClose, Search } from 'lucide-react'
+import { usePathname } from 'next/navigation'
+import { BarChart2, Bot, Cpu, Cuboid, LayoutDashboard, List, PanelLeftClose, Search } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { Plataforma, SaludFuente } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
@@ -11,13 +14,14 @@ import { cn } from '@/lib/utils'
  * vivo de que estamos leyendo las dos APIs. Cuando una se cae, el punto cambia
  * y el veredicto degrada a SIN_EVIDENCIA.
  */
-type Navegacion = { etiqueta: string; icono: LucideIcon; href: string; activo?: boolean }
+type Navegacion = { etiqueta: string; icono: LucideIcon; href: string }
 
 const NAVEGACION: Navegacion[] = [
-  { etiqueta: 'Command Center', icono: LayoutDashboard, href: '/command-center', activo: true },
+  { etiqueta: 'Command Center', icono: LayoutDashboard, href: '/command-center' },
   { etiqueta: 'Ficha unificada', icono: Cuboid, href: '/equipo' },
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
+  { etiqueta: 'O.D.I.N.', icono: Bot, href: '/odin' },
 ]
 
 type Estado = SaludFuente['estado']
@@ -47,6 +51,8 @@ const TEXTO_SALUD: Record<Estado, string> = {
 }
 
 export function BarraLateral({ salud }: { salud: SaludFuente[] }) {
+  const pathname = usePathname()
+
   return (
     <aside className="sticky top-0 flex h-screen w-60 shrink-0 flex-col justify-between self-start overflow-y-auto bg-marina text-white">
       <div className="flex flex-col gap-6 px-5 pb-4 pt-7">
@@ -74,24 +80,29 @@ export function BarraLateral({ salud }: { salud: SaludFuente[] }) {
           <p className="font-label text-[9px] font-bold uppercase tracking-widest text-marina-tenue">
             Navegación
           </p>
-          {NAVEGACION.map(({ etiqueta, icono: Icono, href, activo }) => (
-            <Link
-              key={etiqueta}
-              href={href}
-              aria-current={activo ? 'page' : undefined}
-              className={cn(
-                'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13px] transition-colors',
-                'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara',
-                activo
-                  ? 'bg-marca font-label font-bold text-white'
-                  : 'font-label text-marina-texto hover:bg-white/5',
-              )}
-            >
-              <Icono aria-hidden className="size-4 shrink-0" />
-              <span className="flex-1">{etiqueta}</span>
-              {activo ? <span aria-hidden className="size-1.5 rounded-full bg-marca-clara" /> : null}
-            </Link>
-          ))}
+          {NAVEGACION.map(({ etiqueta, icono: Icono, href }) => {
+            const activo = pathname === href || pathname.startsWith(`${href}/`)
+            return (
+              <Link
+                key={etiqueta}
+                href={href}
+                aria-current={activo ? 'page' : undefined}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-lg px-3 py-2.5 text-[13px] transition-colors',
+                  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara',
+                  activo
+                    ? 'bg-marca font-label font-bold text-white'
+                    : 'font-label text-marina-texto hover:bg-white/5',
+                )}
+              >
+                <Icono aria-hidden className="size-4 shrink-0" />
+                <span className="flex-1">{etiqueta}</span>
+                {activo ? (
+                  <span aria-hidden className="size-1.5 rounded-full bg-marca-clara" />
+                ) : null}
+              </Link>
+            )
+          })}
         </nav>
       </div>
 

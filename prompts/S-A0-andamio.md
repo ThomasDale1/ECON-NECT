@@ -140,8 +140,10 @@ todavía no se use. **Nada más que esto; nada menos que esto.**
   label  dropdown-menu  alert  sonner  command  scroll-area  progress
   ```
 
-- ❌ **Ningún SDK de LLM.** Ni `openai` ni `@anthropic-ai/sdk`. Se instalará solo
-  si S-A6 llega a construirse.
+- ❌ **Ningún SDK de LLM en `apps/web`.** Ni `openai` ni `@anthropic-ai/sdk`.
+  S-A6 usa Qwen local desde `services/intelligence/`; Next.js solo tendrá un
+  adaptador HTTP `server-only`. Ver la decisión vigente en
+  [03-ARQUITECTURA-IA-ODIN.md](../docs/03-ARQUITECTURA-IA-ODIN.md).
 
 ## 3. Scripts de `apps/web/package.json`
 

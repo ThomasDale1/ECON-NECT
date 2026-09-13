@@ -280,6 +280,18 @@ Notas: siempre ícono + texto (§5). Un ícono distinto de lucide por veredicto
 dependa del color.
 Registrado: S-B1 · 12 de septiembre de 2026
 
+### ConsolaOdin
+File: apps/web/components/odin/consola-odin.tsx
+Tipo: formulario
+Clases: `rounded-xl border border-border`, `flex flex-col gap-4`, componentes
+`Card`, `Select`, `Textarea`, `Button` y `Badge` del baseline.
+Tokens de color: violeta de `SIN_EVIDENCIA` para datos faltantes; ámbar para
+declarar datos de demostración. Ningún color representa por sí solo un estado.
+Notas: expone únicamente las tres intenciones read-only de O.D.I.N.; la evidencia
+se muestra con plataforma, endpoint, campo y fecha. El navegador solo envía
+`assetId` y el mensaje, nunca el snapshot ni credenciales.
+Registrado: S-A6 · 12 de septiembre de 2026
+
 ### BadgeOrigen
 File: apps/web/components/nect/badge-origen.tsx
 Tipo: badge
