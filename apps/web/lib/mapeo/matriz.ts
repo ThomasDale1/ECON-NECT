@@ -456,18 +456,18 @@ const NO_CONFIRMADO: MetadatosCampo = {
 }
 
 const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
-  Empresa: { tipoDato: 'Catálogo / texto', ejemplo: 'The Hub (ejemplo sintético del diccionario)' },
+  Empresa: { tipoDato: 'Catálogo / texto', ejemplo: 'Nombre de la empresa propietaria (forma del valor)' },
   'No. de activo': {
     tipoDato: 'Texto compuesto',
-    ejemplo: 'CF-03 - Cargador frontal 03 (ejemplo sintético del diccionario)',
+    ejemplo: '«código de activo - nombre del equipo» (forma del valor)',
   },
   'Nombre del equipo': {
     tipoDato: 'Texto',
-    ejemplo: 'Cargador frontal 03 (ejemplo sintético del diccionario)',
+    ejemplo: 'Nombre descriptivo del equipo (forma del valor)',
   },
   'Clase de equipo (`clase_equipo`)': {
     tipoDato: 'Catálogo',
-    ejemplo: 'Cargador frontal (ejemplo sintético)',
+    ejemplo: 'Clase de equipo (valor de catálogo)',
   },
   'Estado (módulo Maquinaria — el recurso)': {
     tipoDato: 'Catálogo',
@@ -475,7 +475,7 @@ const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
   },
   'Estado (módulo Mantenimiento, diccionario de datos)': {
     tipoDato: 'Catálogo / texto compuesto',
-    ejemplo: 'CF-03 - Obsoleto (ejemplo sintético del diccionario)',
+    ejemplo: '«código de activo - estado» (forma del valor)',
   },
   'estado (objeto Falla — no aparece como módulo propio en el diccionario compartido)': {
     tipoDato: 'Catálogo',
@@ -491,40 +491,36 @@ const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
   },
   'No. de activo + Clase de equipo': {
     tipoDato: 'Texto compuesto + catálogo',
-    ejemplo: 'CF-03 + Cargador frontal (ejemplo sintético)',
-  },
-  'marca (nombre exacto de columna no confirmado)': {
-    tipoDato: 'No confirmado en Prisma',
-    ejemplo: 'Pendiente de confirmar; no se inventa un valor',
-  },
-  'modelo (nombre exacto de columna no confirmado)': {
-    tipoDato: 'No confirmado en Prisma',
-    ejemplo: 'Pendiente de confirmar; no se inventa un valor',
-  },
-  'año (nombre exacto de columna no confirmado)': {
-    tipoDato: 'No confirmado en Prisma',
-    ejemplo: 'Pendiente de confirmar; no se inventa un valor',
+    ejemplo: '«código de activo» + «clase de equipo» (forma del valor)',
   },
   Proyecto: {
     tipoDato: 'Referencia / texto compuesto',
-    ejemplo: 'PROY-014 - The Hub - Proyecto Xi - La Unión (ejemplo sintético del diccionario)',
+    ejemplo: '«código de proyecto - empresa - obra - zona» (forma del valor)',
   },
-  Tipo: { tipoDato: 'Catálogo', ejemplo: 'Cargador frontal (ejemplo sintético)' },
+  Tipo: { tipoDato: 'Catálogo', ejemplo: 'Clase de equipo (valor de catálogo)' },
   Solicita: { tipoDato: 'Usuario / referencia', ejemplo: 'Usuario autorizado (ejemplo genérico)' },
   Período: { tipoDato: 'Fecha o rango de fechas', ejemplo: 'Fecha requerida (ejemplo genérico)' },
   'Estado de solicitud': { tipoDato: 'Catálogo', ejemplo: 'APROBADA (valor de catálogo)' },
   Maquinaria: {
     tipoDato: 'Catálogo / texto compuesto',
-    ejemplo: 'CF-03 - Cargador frontal 03 (ejemplo sintético del diccionario)',
+    ejemplo: '«código de activo - nombre del equipo» (forma del valor)',
+  },
+  'cod_trabajador (/api/maquinaria/operadores)': {
+    tipoDato: 'Texto (código de trabajador)',
+    ejemplo: 'Código de trabajador (forma del valor)',
+  },
+  'created_at (solicitudes de maquinaria de Prisma)': {
+    tipoDato: 'Fecha AAAA-MM-DD (sin hora)',
+    ejemplo: 'Fecha de creación de la solicitud (forma del valor)',
   },
 }
 
 const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
   'Grupo, Etiquetas (módulo Vehículos)': {
     tipoDato: 'Grupo + lista de etiquetas',
-    ejemplo: 'Vehículos-Hackathon + Equipo 14 - The Hub (ejemplos sintéticos del diccionario)',
+    ejemplo: '«grupo» + «etiqueta de equipo» (forma del valor)',
   },
-  'Descripción (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'CF-03 (ejemplo sintético)' },
+  'Descripción (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Código de activo del equipo (forma del valor)' },
   'Tipo (módulo Vehículos) — `veh_type`': {
     tipoDato: 'Entero en API / catálogo nominal en diccionario',
     ejemplo: '8 (valor estructural observado)',
@@ -534,19 +530,19 @@ const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
     tipoDato: 'Catálogo personalizable',
     ejemplo: 'Traslado (valor de catálogo)',
   },
-  'Marca (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Marca de ejemplo (sintético)' },
-  'Modelo (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Modelo de ejemplo (sintético)' },
-  'Año (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: '2024 (ejemplo sintético)' },
-  'Color (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Amarillo (ejemplo sintético)' },
+  'Marca (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Marca del vehículo (forma del valor)' },
+  'Modelo (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Modelo del vehículo (forma del valor)' },
+  'Año (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Año de fabricación, cuatro dígitos (forma del valor)' },
+  'Color (módulo Vehículos)': { tipoDato: 'Texto', ejemplo: 'Color del vehículo (forma del valor)' },
   'Marca, Modelo, Año, Color (módulo Vehículos)': {
     tipoDato: 'Texto por atributo',
     ejemplo: 'Valores descriptivos por atributo (ejemplo genérico)',
   },
   'Nombre (módulo Geocercas)': {
     tipoDato: 'Texto compuesto',
-    ejemplo: 'PROY-014 - The Hub - Proyecto Xi - La Unión (ejemplo sintético del diccionario)',
+    ejemplo: '«código de proyecto - empresa - obra - zona» (forma del valor)',
   },
-  'Tipo (módulo Vehículos)': { tipoDato: 'Catálogo', ejemplo: 'Cargador frontal (ejemplo sintético)' },
+  'Tipo (módulo Vehículos)': { tipoDato: 'Catálogo', ejemplo: 'Clase de equipo (valor de catálogo)' },
   'Estado (módulo Tareas)': { tipoDato: 'Catálogo', ejemplo: 'Pendiente (valor de catálogo)' },
   'Tipo (módulo Tareas)': { tipoDato: 'Catálogo personalizable', ejemplo: 'Traslado (valor de catálogo)' },
   'Origen, Destino (módulo Tareas)': {
@@ -555,53 +551,92 @@ const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
   },
   'Asignar (módulo Tareas), Conductor (módulo Vehículos)': {
     tipoDato: 'Usuario / referencia',
-    ejemplo: 'código — nombre de ejemplo (formato sintético)',
+    ejemplo: '«código - nombre»; solo se lee el código (forma del valor)',
   },
   'Latitud, Longitud (módulos Geocercas y Tareas)': {
     tipoDato: 'Dos coordenadas decimales',
-    ejemplo: '13.70, -89.20 (ejemplo sintético)',
+    ejemplo: 'Par de grados decimales (forma del valor)',
   },
   'ID remoto (módulo Vehículos)': {
     tipoDato: 'Identificador / texto',
-    ejemplo: 'id-prisma-sintético',
+    ejemplo: 'Identificador del equipo en Prisma (forma del valor)',
   },
   'remote_id (módulo Geocercas)': {
     tipoDato: 'Identificador / texto',
-    ejemplo: 'id-proyecto-sintético',
+    ejemplo: 'Identificador del proyecto (forma del valor)',
   },
   'remote_id (módulo Tareas)': {
     tipoDato: 'Identificador / texto',
-    ejemplo: 'id-solicitud-sintético',
+    ejemplo: 'Identificador de la solicitud (forma del valor)',
   },
   'Proveedor (módulo Mantenimiento)': {
     tipoDato: 'Texto / referencia',
-    ejemplo: 'Proveedor de ejemplo (sintético)',
+    ejemplo: 'Nombre del proveedor del servicio (forma del valor)',
   },
   'Mecánico (módulo Mantenimiento)': {
     tipoDato: 'Texto / referencia',
-    ejemplo: 'Mecánico de ejemplo (sintético)',
+    ejemplo: 'Nombre del mecánico que atendió (forma del valor)',
   },
   'Motivo de reparación (módulo Mantenimiento)': {
     tipoDato: 'Texto',
-    ejemplo: 'Motivo de ejemplo (sintético)',
+    ejemplo: 'Motivo de la reparación (forma del valor)',
   },
   'Odómetro (módulo Mantenimiento)': {
     tipoDato: 'Numérico',
-    ejemplo: '12500 (ejemplo sintético)',
+    ejemplo: 'Kilometraje acumulado (forma del valor)',
   },
   'Horómetro (módulo Mantenimiento)': {
     tipoDato: 'Numérico',
-    ejemplo: '840 (ejemplo sintético)',
+    ejemplo: 'Horas de uso acumuladas (forma del valor)',
   },
+  'Estado (módulo Vehículos — status 0–9 del conductor)': {
+    tipoDato: 'Entero 0–9 (catálogo del conductor, no del recurso)',
+    ejemplo: 'Código de estado del conductor (valor de catálogo)',
+  },
+  'fn (ajax/drivers.php, módulo Conductores)': {
+    tipoDato: 'Texto compuesto «código - nombre»',
+    ejemplo: 'Solo se lee el código antes de " - "; el nombre se descarta (§1.2)',
+  },
+  'Calificación de seguridad del conductor — scores[].safety_score (ajax/report.php?id=32, reporte de conductores)':
+    {
+      tipoDato: 'Numérico 0–100',
+      ejemplo: 'Puntaje de seguridad del conductor (forma del valor)',
+    },
+  'Horas con motor encendido por conductor y día — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)':
+    {
+      tipoDato: 'Numérico en minutos (unidad inferida, no declarada)',
+      ejemplo: 'Minutos con motor encendido en el día (forma del valor)',
+    },
 }
 
-function metadatosCampo(
+/**
+ * Campos cuyo tipo de dato **de verdad** no se pudo confirmar en una fuente
+ * permitida. Es una lista explícita, no el resultado de que un lookup falle:
+ * "no confirmado" es una afirmación sobre la evidencia y tiene que declararse
+ * a mano, igual que `sin equivalencia directa` (AGENTS.md §1.1).
+ *
+ * Hasta que este catálogo estaba incompleto, un nombre de campo sin entrada
+ * caía acá en silencio y la matriz declaraba "pendiente de confirmar" sobre
+ * hallazgos que el equipo sí había verificado. `metadatosCampo` ahora exige
+ * que el hueco sea deliberado; `matriz.test.ts` verifica que ninguna fila
+ * quede sin metadato por olvido.
+ */
+const SIN_TIPO_CONFIRMADO: ReadonlySet<string> = new Set([
+  'marca (nombre exacto de columna no confirmado)',
+  'modelo (nombre exacto de columna no confirmado)',
+  'año (nombre exacto de columna no confirmado)',
+])
+
+export function metadatosCampo(
   plataforma: 'Prisma' | 'Startrack',
   nombre: string | null,
-): MetadatosCampo {
+): MetadatosCampo | null {
   if (!nombre) return NO_APLICA
+  if (SIN_TIPO_CONFIRMADO.has(nombre)) return NO_CONFIRMADO
   const catalogo = plataforma === 'Prisma' ? METADATOS_PRISMA : METADATOS_STARTRACK
-  return catalogo[nombre] ?? NO_CONFIRMADO
+  // `null` = falta la entrada en el catálogo. No es lo mismo que "no
+  // confirmado", y la prueba lo trata como error en vez de mostrarlo.
+  return catalogo[nombre] ?? null
 }
 
 function cardinalidadDe(fila: FilaMapeoBase): CardinalidadMapeo {
@@ -622,8 +657,8 @@ function cardinalidadDe(fila: FilaMapeoBase): CardinalidadMapeo {
 
 export const MATRIZ_MAPEO: FilaMapeo[] = MATRIZ_MAPEO_BASE.map((fila) => ({
   ...fila,
-  prisma: metadatosCampo('Prisma', fila.campoPrisma),
-  startrack: metadatosCampo('Startrack', fila.campoStartrack),
+  prisma: metadatosCampo('Prisma', fila.campoPrisma) ?? NO_CONFIRMADO,
+  startrack: metadatosCampo('Startrack', fila.campoStartrack) ?? NO_CONFIRMADO,
   cardinalidad: cardinalidadDe(fila),
 }))
 
