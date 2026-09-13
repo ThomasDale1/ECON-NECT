@@ -37,7 +37,7 @@ const NAVEGACION: Navegacion[] = [
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
   { etiqueta: 'Planeación', icono: CalendarRange, href: '/planeacion' },
-  { etiqueta: 'Mapeo y RACI', icono: Table2, href: '/mapeo' },
+  { etiqueta: 'Mapeo y responsabilidades', icono: Table2, href: '/mapeo' },
   { etiqueta: 'O.D.I.N.', icono: Bot, href: '/odin' },
 ]
 

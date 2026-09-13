@@ -22,7 +22,7 @@ propiedad disjunta, los conflictos de merge casi desaparecen.
 |---|---|---|---|
 | **A · Núcleo** | Backend & Integración | Conectores → mapeo de datos en vivo → reglas → rutas de API → propagación | `lib/conectores/` · `lib/canonico/` · `lib/reglas/` · `lib/tipos/` · `app/api/` |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa | `components/` · `app/(nect)/` · `app/globals.css` |
-| **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol | `lib/mapeo/` · `lib/gobernanza/` · `lib/kpi/` · `lib/acceso/` |
+| **C · Semántica** | Data Architect | Matriz de mapeo, matriz de responsabilidades, catálogo de KPIs, acceso por rol | `lib/mapeo/` · `lib/gobernanza/` · `lib/kpi/` · `lib/acceso/` |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch | `docs/entregables/` — **ningún archivo de código** |
 
 ### 0.2 Los archivos compartidos, y la regla que los protege
@@ -112,7 +112,7 @@ la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
                                                       ver AGENTS.md §12)
   ── LÍNEA ROJA: nada de aquí para arriba se corta ──
       Conectores · mapeo de datos en vivo · reglas · ficha unificada ·
-      bandeja de incoherencias · matriz de mapeo · RACI ·
+      bandeja de incoherencias · matriz de mapeo · responsabilidades ·
       propagación P1 · los 7 entregables
 ```
 
@@ -133,7 +133,7 @@ mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
 | Franja | Qué pasa | ¿Se programa? |
 |---|---|---|
-| 15:30 – 17:00 | **Checkpoint 1 + mentorías** | **No.** Es nota (power skills) y es la fuente para validar la RACI |
+| 15:30 – 17:00 | **Checkpoint 1 + mentorías** | **No.** Es nota (power skills) y es la fuente para validar responsabilidades |
 | 17:00 – 20:00 | Trabajo | Sí — la mejor ventana del día |
 | 20:00 – 21:00 | Cena | Parcial |
 | 21:00 – 22:00 | **Checkpoint 2 + mentorías** | **No.** Es nota |
@@ -147,10 +147,10 @@ mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
 | | Hora | Foco declarado por ECON | Qué enseñamos |
 |---|---|---|---|
-| **CP1** | 15:30 | Mapeo de campos y RACI | La matriz de mapeo v1 en papel o pantalla, con filas "sin equivalencia" ya marcadas, y los hallazgos E.2/E.4 |
+| **CP1** | 15:30 | Mapeo de campos y responsabilidades | La matriz de mapeo en papel o pantalla, con filas "sin equivalencia" ya marcadas, y los hallazgos E.2/E.4 |
 | **CP2** | 21:00 | Avance contra requisitos, foco en prototipo | Prototipo navegable que responde una consulta unificada en vivo |
 
-En ambos hay **mentores de proceso de ECON: son la fuente para cerrar la RACI.**
+En ambos hay **mentores de proceso de ECON: son la fuente para cerrar la matriz de responsabilidades.**
 Llevar preguntas escritas (§3).
 
 ---
@@ -220,7 +220,7 @@ directa".
 **Objetivo:** que ningún entregable nazca a las 6 de la mañana.
 
 - **En el CP1 (ahora):** llevar escritas las preguntas para los mentores de
-  proceso (§3). Anotar las respuestas textuales — son la fuente de la RACI.
+  proceso (§3). Anotar las respuestas textuales — son la fuente de las responsabilidades.
 - Esqueleto del **documento de decisiones técnicas** (máx. 2 páginas), con los
   títulos ya puestos: por qué se descartó el mapeo por nombre · por qué
   `remote_id` es la respuesta a los conflictos en producción · por qué la
@@ -346,13 +346,13 @@ que lo produjo en cada caso.
 
 ---
 
-### 🟩 S-C2 — Matriz tipada, RACI y KPIs · 17:45–01:00 · Carril C
+### 🟩 S-C2 — Matriz tipada, responsabilidades y KPIs · 17:45–01:00 · Carril C
 
 **Objetivo:** que la documentación y el prototipo sean el mismo objeto (C.5).
 
 - `lib/mapeo/matriz.ts` — la matriz de S-C1 como estructura tipada + la página
   que la renderiza con filtro por tipo de relación.
-- `lib/gobernanza/raci.ts` — la RACI tipada, construida desde el diagrama TO-BE,
+- `lib/gobernanza/responsabilidades.ts` — la matriz tipada, construida desde el diagrama TO-BE,
   los organigramas y **lo que digan los mentores en los checkpoints**. Filas por
   paso del proceso, columnas por los seis agentes del TO-BE.
   **Enlazarla con las reglas de A:** cada incoherencia sabe quién la resuelve
@@ -362,7 +362,7 @@ que lo produjo en cada caso.
   ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)): qué mide, por qué importa, fórmula,
   referencia, **acción que dispara**, y por qué ninguna plataforma lo ve sola.
   Si no es calculable con lo que hay, se declara y se dice qué dato falta.
-- Exportación a CSV de la matriz y de la RACI desde la pantalla.
+- Exportación a CSV de la matriz de mapeo y la matriz de responsabilidades desde la pantalla.
 
 ---
 
@@ -642,7 +642,7 @@ el endpoint identificado. **Eso también suma; prometerlas sin hacerlas, no.**
   aprendizaje.
 - **README de entrega** — cómo revisar el prototipo y las matrices, **con las
   claves por rol escritas ahí** para que el jurado entre.
-- Exportaciones de matriz y RACI generadas desde el prototipo.
+- Exportaciones de mapeo y responsabilidades generadas desde el prototipo.
 
 ---
 
@@ -761,7 +761,7 @@ haberla corrido.**
 
 Son de carril D, pero cualquiera que hable con un mentor las lleva.
 
-**Para cerrar la RACI:**
+**Para cerrar la matriz de responsabilidades:**
 1. ¿Quién aprueba realmente una solicitud de maquinaria, y quién la origina?
 2. ¿Quién decide que un equipo sale de operación: Mantenimiento o Logística?
 3. ¿Quién debe enterarse primero de que un equipo no va a llegar, y por qué canal

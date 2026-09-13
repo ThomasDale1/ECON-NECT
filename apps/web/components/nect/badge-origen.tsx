@@ -20,18 +20,16 @@ import { cn } from '@/lib/utils'
  */
 const PRESENTACION: Record<
   Plataforma,
-  { etiqueta: string; contexto: string; punto: string; hover: string }
+  { etiqueta: string; contexto: string; hover: string }
 > = {
   prisma: {
     etiqueta: 'Prisma',
     contexto: 'esperado',
-    punto: 'bg-origen-prisma',
     hover: 'hover:border-origen-prisma/40 hover:text-foreground',
   },
   startrack: {
     etiqueta: 'Startrack',
     contexto: 'observado',
-    punto: 'bg-origen-startrack',
     hover: 'hover:border-origen-startrack/40 hover:text-foreground',
   },
 }

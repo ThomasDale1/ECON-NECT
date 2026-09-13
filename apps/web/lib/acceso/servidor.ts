@@ -48,7 +48,7 @@ export async function exigirSesion(request: Request): Promise<FalloDeAcceso | Ac
   }
 }
 
-/** Exige además permiso de escritura (RACI: paso "Programar el traslado"). */
+/** Exige además permiso de escritura (responsabilidades: "Programar y ejecutar el traslado"). */
 export async function exigirSesionQuePuedaPropagar(
   request: Request,
 ): Promise<FalloDeAcceso | AccesoConcedido> {
@@ -60,7 +60,7 @@ export async function exigirSesionQuePuedaPropagar(
       respuesta: NextResponse.json(
         {
           error: 'rol_sin_permiso',
-          mensaje: `El rol ${resultado.sesion.rol} no propaga cambios a otra plataforma. Según la RACI, el paso "Programar el traslado" lo aprueba la Gerencia de Logística y Equipo.`,
+          mensaje: `El rol ${resultado.sesion.rol} no propaga cambios a otra plataforma. Según la matriz de responsabilidades, "Programar y ejecutar el traslado" corresponde a la Gerencia de Logística y Equipos.`,
         },
         { status: 403 },
       ),
