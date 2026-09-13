@@ -1,21 +1,29 @@
 'use client'
 
 import { useSyncExternalStore } from 'react'
-import { ArrowRightLeft, Ban, ChevronLeft, ChevronRight } from 'lucide-react'
-import type { AsignacionPropuesta, FilaMaquina, RespuestaOptimizar } from '@/lib/optimizador/tipos'
+import { ArrowRightLeft, Ban, CalendarClock, ChevronLeft, ChevronRight } from 'lucide-react'
+import type {
+  AsignacionPropuesta,
+  FilaMaquina,
+  RespuestaOptimizar,
+  SolicitudReprogramada,
+} from '@/lib/optimizador/tipos'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { VerOrigen } from '@/components/nect/ver-origen'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { aFechaUtc, estaEnRango, sumarDias } from './fechas'
+import { TarjetaSinAsignacion } from './tarjeta-sin-asignacion'
 import {
   ALTO_BARRA_PX,
   ANCHO_ETIQUETA_PX,
   CLASE_OCUPACION_RAYADA,
   ESPACIO_ENTRE_CARRILES_PX,
   EtiquetaMaquina,
+  CLASE_REPROGRAMADA,
   TEXTO_REEMPLAZO,
   altoFila,
+  tituloReprogramada,
   rotuloOcupacion,
   tituloOcupacion,
 } from './timeline-maquinas'
@@ -87,11 +95,13 @@ function FilaDia({
   fecha,
   asignaciones,
   onSeleccionar,
+  reprogramadas,
 }: {
   maquina: FilaMaquina
   fecha: string
   asignaciones: AsignacionPropuesta[]
   onSeleccionar: (a: AsignacionPropuesta) => void
+  reprogramadas?: ReadonlyMap<string, SolicitudReprogramada>
 }) {
   const ocupaciones = maquina.ocupacionReal.filter(
     (o) => o.inicio.valor !== null && o.fin.valor !== null && estaEnRango(fecha, o.inicio.valor, o.fin.valor),
@@ -133,15 +143,27 @@ function FilaDia({
           const codigo = asignacion.solicitud.codigoProyecto ?? asignacion.solicitud.proyecto.valor ?? 'Sin registro'
           const operador = asignacion.operador.codTrabajador.valor ?? 'Sin registro'
           const reemplazo = asignacion.reemplazaConfirmada
+          const reprogramada = reprogramadas?.get(asignacion.solicitud.id)
           return (
             <button
               key={asignacion.solicitud.id}
               type="button"
               onClick={() => onSeleccionar(asignacion)}
-              title={reemplazo ? `${codigo} · ${operador} · ${TEXTO_REEMPLAZO}` : `${codigo} · ${operador}`}
-              className="absolute left-0 flex items-center gap-3 overflow-hidden rounded-lg bg-marca px-3 text-left text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara focus-visible:ring-offset-1"
+              title={[`${codigo} · ${operador}`, reemplazo ? TEXTO_REEMPLAZO : null, reprogramada ? tituloReprogramada(reprogramada) : null]
+                .filter(Boolean)
+                .join(' · ')}
+              className={cn(
+                'absolute left-0 flex items-center gap-3 overflow-hidden rounded-lg bg-marca px-3 text-left text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara focus-visible:ring-offset-1',
+                reprogramada && CLASE_REPROGRAMADA,
+              )}
               style={{ top: topCarril(ocupaciones.length + i), width: ANCHO_BLOQUE_PX, height: ALTO_BARRA_PX }}
             >
+              {reprogramada && (
+                <span className="flex shrink-0 items-center gap-1 rounded-md bg-white/15 px-1.5 py-0.5 font-label text-[10px]">
+                  <CalendarClock aria-hidden className="size-3" />
+                  Reprogramada +{reprogramada.atrasoDias} d · pedida {reprogramada.original.inicio} → {reprogramada.original.fin} · vista previa
+                </span>
+              )}
               <span className="truncate font-label text-xs font-semibold">
                 {codigo} · <span className="font-mono">{operador}</span>
               </span>
@@ -165,6 +187,7 @@ export function VistaDia({
   onCambiarFecha,
   onVolverASemana,
   onSeleccionarAsignacion,
+  reprogramadas,
 }: {
   respuesta: RespuestaOptimizar
   /** Ya acotada al horizonte por quien la pasa. */
@@ -172,6 +195,8 @@ export function VistaDia({
   onCambiarFecha: (fecha: string) => void
   onVolverASemana: () => void
   onSeleccionarAsignacion: (a: AsignacionPropuesta) => void
+  /** Solo en la vista previa de reprogramación: marca las propuestas movidas. */
+  reprogramadas?: ReadonlyMap<string, SolicitudReprogramada>
 }) {
   const minuto = useSyncExternalStore<number | null>(suscribirReloj, minutoActual, sinReloj)
 
@@ -276,15 +301,16 @@ export function VistaDia({
                 {sinAsignacionDelDia.map((s, i) => {
                   const texto = `${s.solicitud.clase.valor ?? 'Sin registro'} · ${s.solicitud.codigoProyecto ?? s.solicitud.proyecto.valor ?? 'Sin registro'} · ${s.motivo}`
                   return (
-                    <div
+                    <TarjetaSinAsignacion
                       key={s.solicitud.id}
-                      className="absolute left-0 flex items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-border bg-muted px-3"
+                      sinAsignacion={s}
+                      respuesta={respuesta}
+                      className="absolute left-0 flex items-center gap-1.5 overflow-hidden rounded-lg border border-dashed border-border bg-muted px-3 transition-colors hover:border-foreground/40"
                       style={{ top: topCarril(i), width: ANCHO_BLOQUE_PX, height: ALTO_BARRA_PX }}
-                      title={texto}
                     >
                       <Ban aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
                       <span className="truncate font-label text-[11px] text-muted-foreground">{texto}</span>
-                    </div>
+                    </TarjetaSinAsignacion>
                   )
                 })}
               </div>
@@ -298,6 +324,7 @@ export function VistaDia({
               fecha={fecha}
               asignaciones={asignacionesPorMaquina.get(maquina.id) ?? []}
               onSeleccionar={onSeleccionarAsignacion}
+              reprogramadas={reprogramadas}
             />
           ))}
 

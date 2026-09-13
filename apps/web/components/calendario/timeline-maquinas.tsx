@@ -1,12 +1,29 @@
 'use client'
 
-import { ArrowRightLeft, Ban, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, Route } from 'lucide-react'
-import type { AsignacionPropuesta, FilaMaquina, OcupacionReal, RespuestaOptimizar } from '@/lib/optimizador/tipos'
+import {
+  ArrowRightLeft,
+  Ban,
+  CalendarClock,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  Route,
+} from 'lucide-react'
+import type {
+  AsignacionPropuesta,
+  FilaMaquina,
+  OcupacionReal,
+  RespuestaOptimizar,
+  SolicitudReprogramada,
+  SolicitudSinAsignacion,
+} from '@/lib/optimizador/tipos'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { VerOrigen } from '@/components/nect/ver-origen'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { DIAS_POR_SEMANA, aFechaUtc, clampFecha, diffDias, seSuperponen, sumarDias } from './fechas'
+import { TarjetaSinAsignacion } from './tarjeta-sin-asignacion'
 
 /**
  * Timeline de máquinas, vista Semana — S-B4 §5, ajustado el 13 de sep. 2026 y
@@ -55,6 +72,14 @@ export function tituloOcupacion(ocupacion: OcupacionReal): string {
 }
 
 export const TEXTO_REEMPLAZO = 'Reemplazo propuesto — la asignación en Prisma no se modifica'
+
+/** Contorno punteado de una propuesta que solo existe en la vista previa de
+ * reprogramación. Compartido con la vista Día. */
+export const CLASE_REPROGRAMADA = 'outline-2 outline-dashed -outline-offset-4 outline-white/80'
+
+export function tituloReprogramada(r: SolicitudReprogramada): string {
+  return `Reprogramada +${r.atrasoDias} día(s): pedida ${r.original.inicio} → ${r.original.fin}, propuesta ${r.propuesta.inicio} → ${r.propuesta.fin} (vista previa, no se guarda)`
+}
 
 /**
  * Velocidad promedio asumida para estimar el tiempo de viaje entre dos
@@ -246,11 +271,13 @@ function BarraPropuesta({
   ventana,
   carril,
   onSeleccionar,
+  reprogramada,
 }: {
   asignacion: AsignacionPropuesta
   ventana: VentanaSemana
   carril: number
   onSeleccionar: (a: AsignacionPropuesta) => void
+  reprogramada?: SolicitudReprogramada
 }) {
   const { left, top, width, cortadaIzq, cortadaDer } = posicion(
     ventana,
@@ -267,26 +294,38 @@ function BarraPropuesta({
     <button
       type="button"
       onClick={() => onSeleccionar(asignacion)}
-      title={esReemplazo ? `${codigo} · ${operador} · ${TEXTO_REEMPLAZO}` : `${codigo} · ${operador}`}
+      title={[`${codigo} · ${operador}`, esReemplazo ? TEXTO_REEMPLAZO : null, reprogramada ? tituloReprogramada(reprogramada) : null]
+        .filter(Boolean)
+        .join(' · ')}
       className={cn(
         'absolute flex flex-col justify-center gap-0.5 overflow-hidden bg-marca px-2.5 text-left text-white transition-opacity hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-marca-clara focus-visible:ring-offset-1',
         cortadaIzq ? 'rounded-l-none pl-4' : 'rounded-l-lg',
         cortadaDer ? 'rounded-r-none pr-4' : 'rounded-r-lg',
+        reprogramada && CLASE_REPROGRAMADA,
       )}
       style={{ left, top, width, height: ALTO_BARRA_PX }}
     >
       {cortadaIzq && <MarcaCorte lado="izq" />}
       <span className="flex items-center gap-1 truncate font-label text-xs font-semibold leading-tight">
-        {esReemplazo && <ArrowRightLeft aria-hidden className="size-3 shrink-0" />}
+        {reprogramada ? (
+          <CalendarClock aria-hidden className="size-3 shrink-0" />
+        ) : (
+          esReemplazo && <ArrowRightLeft aria-hidden className="size-3 shrink-0" />
+        )}
         <span className="truncate">{codigo}</span>
       </span>
       {!compacto &&
-        (esReemplazo ? (
+        (reprogramada ? (
+          <span className="truncate font-label text-[10px] leading-tight text-white/90">
+            +{reprogramada.atrasoDias} d · vista previa · {operador}
+          </span>
+        ) : esReemplazo ? (
           <span className="truncate font-label text-[10px] leading-tight text-white/90">{TEXTO_REEMPLAZO}</span>
         ) : (
           <span className="truncate font-mono text-[10px] leading-tight text-white/80">{operador}</span>
         ))}
       {compacto && esReemplazo && <span className="sr-only">{TEXTO_REEMPLAZO}</span>}
+      {compacto && reprogramada && <span className="sr-only">{tituloReprogramada(reprogramada)}</span>}
       {cortadaDer && <MarcaCorte lado="der" />}
     </button>
   )
@@ -294,35 +333,36 @@ function BarraPropuesta({
 
 function BarraSinAsignacion({
   ventana,
-  inicio,
-  fin,
   carril,
-  texto,
+  sinAsignacion,
+  respuesta,
 }: {
   ventana: VentanaSemana
-  inicio: string
-  fin: string
   carril: number
-  texto: string
+  sinAsignacion: SolicitudSinAsignacion
+  respuesta: RespuestaOptimizar
 }) {
-  const { left, top, width, cortadaIzq, cortadaDer } = posicion(ventana, inicio, fin, carril)
+  const { solicitud } = sinAsignacion
+  const texto = `${solicitud.clase.valor ?? 'Sin registro'} · ${solicitud.codigoProyecto ?? solicitud.proyecto.valor ?? 'Sin registro'} · ${sinAsignacion.motivo}`
+  const { left, top, width, cortadaIzq, cortadaDer } = posicion(ventana, solicitud.inicioEfectivo, solicitud.fin.valor!, carril)
   const compacto = width < ANCHO_MINIMO_EXPANDIDO_PX
   return (
-    <div
+    <TarjetaSinAsignacion
+      sinAsignacion={sinAsignacion}
+      respuesta={respuesta}
       className={cn(
-        'absolute flex items-center overflow-hidden border border-dashed border-border bg-muted',
+        'absolute flex items-center overflow-hidden border border-dashed border-border bg-muted transition-colors hover:border-foreground/40',
         compacto ? 'justify-center px-1' : 'gap-1.5 px-2.5',
         cortadaIzq ? 'rounded-l-none pl-4' : 'rounded-l-lg',
         cortadaDer ? 'rounded-r-none pr-4' : 'rounded-r-lg',
       )}
       style={{ left, top, width, height: ALTO_BARRA_PX }}
-      title={texto}
     >
       {cortadaIzq && <MarcaCorte lado="izq" />}
       <Ban aria-hidden className="size-3.5 shrink-0 text-muted-foreground" />
       {!compacto && <span className="truncate font-label text-[11px] text-muted-foreground">{texto}</span>}
       {cortadaDer && <MarcaCorte lado="der" />}
-    </div>
+    </TarjetaSinAsignacion>
   )
 }
 
@@ -368,12 +408,14 @@ function FilaMaquinaComponente({
   asignaciones,
   onSeleccionar,
   anchoTotal,
+  reprogramadas,
 }: {
   maquina: FilaMaquina
   ventana: VentanaSemana
   asignaciones: AsignacionPropuesta[]
   onSeleccionar: (a: AsignacionPropuesta) => void
   anchoTotal: number
+  reprogramadas?: ReadonlyMap<string, SolicitudReprogramada>
 }) {
   type Item =
     | { tipo: 'ocupacion'; indice: number; data: OcupacionReal }
@@ -465,6 +507,7 @@ function FilaMaquinaComponente({
               ventana={ventana}
               carril={carril}
               onSeleccionar={onSeleccionar}
+              reprogramada={reprogramadas?.get(item.data.solicitud.id)}
             />
           ),
         )}
@@ -482,12 +525,15 @@ export function TimelineMaquinas({
   onCambiarInicioSemana,
   onSeleccionarAsignacion,
   onSeleccionarDia,
+  reprogramadas,
 }: {
   respuesta: RespuestaOptimizar
   inicioSemana: string
   onCambiarInicioSemana: (fecha: string) => void
   onSeleccionarAsignacion: (a: AsignacionPropuesta) => void
   onSeleccionarDia: (fecha: string) => void
+  /** Solo en la vista previa de reprogramación: marca las propuestas movidas. */
+  reprogramadas?: ReadonlyMap<string, SolicitudReprogramada>
 }) {
   const { desde: desdeHorizonte, hasta: hastaHorizonte } = respuesta.horizonte
   const desdeSemana = clampFecha(inicioSemana, desdeHorizonte, hastaHorizonte)
@@ -583,10 +629,9 @@ export function TimelineMaquinas({
                   <BarraSinAsignacion
                     key={s.solicitud.id}
                     ventana={ventana}
-                    inicio={s.solicitud.inicioEfectivo}
-                    fin={s.solicitud.fin.valor!}
                     carril={carril}
-                    texto={`${s.solicitud.clase.valor ?? 'Sin registro'} · ${s.solicitud.codigoProyecto ?? s.solicitud.proyecto.valor ?? 'Sin registro'} · ${s.motivo}`}
+                    sinAsignacion={s}
+                    respuesta={respuesta}
                   />
                 ))}
               </div>
@@ -601,6 +646,7 @@ export function TimelineMaquinas({
               asignaciones={asignacionesPorMaquina.get(maquina.id) ?? []}
               onSeleccionar={onSeleccionarAsignacion}
               anchoTotal={anchoTotal}
+              reprogramadas={reprogramadas}
             />
           ))}
         </div>

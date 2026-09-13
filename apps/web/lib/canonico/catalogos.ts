@@ -66,8 +66,14 @@ export const CATALOGO_TIPO_TAREA: readonly TipoTareaCatalogo[] = [
  * contra el catálogo de Startrack — Pendiente/Completada/Cancelada/estados
  * personalizados, diccionario de datos hoja STARTRACK módulo Tareas fila 27).
  * Comparación insensible a mayúsculas porque el catálogo real observado en
- * `status_name` no se confirmó en una sola grafía. */
-const ESTADOS_TAREA_FINALIZADA = ['completada', 'cancelada']
+ * `status_name` no se confirmó en una sola grafía.
+ *
+ * `canceled`: verificado en vivo el 13-sep-2026 — `GET /api/job` devuelve
+ * `status_name` en inglés (pares observados `0/Pending`, `2/Canceled`,
+ * `3/Partial`), y `GET api/job/status` nombra el id 2 "Cancelada". Sin esta
+ * grafía una tarea cancelada contaba como viva y R2 no se apagaba. La grafía
+ * inglesa de Completada no se observó; no se agrega por suposición. */
+const ESTADOS_TAREA_FINALIZADA = ['completada', 'cancelada', 'canceled']
 
 export function tareaFinalizada(valorEstadoTarea: string | null): boolean {
   if (!valorEstadoTarea) return false

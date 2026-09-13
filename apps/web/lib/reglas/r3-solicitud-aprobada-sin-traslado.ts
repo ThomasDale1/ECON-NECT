@@ -1,5 +1,5 @@
 import type { EquipoUnificado, ResultadoRegla } from '@/lib/tipos/canonico'
-import { tareaTrasladoViva } from './ayudas'
+import { esTareaDeTraslado, tareaFinalizada, tareaTrasladoViva } from './ayudas'
 import type { ContextoReglas, Regla } from './tipos'
 
 /** R3 — la línea punteada 1 del TO-BE de ECON (01 Parte B): "solicitud
@@ -28,6 +28,12 @@ export const r3SolicitudAprobadaSinTraslado: Regla = {
     const enlazadaPorHeuristica = tareas.some((t) => tareaTrasladoViva(t, ctx))
     if (enlazadaPorRemoteId || enlazadaPorHeuristica) return null
 
+    // Que exista un traslado ya finalizado no es lo mismo que no encontrar
+    // ninguno: la explicación nombra lo que se leyó (C.1).
+    const trasladoFinalizado = tareas.some(
+      (t) => esTareaDeTraslado(t, ctx) && tareaFinalizada(t.status_name ?? t.status),
+    )
+
     return {
       regla: 'R3',
       nombre: 'Solicitud aprobada sin tarea de traslado',
@@ -36,7 +42,9 @@ export const r3SolicitudAprobadaSinTraslado: Regla = {
       confianza: 75,
       porque: [
         `Hay ${aprobadas.length} solicitud(es) aprobada(s) para este equipo en Prisma.`,
-        'No se encontró una tarea de traslado enlazada en Startrack, ni por remote_id ni por el vehículo asignado.',
+        trasladoFinalizado
+          ? 'El vehículo asignado tiene una tarea de traslado en Startrack, pero está finalizada (cancelada o completada); no hay ninguna viva ni enlazada por remote_id.'
+          : 'No se encontró una tarea de traslado enlazada en Startrack, ni por remote_id ni por el vehículo asignado.',
       ],
       accionSugerida: 'Generar o verificar la tarea de traslado correspondiente en Startrack.',
       rolResponsable: 'LOGISTICA',

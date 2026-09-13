@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { PropagarTraslado } from '@/components/nect/propagar-traslado'
+import { ResolverCoherencia } from '@/components/nect/resolver-coherencia'
 import { VerOrigen } from '@/components/nect/ver-origen'
 import { lecturaRespaldo } from '@/components/nect/respaldo'
 import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilidades'
@@ -85,6 +86,7 @@ export function ExpedienteVivo({ equipos }: { equipos: EquipoUnificado[] }) {
   const faltantes = [...new Set(equipo.reglas.flatMap((regla) => regla.camposFaltantes))]
   const respaldo = lecturaRespaldo(equipo)
   const puedePropagarse = equipo.reglas.some((regla) => regla.regla === 'R3')
+  const resuelveR2 = equipo.reglas.some((regla) => regla.regla === 'R2')
   const responsable = decisiva ? responsablePorRol(decisiva.rolResponsable) : null
   const pasoProceso = decisiva ? PASO_DE_REGLA[decisiva.regla] : null
   const linajes = linajesClave(equipo)
@@ -199,6 +201,16 @@ export function ExpedienteVivo({ equipos }: { equipos: EquipoUnificado[] }) {
                   Ninguna regla pudo explicar este equipo con la lectura actual.
                 </div>
               )}
+
+              {resuelveR2 ? (
+                <ResolverCoherencia
+                  key={equipo.id}
+                  equipoId={equipo.id}
+                  codigoActivo={equipo.codigoActivo.valor}
+                  estadoPrisma={equipo.equipo?.valor ?? null}
+                  estadoStartrack={equipo.tarea?.valor ?? null}
+                />
+              ) : null}
             </div>
 
             <div className="flex flex-col justify-between gap-5 border-t border-border bg-muted/35 p-7 lg:border-l lg:border-t-0">
@@ -218,9 +230,9 @@ export function ExpedienteVivo({ equipos }: { equipos: EquipoUnificado[] }) {
                 <Impacto
                   icono={ShieldCheck}
                   titulo="Permiso de escritura"
-                  valor={puedePropagarse ? 'Disponible para P1' : 'Solo lectura'}
+                  valor={puedePropagarse ? 'Disponible para P1' : resuelveR2 ? 'Decision con escritura' : 'Solo lectura'}
                   nota={
-                    puedePropagarse
+                    puedePropagarse || resuelveR2
                       ? 'La escritura se confirma y el servidor vuelve a autorizar.'
                       : 'O.D.I.N. y este expediente no escriben.'
                   }
@@ -254,7 +266,7 @@ export function ExpedienteVivo({ equipos }: { equipos: EquipoUnificado[] }) {
           <div className="flex flex-col gap-6">
             <Card titulo="Cadena de decision" icono={GitBranch}>
               <ol className="grid gap-3 md:grid-cols-4">
-                {pasosDecision(equipo, decisiva, puedePropagarse).map((paso, index) => (
+                {pasosDecision(equipo, decisiva, puedePropagarse, resuelveR2).map((paso, index) => (
                   <li key={paso.titulo} className="rounded-lg border border-border bg-card p-4">
                     <span className="flex size-7 items-center justify-center rounded-full bg-primary font-mono text-xs font-bold text-primary-foreground">
                       {index + 1}
@@ -288,8 +300,8 @@ export function ExpedienteVivo({ equipos }: { equipos: EquipoUnificado[] }) {
                 </div>
                 <EstadoComparado
                   titulo="Despues de confirmar"
-                  texto={despuesDe(equipo, decisiva, puedePropagarse)}
-                  tono={puedePropagarse ? 'ok' : 'neutro'}
+                  texto={despuesDe(equipo, decisiva, puedePropagarse, resuelveR2)}
+                  tono={puedePropagarse || resuelveR2 ? 'ok' : 'neutro'}
                 />
               </div>
             </Card>
@@ -428,7 +440,12 @@ function impactoDe(equipo: EquipoUnificado, faltantes: string[]): string {
   return 'Atencion requerida'
 }
 
-function pasosDecision(equipo: EquipoUnificado, regla: ResultadoRegla | undefined, puedePropagarse: boolean): Paso[] {
+function pasosDecision(
+  equipo: EquipoUnificado,
+  regla: ResultadoRegla | undefined,
+  puedePropagarse: boolean,
+  resuelveR2: boolean,
+): Paso[] {
   return [
     {
       titulo: 'Leer',
@@ -452,8 +469,10 @@ function pasosDecision(equipo: EquipoUnificado, regla: ResultadoRegla | undefine
       titulo: 'Cerrar ciclo',
       detalle: puedePropagarse
         ? 'P1 puede crear la tarea en Startrack con remote_id, siempre confirmada.'
-        : 'Este caso queda como consulta, explicacion o seguimiento sin escritura.',
-      estado: puedePropagarse ? 'actual' : 'pendiente',
+        : resuelveR2
+          ? 'Elegir que estado manda; la otra plataforma recibe su equivalente, siempre confirmado.'
+          : 'Este caso queda como consulta, explicacion o seguimiento sin escritura.',
+      estado: puedePropagarse || resuelveR2 ? 'actual' : 'pendiente',
     },
   ]
 }
@@ -464,9 +483,17 @@ function antesDe(equipo: EquipoUnificado, regla: ResultadoRegla | undefined): st
   return regla.porque[0] ?? regla.nombre
 }
 
-function despuesDe(equipo: EquipoUnificado, regla: ResultadoRegla | undefined, puedePropagarse: boolean): string {
+function despuesDe(
+  equipo: EquipoUnificado,
+  regla: ResultadoRegla | undefined,
+  puedePropagarse: boolean,
+  resuelveR2: boolean,
+): string {
   if (puedePropagarse) {
     return 'Se crea una tarea nueva en Startrack, enlazada por remote_id. La excepcion desaparece al releer porque el hecho ya existe.'
+  }
+  if (resuelveR2) {
+    return 'Ambas plataformas quedan en estados equivalentes: OBSOLETA con el traslado Cancelado, o DISPONIBLE con el traslado Pendiente. Al releer, R2 se apaga y el equipo sale coherente.'
   }
   if (equipo.veredicto === 'SIN_EVIDENCIA') {
     return 'No se fuerza una conclusion: el expediente deja la lista de datos faltantes para validacion humana.'

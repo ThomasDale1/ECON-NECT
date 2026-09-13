@@ -1,7 +1,7 @@
 'use client'
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { AlertTriangle, ChevronDown, ChevronRight, Info, RefreshCw } from 'lucide-react'
+import { AlertTriangle, CalendarClock, ChevronDown, ChevronRight, Info, RefreshCw } from 'lucide-react'
 import type {
   AsignacionPropuesta,
   CambioPlan,
@@ -9,6 +9,7 @@ import type {
   IdPrioridad,
   PeticionOptimizar,
   RespuestaOptimizar,
+  RespuestaReprogramacion,
 } from '@/lib/optimizador/tipos'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
@@ -18,6 +19,7 @@ import { cn } from '@/lib/utils'
 import { AvisoCambios } from './aviso-cambios'
 import { DetalleAsignacion } from './detalle-asignacion'
 import { clampFecha, semanaQueContiene } from './fechas'
+import { PanelReprogramacion } from './panel-reprogramacion'
 import { PilaPrioridades, pilaAPeticion, pilaInicial, type ItemPila } from './pila-prioridades'
 import { ResumenNiveles } from './resumen-niveles'
 import { TilesKpiOptimizador, TilesKpiSkeleton } from './tiles-kpi-optimizador'
@@ -57,6 +59,26 @@ async function pedirPlan(peticion: PeticionOptimizar): Promise<ResultadoPeticion
     return { ok: false, error: { error: 'fuente_no_disponible', mensaje: e instanceof Error ? e.message : String(e) } }
   }
 }
+
+type ResultadoReprogramacion = { ok: true; datos: RespuestaReprogramacion } | { ok: false; error: ErrorOptimizar }
+
+/** La vista previa de reprogramación: el servidor la calcula y no guarda nada. */
+async function pedirReprogramacion(pila: IdPrioridad[]): Promise<ResultadoReprogramacion> {
+  try {
+    const res = await fetch('/api/optimizar/reprogramacion', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pila }),
+    })
+    const cuerpo = await res.json()
+    if (!res.ok) return { ok: false, error: cuerpo as ErrorOptimizar }
+    return { ok: true, datos: cuerpo as RespuestaReprogramacion }
+  } catch (e) {
+    return { ok: false, error: { error: 'fuente_no_disponible', mensaje: e instanceof Error ? e.message : String(e) } }
+  }
+}
+
+type EstadoReprogramacion = { datos: RespuestaReprogramacion | null; cargando: boolean; error: string | null }
 
 /** Solo ids: lo único que el servidor necesita para calcular los cambios. */
 function idsDelPlan(respuesta: RespuestaOptimizar): PeticionOptimizar['planAnterior'] {
@@ -155,10 +177,17 @@ export function Planeador() {
   const [detalleAbierto, setDetalleAbierto] = useState(false)
   const [vista, setVista] = useState<Vista>({ tipo: 'semana' })
   const [inicioSemana, setInicioSemana] = useState<string | null>(null)
+  // `null` = vista previa cerrada. Abierta, pausa la actualización automática.
+  const [reprogramacion, setReprogramacion] = useState<EstadoReprogramacion | null>(null)
 
   // El intervalo lee estos valores sin reiniciarse en cada render.
   const secuencia = useRef(0)
   const enCurso = useRef(false)
+  const secuenciaReprogramacion = useRef(0)
+  const vistaPreviaAbierta = useRef(false)
+  useEffect(() => {
+    vistaPreviaAbierta.current = reprogramacion !== null
+  }, [reprogramacion])
   const respuestaRef = useRef<RespuestaOptimizar | null>(null)
   const pilaAplicadaRef = useRef<IdPrioridad[]>(pilaAplicada)
   useEffect(() => {
@@ -214,14 +243,33 @@ export function Planeador() {
     )
   }, [])
 
+  // Siempre con la pila aplicada: la vista previa parte del plan en pantalla.
+  const calcularReprogramacion = useCallback(async () => {
+    const id = ++secuenciaReprogramacion.current
+    setReprogramacion((actual) => ({ datos: actual?.datos ?? null, cargando: true, error: null }))
+    const resultado = await pedirReprogramacion(pilaAplicadaRef.current)
+    if (id !== secuenciaReprogramacion.current) return
+    if (resultado.ok) {
+      setReprogramacion({ datos: resultado.datos, cargando: false, error: null })
+    } else {
+      setReprogramacion((actual) => ({ datos: actual?.datos ?? null, cargando: false, error: resultado.error.mensaje }))
+    }
+  }, [])
+
+  const cerrarReprogramacion = useCallback(() => {
+    secuenciaReprogramacion.current++
+    setReprogramacion(null)
+  }, [])
+
   const optimizar = useCallback(
     (pilaPedida: IdPrioridad[]) => {
+      cerrarReprogramacion()
       setEstadoDeCarga('cargando')
       setError(null)
       setPilaAplicada(pilaPedida)
       void ejecutarManual(pilaPedida)
     },
-    [ejecutarManual],
+    [ejecutarManual, cerrarReprogramacion],
   )
 
   useEffect(() => {
@@ -237,6 +285,7 @@ export function Planeador() {
     const intervalo = window.setInterval(() => {
       if (document.visibilityState !== 'visible') return
       if (enCurso.current) return
+      if (vistaPreviaAbierta.current) return
       void ejecutarAutomatico()
     }, INTERVALO_REPLAN_MS)
     return () => window.clearInterval(intervalo)
@@ -258,12 +307,20 @@ export function Planeador() {
 
   const listo = estadoDeCarga === 'listo' && respuesta !== null
 
+  // Con la vista previa calculada, el calendario muestra el plan reprogramado.
+  const planVisible = reprogramacion?.datos?.plan ?? respuesta
+  const reprogramadasPorId = reprogramacion?.datos
+    ? new Map(reprogramacion.datos.reprogramadas.map((r) => [r.solicitudId, r]))
+    : undefined
+
   return (
     <div className="flex min-w-0 flex-1 flex-col">
       <BarraSuperior
         titulo="Planeación de maquinaria"
         ultimaLectura={
-          respuesta ? `${formatearHora(respuesta.generadoEn)} · se actualiza cada 60 s` : 'Sin lectura todavía'
+          respuesta
+            ? `${formatearHora(respuesta.generadoEn)} · ${reprogramacion ? 'actualización en pausa (vista previa abierta)' : 'se actualiza cada 60 s'}`
+            : 'Sin lectura todavía'
         }
         datoViejo={listo && errorAutomatico !== null}
         usuario={{ nombre: 'Logística', iniciales: 'LG' }}
@@ -338,6 +395,12 @@ export function Planeador() {
             <RefreshCw aria-hidden className={estadoDeCarga === 'cargando' ? 'animate-spin' : undefined} />
             Re-optimizar
           </Button>
+          {listo && respuesta.sinAsignacion.length > 0 && reprogramacion === null && (
+            <Button variant="outline" onClick={() => void calcularReprogramacion()}>
+              <CalendarClock aria-hidden />
+              Ver reprogramación propuesta ({respuesta.sinAsignacion.length})
+            </Button>
+          )}
           {hayCambiosSinAplicar && (
             <span className="font-label text-xs font-semibold text-veredicto-atencion">Hay cambios sin aplicar</span>
           )}
@@ -347,6 +410,7 @@ export function Planeador() {
         {estadoDeCarga === 'cargando' && <TimelineSkeleton />}
 
         {listo &&
+          planVisible &&
           (sinSolicitudesEvaluables ? (
             <Alert>
               <Info aria-hidden />
@@ -355,36 +419,48 @@ export function Planeador() {
             </Alert>
           ) : (
             <section aria-label="Calendario" className="flex flex-col gap-3">
+              {reprogramacion && (
+                <PanelReprogramacion
+                  datos={reprogramacion.datos}
+                  cargando={reprogramacion.cargando}
+                  error={reprogramacion.error}
+                  hora={reprogramacion.datos ? formatearHora(reprogramacion.datos.generadoEn, false) : null}
+                  onRecalcular={() => void calcularReprogramacion()}
+                  onCerrar={cerrarReprogramacion}
+                />
+              )}
               <SelectorVista
                 vista={vista}
                 onSemana={() => setVista({ tipo: 'semana' })}
                 onDia={() =>
                   setVista({
                     tipo: 'dia',
-                    fecha: clampFecha(respuesta.hoy, respuesta.horizonte.desde, respuesta.horizonte.hasta),
+                    fecha: clampFecha(planVisible.hoy, planVisible.horizonte.desde, planVisible.horizonte.hasta),
                   })
                 }
               />
               {vista.tipo === 'semana' ? (
                 <TimelineMaquinas
-                  respuesta={respuesta}
-                  inicioSemana={inicioSemana ?? respuesta.horizonte.desde}
+                  respuesta={planVisible}
+                  inicioSemana={inicioSemana ?? planVisible.horizonte.desde}
                   onCambiarInicioSemana={setInicioSemana}
                   onSeleccionarAsignacion={abrirDetalle}
                   onSeleccionarDia={(fecha) => setVista({ tipo: 'dia', fecha })}
+                  reprogramadas={reprogramadasPorId}
                 />
               ) : (
                 <VistaDia
-                  respuesta={respuesta}
-                  fecha={clampFecha(vista.fecha, respuesta.horizonte.desde, respuesta.horizonte.hasta)}
+                  respuesta={planVisible}
+                  fecha={clampFecha(vista.fecha, planVisible.horizonte.desde, planVisible.horizonte.hasta)}
                   onCambiarFecha={(fecha) => setVista({ tipo: 'dia', fecha })}
                   onVolverASemana={() => {
                     setInicioSemana(
-                      semanaQueContiene(vista.fecha, inicioSemana ?? respuesta.horizonte.desde, respuesta.horizonte),
+                      semanaQueContiene(vista.fecha, inicioSemana ?? planVisible.horizonte.desde, planVisible.horizonte),
                     )
                     setVista({ tipo: 'semana' })
                   }}
                   onSeleccionarAsignacion={abrirDetalle}
+                  reprogramadas={reprogramadasPorId}
                 />
               )}
             </section>

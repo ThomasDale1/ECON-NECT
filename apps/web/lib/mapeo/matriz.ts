@@ -466,6 +466,20 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
     critico: false,
   },
 
+  // Coherencia de estado — resolver R2 desde el expediente
+  {
+    modulo: 'Coherencia de estado (R2)',
+    campoPrisma: 'estado del equipo (PATCH /api/maquinaria/equipos/{id}/estado)',
+    campoStartrack: 'status de la tarea de Traslado (PUT api/job/{id})',
+    tipoRelacion: 'con transformación',
+    transformacion:
+      'No son el mismo objeto: Prisma describe el recurso y Startrack la tarea. La equivalencia solo existe para apagar R2 cuando una persona elige qué lado manda. Mantener Prisma (OBSOLETA) → la tarea de Traslado pasa a 2 = Cancelada. Mantener Startrack (traslado Pendiente) → el equipo pasa a DISPONIBLE. Si el equipo no opera por falla o paro, no hay equivalencia por estado y no se escribe. Siempre con confirmación humana y recurso propio.',
+    evidencia:
+      'Verificado en vivo el 13 de septiembre de 2026: `GET api/job/status` devuelve cuatro estados (0 Pendiente, 1 Completada, 2 Cancelada, 3 Parcial) y ninguno equivale a "Suspendida"; `GET /api/job` devuelve `status_name` en inglés (Pending, Canceled, Partial observados); OPTIONS de `api/job/{id}` anuncia GET y PUT, y OPTIONS de `/api/maquinaria/equipos/{id}/estado` anuncia PATCH. Un PUT sobre una tarea propia ya cancelada respondió 403 "no puede modificar una Tarea cancelada": Cancelada es definitiva. Confianza media: ni el PUT sobre una tarea Pendiente ni el cuerpo `{ estado }` del PATCH se han ejercido con una escritura exitosa.',
+    confianza: 'media',
+    critico: false,
+  },
+
   {
     modulo: 'Solicitudes',
     campoPrisma: 'created_at (solicitudes de maquinaria de Prisma)',
@@ -563,9 +577,17 @@ const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
     tipoDato: 'Fecha AAAA-MM-DD (sin hora)',
     ejemplo: 'Fecha de creación de la solicitud (forma del valor)',
   },
+  'estado del equipo (PATCH /api/maquinaria/equipos/{id}/estado)': {
+    tipoDato: 'Catálogo',
+    ejemplo: 'DISPONIBLE (valor de catálogo)',
+  },
 }
 
 const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
+  'status de la tarea de Traslado (PUT api/job/{id})': {
+    tipoDato: 'Catálogo (código en texto)',
+    ejemplo: '2 = Cancelada (valor de catálogo)',
+  },
   'Grupo, Etiquetas (módulo Vehículos)': {
     tipoDato: 'Grupo + lista de etiquetas',
     ejemplo: '«grupo» + «etiqueta de equipo» (forma del valor)',

@@ -702,7 +702,7 @@ export function camposQueDifieren(
   return distintos.sort()
 }
 
-async function ponerVehiculo(endpoint: string, cuerpo: VehiculoStartrackCompleto): Promise<void> {
+async function ponerRecurso(endpoint: string, cuerpo: VehiculoStartrackCompleto): Promise<void> {
   const { baseUrl } = config()
   if (!cookieSesion) await iniciarSesion()
 
@@ -770,7 +770,7 @@ export async function actualizarEstadoVehiculo(
   const { endpoint, datos: original } = await leerVehiculoCompleto(vehiculoId)
   const antes = original.status == null ? null : String(original.status)
 
-  await ponerVehiculo(endpoint, { ...original, status })
+  await ponerRecurso(endpoint, { ...original, status })
 
   const { datos: verificado } = await leerVehiculoCompleto(vehiculoId)
   const despues = verificado.status == null ? null : String(verificado.status)
@@ -781,7 +781,7 @@ export async function actualizarEstadoVehiculo(
   if (alterados.length > 0) {
     // Se revierte con el objeto original tal cual salió de la API; si la
     // reversión también falla, ese error es el que llega, con su endpoint.
-    await ponerVehiculo(endpoint, original)
+    await ponerRecurso(endpoint, original)
     throw new ErrorEscritura(
       PLATAFORMA,
       endpoint,
@@ -800,4 +800,79 @@ export async function actualizarEstadoVehiculo(
   invalidarCache(`startrack:${endpoint}`)
 
   return { antes, despues, endpoint, metodo: 'PUT', hora: new Date().toISOString() }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura — estado de una tarea (coherencia R2, expediente).
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Mismas tres reglas que `actualizarEstadoVehiculo`: el PUT espeja el objeto
+// que devolvió `GET api/job/{id}` (70 campos, verificado el 13-sep-2026; OPTIONS
+// anuncia GET y PUT) con solo `status` reemplazado; un GET posterior verifica;
+// si cambió algo más que el estado, se revierte. `contact_name`,
+// `contact_email` y `phone_number` viajan dentro del cuerpo porque el PUT
+// espeja el objeto, pero no se registran ni salen de esta función.
+
+/** `0` Pendiente · `2` Cancelada (`GET api/job/status`). Una tarea ya
+ * cancelada no se puede modificar: el PUT responde 403 "no puede modificar una
+ * Tarea cancelada" (verificado el 13-sep-2026), así que `2` es definitivo. */
+export type EstadoTareaEscribible = '0' | '2'
+
+/** Campos del mismo objeto tarea que registran el propio cambio de estado. Se
+ * nombran por lo que son, no por lo observado en un PUT: si el primer PUT real
+ * altera otro campo, la verificación lo revierte y lo reporta. */
+const CAMPOS_BITACORA_DE_ESTADO_TAREA = ['changed_date', 'last_status_change_date', 'closed_date', 'status_changes']
+
+async function leerTareaCompleta(tareaId: string): Promise<{ endpoint: string; datos: Record<string, unknown> }> {
+  const endpoint = `api/job/${tareaId}`
+  const cuerpo = await peticionApiJson(endpoint)
+  const datos = cuerpo.data
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) {
+    throw new ErrorEscritura(PLATAFORMA, endpoint, 'GET sin `data`: no se escribe un cuerpo que no salió de la API')
+  }
+  return { endpoint, datos: datos as Record<string, unknown> }
+}
+
+export type RastroEstadoTarea = {
+  tareaId: string
+  antes: string | null
+  despues: string | null
+  endpoint: string
+  metodo: 'PUT'
+  hora: string
+}
+
+/** Cambia `status` de una tarea. Solo la llama `lib/propagacion/coherencia.ts`,
+ * después de la restricción de recurso propio. */
+export async function actualizarEstadoTarea(tareaId: string, status: EstadoTareaEscribible): Promise<RastroEstadoTarea> {
+  const { endpoint, datos: original } = await leerTareaCompleta(tareaId)
+  const antes = original.status == null ? null : String(original.status)
+
+  await ponerRecurso(endpoint, { ...original, status })
+
+  const { datos: verificado } = await leerTareaCompleta(tareaId)
+  const despues = verificado.status == null ? null : String(verificado.status)
+
+  const alterados = camposQueDifieren(original, verificado).filter(
+    (campo) => campo !== 'status' && !CAMPOS_BITACORA_DE_ESTADO_TAREA.includes(campo),
+  )
+  if (alterados.length > 0) {
+    await ponerRecurso(endpoint, original)
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PUT alteró campos además de status (${alterados.join(', ')}); se revirtió al objeto original`,
+    )
+  }
+  if (despues !== status) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PUT respondió sin error pero status sigue en ${despues ?? 'null'} (se pidió ${status})`,
+    )
+  }
+
+  invalidarCache('startrack:api/job')
+
+  return { tareaId, antes, despues, endpoint, metodo: 'PUT', hora: new Date().toISOString() }
 }

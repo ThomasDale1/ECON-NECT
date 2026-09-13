@@ -364,3 +364,78 @@ export async function programarMantenimiento(
     verificado: verificado.datos,
   }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura — estado del equipo (coherencia R2, expediente; P2 de 01 D.6).
+// `PATCH /api/maquinaria/equipos/{id}/estado`: OPTIONS anuncia PATCH
+// (verificado el 13-sep-2026). El cuerpo `{ estado }` espeja el nombre del
+// campo que devuelve la lista; si Prisma no lo acepta, el error vuelve tal cual
+// y **no** se prueba otro cuerpo por cuenta propia. Verificación por la lista,
+// que es donde `estado` está confirmado.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export type EstadoEquipoEscribible = 'DISPONIBLE'
+
+export type RastroEstadoEquipo = {
+  antes: string | null
+  despues: string | null
+  endpoint: string
+  metodo: 'PATCH'
+  hora: string
+}
+
+async function estadoEnLista(id: string): Promise<string | null> {
+  const lista = (await leerEquipos()).datos as { id?: unknown; estado?: unknown }[]
+  const equipo = lista.find((e) => String(e.id) === id)
+  return equipo?.estado == null ? null : String(equipo.estado)
+}
+
+export async function actualizarEstadoEquipo(id: string, estado: EstadoEquipoEscribible): Promise<RastroEstadoEquipo> {
+  const { baseUrl } = config()
+  const endpoint = `/api/maquinaria/equipos/${id}/estado`
+  if (!cookieSesion) await iniciarSesion()
+
+  invalidarCache('prisma:equipos')
+  const antes = await estadoEnLista(id)
+
+  const intentar = async (): Promise<Response> =>
+    fetch(`${baseUrl}${endpoint}`, {
+      method: 'PATCH',
+      headers: { Cookie: cookieSesion!, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({ estado }),
+    })
+
+  let respuesta = await intentar()
+  if (respuesta.status === 401) {
+    await iniciarSesion()
+    respuesta = await intentar()
+  }
+
+  let json: unknown = null
+  try {
+    json = await respuesta.json()
+  } catch {
+    // Sin cuerpo: la lectura de verificación decide.
+  }
+  const comoObjeto = (json ?? {}) as Record<string, unknown>
+  if (!respuesta.ok) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `status ${respuesta.status}: ${String(comoObjeto.error ?? comoObjeto.message ?? 'sin detalle')}`,
+    )
+  }
+
+  invalidarCache(`prisma:equipo:${id}`)
+  invalidarCache('prisma:equipos')
+  const despues = await estadoEnLista(id)
+  if (despues !== estado) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PATCH respondió sin error pero estado sigue en ${despues ?? 'null'} (se pidió ${estado})`,
+    )
+  }
+
+  return { antes, despues, endpoint, metodo: 'PATCH', hora: new Date().toISOString() }
+}
