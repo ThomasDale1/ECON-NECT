@@ -1,0 +1,2 @@
+"""Contratos y configuración compartidos."""
+

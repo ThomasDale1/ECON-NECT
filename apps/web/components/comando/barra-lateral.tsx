@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart2,
+  Bot,
   Cpu,
   LayoutDashboard,
   List,
@@ -35,6 +36,7 @@ const NAVEGACION: Navegacion[] = [
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
   { etiqueta: 'Mapeo y RACI', icono: Table2, href: '/mapeo' },
+  { etiqueta: 'O.D.I.N.', icono: Bot, href: '/odin' },
 ]
 
 type Estado = SaludFuente['estado']

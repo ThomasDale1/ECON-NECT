@@ -3,7 +3,7 @@
 **Carril C · arranca YA, sin esperar al repositorio**
 
 > Leé [AGENTS.md](../AGENTS.md) y
-> [01 Parte E](../01-DEFINICION-DE-NEGOCIO.md) — la Parte E es tu materia prima:
+> [01 Parte E](../docs/01-DEFINICION-DE-NEGOCIO.md) — la Parte E es tu materia prima:
 > son hallazgos ya verificados contra las APIs reales.
 
 ---
@@ -58,7 +58,7 @@ razonable.
 ## 2. Las filas incómodas son las que suman
 
 Poblá la matriz con los hallazgos ya verificados
-([01 Parte E](../01-DEFINICION-DE-NEGOCIO.md)). **Estas son las filas que ganan
+([01 Parte E](../docs/01-DEFINICION-DE-NEGOCIO.md)). **Estas son las filas que ganan
 puntos, no las fáciles:**
 
 | Hallazgo | Por qué importa |
@@ -94,7 +94,7 @@ operativo · imputar costos.
 
 ⚠ **Lo que no esté validado se marca como propuesta.** En los checkpoints hay
 mentores de proceso de ECON: **son la fuente.** Llevá las preguntas de
-[02 §3](../02-ROADMAP.md) escritas y anotá las respuestas textuales.
+[02 §3](../docs/02-ROADMAP.md) escritas y anotá las respuestas textuales.
 
 **El enlace que la vuelve utilizable:** cada regla del carril A nombra un rol
 responsable, y ese rol **se lee de acá**. Una RACI que no está conectada a la
@@ -137,7 +137,7 @@ Eso vale más que un número inventado.
 ## 6. Acceso por rol — `lib/acceso/verificar.ts` (S-C3, más tarde)
 
 Una clave por rol, desde variables de entorno de servidor. Cinco roles
-([01 D.5](../01-DEFINICION-DE-NEGOCIO.md)). Varios jueces entran a la vez, cada
+([01 D.5](../docs/01-DEFINICION-DE-NEGOCIO.md)). Varios jueces entran a la vez, cada
 uno a su vista.
 
 ⚠ **El archivo `middleware.ts` es del carril A y ya llama a tu función. No lo
