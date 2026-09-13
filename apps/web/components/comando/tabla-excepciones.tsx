@@ -1,6 +1,6 @@
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
-import { BarraConfianza } from '@/components/nect/barra-confianza'
 import { Button } from '@/components/ui/button'
+import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen, ResultadoRegla, Rol } from '@/lib/tipos/canonico'
 
 /**
@@ -57,13 +57,23 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
         <Button size="sm">Resolver seleccionadas</Button>
       </div>
 
+      {/* Se declara una vez, no en cada fila: repetirlo 16 veces convertiría un
+          hecho del sistema en ruido de bandeja. */}
+      <p className="rounded-lg border border-dashed border-border px-3 py-2 font-label text-[11px] leading-relaxed text-muted-foreground">
+        <strong className="font-bold">Sin equivalencia directa:</strong> este sandbox de Startrack
+        no publica tareas de traslado ni el radio de sus geocercas. No es un dato que falte en esta
+        lectura: los endpoints de tareas responden 404 y el de viajes está deshabilitado para la
+        cuenta. Por eso el traslado no se verifica y la distancia a la geocerca no se traduce a
+        dentro o fuera.
+      </p>
+
       {filas.length === 0 ? (
         <p className="py-8 text-center font-label text-sm text-muted-foreground">
           No hay incoherencias detectadas con la evidencia disponible.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-xl border border-border">
-          <table className="w-full min-w-[1060px] border-collapse text-left">
+          <table className="w-full min-w-[1160px] border-collapse text-left">
             <caption className="sr-only">
               Equipos con incoherencias entre Prisma y Startrack, ordenados por severidad.
             </caption>
@@ -74,8 +84,8 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                 <th scope="col" className="w-[120px] py-2.5 pr-3 font-bold">Proyecto</th>
                 <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Prisma (esperado)</th>
                 <th scope="col" className="w-[144px] py-2.5 pr-3 font-bold">Startrack (observado)</th>
-                <th scope="col" className="w-[96px] py-2.5 pr-3 font-bold">Confianza</th>
-                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Acción sugerida</th>
+                <th scope="col" className="w-[190px] py-2.5 pr-3 font-bold">Qué falta</th>
+                <th scope="col" className="w-[200px] py-2.5 pr-3 font-bold">Siguiente paso</th>
                 <th scope="col" className="w-[112px] py-2.5 pr-4 font-bold">Responsable</th>
               </tr>
             </thead>
@@ -120,8 +130,11 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                     <Celda estado={equipo.falla ?? equipo.solicitud ?? equipo.equipo} />
                     {/* Startrack describe la tarea de traslado; si no hay, el vehículo. */}
                     <Celda estado={equipo.tarea ?? equipo.vehiculo} />
+                    {/* Sin porcentaje: un "54%" invita a decidir a ojo si vale
+                        la pena revisar. Acá se dice qué dato falta, que es lo
+                        único accionable. */}
                     <td className="py-3.5 pr-3 align-middle">
-                      <BarraConfianza porcentaje={equipo.confianza} />
+                      <QueFalta reglas={equipo.reglas} />
                     </td>
                     <td className="py-3.5 pr-3 align-middle font-label text-[13px] text-muted-foreground">
                       {regla ? regla.accionSugerida : <SinRegistro />}
@@ -160,6 +173,33 @@ function Celda({ estado }: { estado: EstadoOrigen | null }) {
         </>
       )}
     </td>
+  )
+}
+
+/**
+ * Qué evidencia falta, en lenguaje operativo.
+ *
+ * Si no falta nada lo dice; el vacío no se deja en blanco (ui-registry §1.4).
+ */
+function QueFalta({ reglas }: { reglas: ResultadoRegla[] }) {
+  const faltantes = [...new Set(reglas.flatMap((r) => r.camposFaltantes))]
+
+  if (faltantes.length === 0) {
+    return (
+      <span className="font-label text-[12px] text-veredicto-coherente">
+        Evidencia completa
+      </span>
+    )
+  }
+
+  return (
+    <ul className="flex flex-col gap-1">
+      {faltantes.map((f) => (
+        <li key={f} className="font-label text-[12px] leading-snug text-muted-foreground">
+          {FALTANTE_EN_PALABRAS[f] ?? f}
+        </li>
+      ))}
+    </ul>
   )
 }
 
