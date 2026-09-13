@@ -23,6 +23,7 @@ function equipo(parcial: Partial<EquipoPrismaCrudo> & { id: number | string }): 
     active_failure_status: null,
     active_failure_is_paro: null,
     fallas_count: null,
+    updated_at: null,
     ...parcial,
   }
 }

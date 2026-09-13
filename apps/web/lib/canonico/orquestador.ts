@@ -12,7 +12,7 @@ import type {
   Ubicacion,
 } from '@/lib/tipos/canonico'
 import { distanciaEnMetros } from './identidad'
-import { reconciliar } from './reconciliacion'
+import { interpretarDesfases, reconciliar } from './reconciliacion'
 import type {
   DatosCrudos,
   EquipoPrismaCrudo,
@@ -76,6 +76,8 @@ export type LecturaUnificada = {
   equipos: EquipoUnificado[]
   salud: SaludFuente[]
   urlStartrack: string | null
+  /** Base de Prisma (sin path inventado: no hay UI documentada de búsqueda). */
+  urlPrisma: string | null
   leidoEn: string
 }
 
@@ -149,19 +151,42 @@ async function leerTodo(): Promise<LecturaUnificada> {
   const equipos = reconciliados.map((eq) => {
     const codigo = eq.codigoActivo.valor
     const vivo = codigo ? (porCodigo.get(codigo) ?? null) : null
+    const crudo = datos.equipos.datos.find((e) => String(e.id) === eq.id) ?? null
+
+    // Preferir vehicle_status_changed_date de fsupdate sobre last_contact_date
+    // (ya usado en reconciliar). Si fsupdate no trae la fecha, se deja lo de reconciliar.
+    const changed = vivo ? texto(vivo, 'vehicle_status_changed_date') : null
+    const desfaseFlota =
+      changed != null
+        ? interpretarDesfases({
+            solicitud: null,
+            tarea: null,
+            equipoUpdatedAt: crudo?.updated_at ?? null,
+            startrackVehiculoFecha: changed,
+          })
+        : null
+    const interpretacionDesfase = desfaseFlota ?? eq.interpretacionDesfase
+
     const enVivo = ubicacionEnVivo(vivo, leidoEn)
-    if (!enVivo) return eq
+    if (!enVivo) {
+      return interpretacionDesfase === eq.interpretacionDesfase
+        ? eq
+        : { ...eq, interpretacionDesfase }
+    }
 
     // La ubicación que resolvió el motor pasa a ser la referencia del proyecto;
     // la posición en vivo la reemplaza como ubicación actual.
     return {
       ...eq,
+      interpretacionDesfase,
       ubicacion: enVivo,
       geocercaProyecto: eq.ubicacion ? geocercaConDistancia(eq.ubicacion, enVivo) : null,
     }
   })
 
-  const host = process.env.STARTRACK_BASE_URL?.replace(/\/+$/, '') ?? null
+  const hostStartrack = process.env.STARTRACK_BASE_URL?.replace(/\/+$/, '') ?? null
+  // Sin path de UI documentado para Prisma: solo la base recortada.
+  const hostPrisma = process.env.PRISMA_BASE_URL?.replace(/\/+$/, '') ?? null
 
   return {
     equipos,
@@ -179,7 +204,8 @@ async function leerTodo(): Promise<LecturaUnificada> {
         latenciaMs: startrackOk && !startrackDesdeCache ? vehiculos_.ms : null,
       },
     ],
-    urlStartrack: host ? `${host}/members-new.php` : null,
+    urlStartrack: hostStartrack ? `${hostStartrack}/members-new.php` : null,
+    urlPrisma: hostPrisma,
     leidoEn,
   }
 }

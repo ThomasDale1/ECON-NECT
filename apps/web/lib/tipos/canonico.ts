@@ -6,8 +6,10 @@
 //   destruyendo el original.
 // - Un campo que no se pudo leer es `null` con su linaje, nunca una cadena
 //   vacía ni un valor inventado.
-// - `confianza < 45` fuerza `veredicto = 'SIN_EVIDENCIA'` (umbral de
-//   ui-registry.md §1.3). Es una heurística determinística, no ML.
+// - `confianza < 45` fuerza `veredicto = 'SIN_EVIDENCIA'`. Ese umbral es una
+//   heurística elegida de ui-registry.md §1.3, no una constante medida ni ML.
+// - El nivel de resolución de identidad (1/2/3) es heurística de enlace, NO
+//   certeza: nivel 2 y 3 restan confianza; no se tratan como identidad segura.
 // - Cambiar este archivo después de las 17:30 exige avisar a B y C en voz alta.
 
 /** Cuál de las dos plataformas fuente. */
@@ -97,11 +99,23 @@ export type Geocerca = {
   radioMetros: number | null
 }
 
+/**
+ * Nivel de la cascada de respaldo que resolvió la identidad (identidad.ts):
+ * 1 = remote_id, 2 = código de activo, 3 = clave. `null` = sin contraparte.
+ * Es una heurística de enlace, no certeza.
+ */
+export type NivelResolucionIdentidad = 1 | 2 | 3
+
 export type EquipoUnificado = {
   id: string
   codigoActivo: Dato<string>
   nombre: Dato<string>
   identidadResuelta: boolean
+  /**
+   * Cascada que resolvió el vínculo Prisma↔Startrack. `null` si no hay
+   * contraparte. Heurística documentada — no se trata como certeza.
+   */
+  nivelResolucionIdentidad: NivelResolucionIdentidad | null
   equipo: EstadoOrigen | null
   solicitud: EstadoOrigen | null
   falla: EstadoOrigen | null
@@ -110,6 +124,12 @@ export type EquipoUnificado = {
   ubicacion: Ubicacion | null
   /** Opcional: solo existe si el proyecto de Prisma cruzó con una geocerca. */
   geocercaProyecto?: Geocerca | null
+  /**
+   * Sugerencia (no hecho, no veredicto) cuando Startrack va ≤5 min adelante de
+   * Prisma: es posible que Prisma aún no se haya actualizado. `null` si faltan
+   * fechas o el desfase no aplica.
+   */
+  interpretacionDesfase: string | null
   veredicto: Veredicto
   confianza: number
   reglas: ResultadoRegla[]

@@ -31,6 +31,8 @@ export type EquipoPrismaCrudo = {
   active_failure_status: string | null
   active_failure_is_paro: boolean | null
   fallas_count: number | null
+  /** Observado en vivo el 13-sep-2026: marca de actualización del registro en Prisma. */
+  updated_at: string | null
   occupied_without_project?: boolean | null
 }
 
@@ -61,6 +63,8 @@ export type VehiculoStartrackCrudo = {
   unit_id: number | string | null
   driver_id: number | string | null
   license_plate: string | null
+  /** Observado en vivo: última comunicación del vehículo (vehicles.php). */
+  last_contact_date: string | null
 }
 
 export type GeocercaStartrackCruda = {
