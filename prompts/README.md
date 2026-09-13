@@ -36,6 +36,14 @@ alcance.
 el mismo repo vacío es un conflicto irrecuperable. C y D no necesitan el repo:
 arrancan de inmediato.
 
+**Paso 0 de S-A0 son las skills.** Se instalan en `.claude/skills/` del proyecto y
+se versionan, así que los demás carriles las reciben al clonar; nadie las
+reinstala por su cuenta. Los nombres exactos que queden instalados se anotan en
+[AGENTS.md §5](../AGENTS.md).
+
+**Git:** el agente no commitea, no pushea y no mergea por su cuenta en ninguna
+sesión. Lo pide el usuario, o no pasa.
+
 ## Reglas que aplican a todos
 
 - Nadie edita un directorio que no es de su carril ([AGENTS.md §4.2](../AGENTS.md)).
