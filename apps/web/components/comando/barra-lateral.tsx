@@ -1,11 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import {
   BarChart2,
-  Cpu,
   LayoutDashboard,
   List,
   PanelLeftClose,
@@ -31,7 +31,7 @@ type Navegacion = { etiqueta: string; icono: LucideIcon; href: string }
 // La ficha unificada no está acá a propósito: necesita un equipo, y se entra a
 // ella desde la flota. Un ítem de nav que lleva a un 404 es peor que no tenerlo.
 const NAVEGACION: Navegacion[] = [
-  { etiqueta: 'Command Center', icono: LayoutDashboard, href: '/command-center' },
+  { etiqueta: 'Centro de comando', icono: LayoutDashboard, href: '/command-center' },
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
   { etiqueta: 'Mapeo y RACI', icono: Table2, href: '/mapeo' },
@@ -87,12 +87,24 @@ export function BarraLateral({
     >
       <div className={cn('flex flex-col gap-6 pb-4 pt-7', contraida ? 'px-3' : 'px-5')}>
         <div className={cn('flex items-center gap-2.5', contraida && 'justify-center')}>
-          <div className="flex size-[34px] shrink-0 items-center justify-center rounded-lg bg-marca-clara">
-            <Cpu aria-hidden className="size-5 text-white" />
-          </div>
-          {!contraida && (
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-heading text-[17px] font-extrabold leading-none">ECONNECT</span>
+          {/* Logo oficial del usuario: public/econ-nect-logo.png */}
+          {contraida ? (
+            <Image
+              src="/econ-nect-logo.png"
+              alt="ECON NECT"
+              width={34}
+              height={34}
+              className="size-[34px] shrink-0 rounded-lg object-contain"
+            />
+          ) : (
+            <div className="flex min-w-0 flex-col gap-1">
+              <Image
+                src="/econ-nect-logo.png"
+                alt="ECON NECT"
+                width={160}
+                height={40}
+                className="h-9 w-auto max-w-full object-contain object-left"
+              />
               <span className="font-label text-[9px] uppercase leading-none text-marca-clara">
                 Capa de operaciones
               </span>
