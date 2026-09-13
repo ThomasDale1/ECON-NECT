@@ -1,5 +1,15 @@
 # S-B4 — Calendario de planeación (timeline por máquina)
 
+> ⚠ **Reemplazado en parte por [S-A10](S-A10-replaneacion.md) (13 sep. 2026,
+> 01:50 CST).**
+> - Ya no rigen: las clases sensibles y la alerta de lluvia, la comparación con
+>   la asignación manual, los rótulos de holgura y continuidad, ni el panel
+>   lateral del día.
+> - Se agregan: KPIs arriba de todo, vista Día (00:00–24:00), replan automático
+>   cada 60 s con aviso de cambios, y la pila con rating y horas de operador.
+>
+> Donde este archivo contradiga a S-A10, manda S-A10.
+
 **Carril B · fase extendida, priorizada tras S-C2 ([AGENTS.md §12.1](../AGENTS.md))**
 **Depende de:** el contrato `lib/optimizador/tipos.ts` (S-A7, Paso 1) para
 arrancar, y de la ruta `POST /api/optimizar` (S-A7) para ver datos.

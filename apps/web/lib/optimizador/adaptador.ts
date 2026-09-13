@@ -1,16 +1,22 @@
-// El adaptador del optimizador (S-A7 Paso 4d). Puro: sin HTTP, sin `Date.now()`
-// implícito — recibe `hoy` como parámetro para poder probarlo. Traduce los
-// insumos leídos en vivo a `EntradaSolver` (hard constraints ya prefiltradas,
-// solo ids y enteros) y deja, para que `ensamblar.ts` los use, los objetivos
-// de cada par candidato y de cada asignación manual observada.
+// El adaptador del optimizador (S-A7 Paso 4d, reescrito en S-A10 Paso 5b).
+// Puro: sin HTTP, sin `Date.now()` implícito — recibe `hoy` como parámetro
+// para poder probarlo. Traduce los insumos leídos en vivo a `EntradaSolver`
+// (hard constraints ya prefiltradas, solo ids y enteros) y deja, para que
+// `ensamblar.ts` los use, los objetivos de cada par candidato y de cada
+// operador candidato, y la peor opción válida de cada solicitud.
 //
 // Las hard constraints que dependen de datos (H1 clase, H2 disponibilidad
 // real de la máquina, H3 disponibilidad del operador) se evalúan acá, nunca
-// en Python (Paso 2).
+// en Python.
 
 import { CATALOGO_CLASE_EQUIPO } from '@/lib/canonico/catalogos'
 import { crearLinaje, puedeOperar } from '@/lib/canonico/estados'
-import { extraerCodigoProyecto, geocercaPorCodigoProyecto, idsIguales } from '@/lib/canonico/identidad'
+import {
+  extraerCodigoProyecto,
+  geocercaPorCodigoProyecto,
+  idsIguales,
+  resolverConductoresDeOperadores,
+} from '@/lib/canonico/identidad'
 import { reconciliar } from '@/lib/canonico/reconciliacion'
 import type {
   EquipoPrismaCrudo,
@@ -20,15 +26,21 @@ import type {
 } from '@/lib/canonico/tipos-crudos'
 import type { Dato, Linaje, Ubicacion } from '@/lib/tipos/canonico'
 import type { DetalleEquipoConProcedencia, InsumosOptimizador } from './insumos'
-import type {
-  ConteoCandidatas,
-  EntradaSolver,
-  FilaMaquina,
-  ObjetivosAsignacion,
-  PeticionOptimizar,
-  SolicitudExcluida,
-  SolicitudPlan,
-  ValorObjetivo,
+import {
+  DIAS_VENTANA_HORAS,
+  type CoberturaOperadores,
+  type ConfirmadaRota,
+  type ConteoCandidatas,
+  type DestinoGeografico,
+  type EntradaSolver,
+  type FilaMaquina,
+  type IdSoftConstraint,
+  type ObjetivosAsignacion,
+  type PeorOpcionValida,
+  type PeticionOptimizar,
+  type SolicitudExcluida,
+  type SolicitudPlan,
+  type ValorObjetivo,
 } from './tipos'
 
 function esClaseDeCatalogo(clase: string | null): boolean {
@@ -70,23 +82,86 @@ function dato<T>(valor: T | null, procedencia: ProcedenciaFuente, campo: string)
   return { valor, linaje: crearLinaje(procedencia, campo, valor) }
 }
 
+/** Por qué un equipo no puede operar, con las mismas tres condiciones que
+ * `puedeOperar` (01 E.2). `null` si puede operar. */
+export function motivoNoOperar(equipo: EquipoPrismaCrudo): string | null {
+  if (equipo.estado === 'OBSOLETA') return 'el equipo está en estado OBSOLETA'
+  if (equipo.active_failure_is_paro === true) return 'el equipo tiene una bandera de paro activa'
+  if (
+    equipo.active_failure_status &&
+    equipo.active_failure_status !== 'FINALIZADO' &&
+    equipo.active_failure_status !== 'RECHAZADO'
+  ) {
+    return `el equipo tiene una falla activa en estado ${equipo.active_failure_status}`
+  }
+  return null
+}
+
+// ── Peor caso declarado ────────────────────────────────────────────────────
+
+type ObjetivoCrudo = { valor: number | null; motivo: string | null; linaje: Linaje[] }
+
+/** Qué extremo es "peor" para un objetivo: el máximo para lo que se minimiza
+ * (distancia, tarifa, horas) y el mínimo para lo que se maximiza (rating). */
+type PeorEs = 'maximo' | 'minimo'
+
+/** Sustituye cada `null` por el peor valor observado entre los candidatos de
+ * esta corrida, y lo declara (`peorCasoAplicado` + motivo). Si nadie tiene
+ * dato, 0 y un aviso: el objetivo no discrimina. El motivo de un valor real se
+ * conserva (p. ej. "0 h — sin actividad registrada"). */
+function sustituirPeorCaso(
+  crudos: Map<string, ObjetivoCrudo>,
+  unidad: ValorObjetivo['unidad'],
+  nombreObjetivo: IdSoftConstraint,
+  peorEs: PeorEs,
+  avisos: string[],
+): Map<string, ValorObjetivo> {
+  let peor: number | null = null
+  for (const crudo of crudos.values()) {
+    if (crudo.valor == null) continue
+    peor = peor == null ? crudo.valor : peorEs === 'maximo' ? Math.max(peor, crudo.valor) : Math.min(peor, crudo.valor)
+  }
+
+  if (peor == null && crudos.size > 0) {
+    avisos.push(`objetivo ${nombreObjetivo} sin datos en ningún candidato: no discrimina`)
+  }
+  const valorPeorCaso = peor ?? 0
+
+  const resultado = new Map<string, ValorObjetivo>()
+  for (const [clave, crudo] of crudos) {
+    resultado.set(
+      clave,
+      crudo.valor != null
+        ? { valor: crudo.valor, peorCasoAplicado: false, motivo: crudo.motivo, unidad, linaje: crudo.linaje }
+        : { valor: valorPeorCaso, peorCasoAplicado: true, motivo: crudo.motivo, unidad, linaje: crudo.linaje },
+    )
+  }
+  return resultado
+}
+
+/** La peor opción válida entre candidatas, solo con valores reales: nunca un
+ * peor caso sustituido (S-A10 Paso 5b.5). */
+function peorEntreReales(valores: ValorObjetivo[], peorEs: PeorEs): PeorOpcionValida {
+  const reales = valores.filter((v) => !v.peorCasoAplicado && v.valor !== null).map((v) => v.valor as number)
+  return {
+    valor: reales.length === 0 ? null : peorEs === 'maximo' ? Math.max(...reales) : Math.min(...reales),
+    candidatasValidas: valores.length,
+    candidatasConDato: reales.length,
+  }
+}
+
 // ── Tipos de salida propios de este módulo ─────────────────────────────────
 
-/** `distancia`/`tarifa`/`holgura` de un par (solicitud, máquina) o de una
- * asignación manual — todavía sin `continuidadOperador`, porque ese objetivo
- * depende del operador elegido y solo se conoce después de resolver
- * (`ensamblar.ts`, Paso 4g, lo completa). */
-export type ObjetivosParcialesPar = Pick<ObjetivosAsignacion, 'distancia' | 'tarifa' | 'holgura'>
+/** `distancia`/`tarifa` de un par (solicitud, máquina). */
+export type ObjetivosPar = Pick<ObjetivosAsignacion, 'distancia' | 'tarifa'>
 
-export type InfoManual = {
-  maquina: { id: string; codigoActivo: Dato<string> }
-  objetivosParciales: ObjetivosParcialesPar
-}
+/** `ratingOperador`/`horasOperador` de un operador candidato. */
+export type ObjetivosOperador = Pick<ObjetivosAsignacion, 'ratingOperador' | 'horasOperador'>
 
 export type ResultadoAdaptador = {
   entradaSolver: EntradaSolver
   /** Todas las filas de máquina, incluidas las no operables y las de clase
-   * fuera de catálogo (Paso 4g las necesita completas). */
+   * fuera de catálogo. */
   filasMaquina: FilaMaquina[]
   /** Solo las solicitudes evaluables (no excluidas), por id. */
   solicitudesEvaluables: Map<string, SolicitudPlan>
@@ -94,20 +169,26 @@ export type ResultadoAdaptador = {
   /** Presente solo cuando algún conteo de `candidatasPorSolicitudId` dio 0. */
   motivoSinCandidatasPorSolicitudId: Map<string, string>
   /** Objetivos de cada par candidato (H1 ∧ H2), clave `${solicitudId}::${maquinaId}`. */
-  objetivosParPorClave: Map<string, ObjetivosParcialesPar>
-  /** La asignación manual observada de cada solicitud APROBADA cuyo
-   * `maquinaria_id` resuelve a un equipo conocido. */
-  manualPorSolicitudId: Map<string, InfoManual>
+  objetivosParPorClave: Map<string, ObjetivosPar>
+  /** Rating y horas de cada operador candidato (la unión de
+   * `operadoresPorSolicitud`), con el peor caso ya declarado. */
+  objetivosOperadorPorId: Map<string, ObjetivosOperador>
+  /** La peor opción válida de cada solicitud evaluable, por objetivo. */
+  peorOpcionPorSolicitudId: Map<string, Record<IdSoftConstraint, PeorOpcionValida>>
+  /** Las APROBADA que volvieron a la demanda porque su máquina confirmada ya
+   * no puede operar. */
+  confirmadaRotaPorSolicitudId: Map<string, ConfirmadaRota>
+  /** Código PROY-### de TODAS las solicitudes leídas, para nombrar un cambio
+   * aunque la solicitud ya no sea evaluable. */
+  codigoProyectoPorSolicitudId: Map<string, string | null>
   excluidas: SolicitudExcluida[]
   avisos: string[]
   horizonte: { desde: string; hasta: string }
-  /** Para `continuidadOperador` en `ensamblar.ts` (Paso 4g): qué operadores
-   * están asociados a cada máquina, según el detalle de equipo. */
-  operadoresAsociadosPorMaquinaId: Map<string, Set<string>>
-  /** Para construir `operador.codTrabajador` en `ensamblar.ts` sin releer
-   * los insumos. */
+  /** Todos los operadores de Prisma, para `operador.codTrabajador` y para
+   * los cambios, sin releer los insumos. */
   operadoresPorId: Map<string, OperadorPrismaCrudo>
   procedenciaOperadores: ProcedenciaFuente
+  coberturaOperadores: CoberturaOperadores
 }
 
 export function clavePar(solicitudId: string, maquinaId: string): string {
@@ -115,13 +196,13 @@ export function clavePar(solicitudId: string, maquinaId: string): string {
 }
 
 export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar, hoy: string): ResultadoAdaptador {
-  const { datos, operadores, detallesPorEquipoId } = insumos
+  const { datos, operadores, detallesPorEquipoId, conductores, reporteConductores, ventanaHoras } = insumos
   const procEquipos: ProcedenciaFuente = datos.equipos
   const procSolicitudes: ProcedenciaFuente = datos.solicitudes
   const procGeocercas: ProcedenciaFuente = datos.geocercas
 
   // 1. Ubicación en cascada (con linaje), vía el motor de reconciliación —
-  // no se reimplementa (Paso 4d.1).
+  // no se reimplementa.
   const equiposUnificados = reconciliar(datos)
   const ubicacionPorEquipoId = new Map<string, Ubicacion | null>()
   for (const eq of equiposUnificados) ubicacionPorEquipoId.set(eq.id, eq.ubicacion)
@@ -133,7 +214,7 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
   for (const [id, detalle] of Object.entries(detallesPorEquipoId)) detallePorEquipoId.set(id, detalle)
 
   // Dueño de la ocupación real de cada equipo: la solicitud APROBADA cuyo
-  // maquinaria_id/project_id apuntan a él (Paso 4d.3).
+  // maquinaria_id/project_id apuntan a él.
   const duenoOcupacionPorEquipoId = new Map<string, string>()
   for (const s of datos.solicitudes.datos) {
     if ((s.status ?? '').toUpperCase() !== 'APROBADA') continue
@@ -155,7 +236,17 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
   // ── 2. Solicitudes: exclusión y SolicitudPlan ─────────────────────────────
   const excluidas: SolicitudExcluida[] = []
   const solicitudesEvaluables = new Map<string, SolicitudPlan>()
-  const solicitudCrudaPorId = new Map<string, SolicitudPrismaCruda>()
+  const confirmadaRotaPorSolicitudId = new Map<string, ConfirmadaRota>()
+  const codigoProyectoPorSolicitudId = new Map<string, string | null>()
+
+  function resolverDestino(nombreProyecto: string | null): DestinoGeografico | null {
+    const geocerca = geocercaPorCodigoProyecto(nombreProyecto, datos.geocercas.datos)
+    if (!geocerca || geocerca.y == null || geocerca.x == null) return null
+    return {
+      lat: dato(geocerca.y, procGeocercas, 'y'),
+      lon: dato(geocerca.x, procGeocercas, 'x'),
+    }
+  }
 
   function construirSolicitudPlan(s: SolicitudPrismaCruda, inicioEfectivo: string): SolicitudPlan {
     return {
@@ -167,26 +258,40 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
       inicio: dato(s.fecha_inicio, procSolicitudes, 'fecha_inicio'),
       fin: dato(s.fecha_fin, procSolicitudes, 'fecha_fin'),
       inicioEfectivo,
+      creadaEn: dato(s.created_at, procSolicitudes, 'created_at'),
+      destino: resolverDestino(s.project_name),
     }
   }
 
   for (const s of datos.solicitudes.datos) {
     const id = String(s.id)
-    solicitudCrudaPorId.set(id, s)
+    codigoProyectoPorSolicitudId.set(id, extraerCodigoProyecto(s.project_name))
     const status = (s.status ?? '').toUpperCase()
 
-    // Decisión revisada el 13 de septiembre de 2026 (feedback directo sobre
-    // el calendario): una solicitud APROBADA es una decisión humana ya
-    // tomada — el optimizador deja de tocarla por completo, ni la propone ni
-    // la reevalúa ("si se toman decisiones manuales, el optimizador ya no
-    // puede hacer nada"). No entra a `excluidas` porque no es un hueco: su
-    // máquina ya se ve ocupada en el Gantt vía `FilaMaquina.ocupacionReal`
-    // (sale de `fecha_inicio_uso`/`fecha_fin_uso` del propio equipo,
-    // independiente de este bucle). Efecto secundario aceptado a propósito:
-    // `manualPorSolicitudId` (más abajo) deja de tener con qué comparar el
-    // KPI de ahorro proyectado de S-C4 para estas solicitudes — el indicador
-    // queda parcial en vez de mostrar una hipótesis que ya no es accionable.
-    if (status === 'APROBADA') continue
+    if (status === 'APROBADA') {
+      // Decisión del 13 de septiembre de 2026: una APROBADA es una decisión
+      // humana y el optimizador no la toca. Excepción acotada (S-A10 Paso
+      // 5b.2): vuelve a la demanda SOLO si su máquina confirmada ya no puede
+      // operar, para proponer un reemplazo. La asignación en Prisma no se
+      // modifica. Si no se cumplen todas las condiciones, no entra a
+      // `excluidas`: no es un hueco, su ocupación ya se ve en el Gantt.
+      if (s.maquinaria_id == null) continue
+      const equipoConfirmado = datos.equipos.datos.find((e) => idsIguales(e.id, s.maquinaria_id))
+      if (!equipoConfirmado) continue
+      if (puedeOperar(equipoConfirmado)) continue
+      if (!s.fecha_inicio || !s.fecha_fin) continue
+      if (s.fecha_fin < hoy) continue
+
+      solicitudesEvaluables.set(id, construirSolicitudPlan(s, maxFecha(hoy, s.fecha_inicio)))
+      confirmadaRotaPorSolicitudId.set(id, {
+        maquina: {
+          id: String(equipoConfirmado.id),
+          codigoActivo: dato(equipoConfirmado.no_activo, procEquipos, 'no_activo'),
+        },
+        motivo: motivoNoOperar(equipoConfirmado) ?? 'la máquina confirmada no puede operar',
+      })
+      continue
+    }
 
     if (status !== 'PENDIENTE') {
       excluidas.push({
@@ -214,20 +319,7 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     solicitudesEvaluables.set(id, construirSolicitudPlan(s, inicioEfectivo))
   }
 
-  // ── Máquinas: FilaMaquina completa (Paso 4g la necesita para TODAS) ───────
-  function motivoNoOperar(equipo: EquipoPrismaCrudo): string | null {
-    if (equipo.estado === 'OBSOLETA') return 'el equipo está en estado OBSOLETA'
-    if (equipo.active_failure_is_paro === true) return 'el equipo tiene una bandera de paro activa'
-    if (
-      equipo.active_failure_status &&
-      equipo.active_failure_status !== 'FINALIZADO' &&
-      equipo.active_failure_status !== 'RECHAZADO'
-    ) {
-      return `el equipo tiene una falla activa en estado ${equipo.active_failure_status}`
-    }
-    return null
-  }
-
+  // ── Máquinas: FilaMaquina completa ────────────────────────────────────────
   const filasMaquina: FilaMaquina[] = []
   for (const equipo of datos.equipos.datos) {
     const id = String(equipo.id)
@@ -245,18 +337,22 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
               inicio: dato(equipo.fecha_inicio_uso, procEquipos, 'fecha_inicio_uso'),
               fin: dato(equipo.fecha_fin_uso, procEquipos, 'fecha_fin_uso'),
               esDeSolicitudId: duenoOcupacionPorEquipoId.get(id) ?? null,
+              proyecto: dato(equipo.project_name, procEquipos, 'project_name'),
+              codigoProyecto: extraerCodigoProyecto(equipo.project_name),
             },
           ]
         : [],
     })
   }
 
-  // ── 4d.4-7: H1/H2/H3 y conteo de candidatas por solicitud ─────────────────
+  // ── H1/H2/H3 y conteo de candidatas por solicitud ─────────────────────────
   const candidatasPorSolicitudId = new Map<string, ConteoCandidatas>()
   const motivoSinCandidatasPorSolicitudId = new Map<string, string>()
   const paresPorSolicitud = new Map<string, EquipoPrismaCrudo[]>()
   const operadoresLibresPorSolicitud = new Map<string, OperadorPrismaCrudo[]>()
 
+  // `associated_operators` del detalle de equipo sigue sirviendo para H3: un
+  // operador asociado a una máquina ocupada no está libre en esa ventana.
   function operadoresLibresPara(s: SolicitudPlan): OperadorPrismaCrudo[] {
     return operadores.datos.filter((op) => {
       if (op.is_active !== true) return false
@@ -286,6 +382,8 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
       if (!h1) continue
       claseCompatible++
 
+      // Una APROBADA rota queda fuera de su propia máquina acá, por H2, sin
+      // código especial.
       const opera = puedeOperar(equipo)
       if (!opera) continue
       operables++
@@ -328,18 +426,8 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     }
   }
 
-  // ── 4d.8-9: objetivos por par, con sustitución de peor caso ───────────────
-  type ObjetivoCrudo = { valor: number | null; motivo: string | null; linaje: Linaje[] }
-
-  function calcularDistancia(s: SolicitudPlan, equipo: EquipoPrismaCrudo, esManualPropio: boolean): ObjetivoCrudo {
-    if (esManualPropio) {
-      return {
-        valor: null,
-        motivo:
-          'la máquina ya está en el proyecto por la asignación manual observada; su ubicación previa no se conoce',
-        linaje: [],
-      }
-    }
+  // ── Objetivos por par (distancia, tarifa) ─────────────────────────────────
+  function calcularDistancia(s: SolicitudPlan, equipo: EquipoPrismaCrudo): ObjetivoCrudo {
     const ubicacion = ubicacionPorEquipoId.get(String(equipo.id)) ?? null
     const origenOk = ubicacion != null && ubicacion.lat.valor != null && ubicacion.lon.valor != null
     const destino = geocercaPorCodigoProyecto(s.proyecto.valor, datos.geocercas.datos)
@@ -391,177 +479,288 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     }
   }
 
-  function calcularHolguraPar(s: SolicitudPlan, equipo: EquipoPrismaCrudo): number {
-    const noPropiaTermina =
-      tieneOcupacionReal(equipo) && !esPropiaDe(equipo, s.id) && equipo.fecha_fin_uso! <= s.inicioEfectivo
-    if (noPropiaTermina) return diffDias(equipo.fecha_fin_uso!, s.inicioEfectivo)
-    return diffDias(hoy, s.inicioEfectivo)
-  }
-
-  // Se computan primero los valores crudos (posiblemente null) de distancia y
-  // tarifa para cada par candidato Y para cada asignación manual — la
-  // sustitución de peor caso corre sobre el conjunto completo de esta corrida
-  // (Paso 4d.9), no por solicitud.
+  // La sustitución de peor caso corre sobre el conjunto completo de pares
+  // candidatos de esta corrida, no por solicitud.
   const distanciaCrudaPorClave = new Map<string, ObjetivoCrudo>()
   const tarifaCrudaPorClave = new Map<string, ObjetivoCrudo>()
-  const holguraPorClave = new Map<string, number>()
-
-  const manualEquipoPorSolicitudId = new Map<string, EquipoPrismaCrudo>()
-  const distanciaCrudaManualPorSolicitudId = new Map<string, ObjetivoCrudo>()
-  const tarifaCrudaManualPorSolicitudId = new Map<string, ObjetivoCrudo>()
-
   for (const [solicitudId, candidatas] of paresPorSolicitud) {
     const s = solicitudesEvaluables.get(solicitudId)!
     for (const equipo of candidatas) {
       const clave = clavePar(solicitudId, String(equipo.id))
-      const esPropia = esPropiaDe(equipo, solicitudId)
-      distanciaCrudaPorClave.set(clave, calcularDistancia(s, equipo, esPropia))
+      distanciaCrudaPorClave.set(clave, calcularDistancia(s, equipo))
       tarifaCrudaPorClave.set(clave, calcularTarifa(equipo))
-      holguraPorClave.set(clave, calcularHolguraPar(s, equipo))
     }
-  }
-
-  for (const s of solicitudesEvaluables.values()) {
-    const solicitudCruda = solicitudCrudaPorId.get(s.id)!
-    if ((solicitudCruda.status ?? '').toUpperCase() !== 'APROBADA') continue
-    if (solicitudCruda.maquinaria_id == null) continue
-    const equipoManual = equipoPorId.get(String(solicitudCruda.maquinaria_id))
-    if (!equipoManual) continue
-    manualEquipoPorSolicitudId.set(s.id, equipoManual)
-    distanciaCrudaManualPorSolicitudId.set(s.id, calcularDistancia(s, equipoManual, true))
-    tarifaCrudaManualPorSolicitudId.set(s.id, calcularTarifa(equipoManual))
-  }
-
-  // La sustitución de peor caso corre SOLO sobre los pares candidatos que
-  // compiten por una asignación (los que ve el solver) — nunca sobre el
-  // objeto `manual` (una comparación observacional, no un candidato de esta
-  // corrida). Por eso `manual.objetivos.distancia` de una APROBADA se queda
-  // en `null` con su motivo cuando la fórmula del Paso 4d.8 lo da null: es
-  // justamente el caso "el origen previo de esta máquina no se conoce"
-  // (Paso 4d.9 dice lo mismo de `holgura` para `manual`, explícitamente).
-  function sustituirPeorCaso(
-    crudosPares: Map<string, ObjetivoCrudo>,
-    unidad: ValorObjetivo['unidad'],
-    nombreObjetivo: string,
-    avisos: string[],
-  ): Map<string, ValorObjetivo> {
-    const maxNoNulo = [...crudosPares.values()].reduce<number | null>((max, o) => {
-      if (o.valor == null) return max
-      return max == null ? o.valor : Math.max(max, o.valor)
-    }, null)
-
-    const ningunoConDato = maxNoNulo == null
-    if (ningunoConDato && crudosPares.size > 0) {
-      avisos.push(`objetivo ${nombreObjetivo} sin datos en ningún candidato: no discrimina`)
-    }
-    const peorCaso = ningunoConDato ? 0 : maxNoNulo
-
-    const resultado = new Map<string, ValorObjetivo>()
-    for (const [clave, crudo] of crudosPares) {
-      resultado.set(
-        clave,
-        crudo.valor != null
-          ? { valor: crudo.valor, peorCasoAplicado: false, motivo: null, unidad, linaje: crudo.linaje }
-          : { valor: peorCaso, peorCasoAplicado: true, motivo: crudo.motivo, unidad, linaje: crudo.linaje },
-      )
-    }
-    return resultado
-  }
-
-  function sinSustitucion(crudo: ObjetivoCrudo, unidad: ValorObjetivo['unidad']): ValorObjetivo {
-    return { valor: crudo.valor, peorCasoAplicado: false, motivo: crudo.motivo, unidad, linaje: crudo.linaje }
   }
 
   const avisos: string[] = []
-  const distanciaPares = sustituirPeorCaso(distanciaCrudaPorClave, 'km', 'distancia', avisos)
-  const tarifaPares = sustituirPeorCaso(tarifaCrudaPorClave, 'USD/h', 'tarifa', avisos)
+  const distanciaPares = sustituirPeorCaso(distanciaCrudaPorClave, 'km', 'distancia', 'maximo', avisos)
+  const tarifaPares = sustituirPeorCaso(tarifaCrudaPorClave, 'USD/h', 'tarifa', 'maximo', avisos)
 
-  const objetivosParPorClave = new Map<string, ObjetivosParcialesPar>()
+  const objetivosParPorClave = new Map<string, ObjetivosPar>()
   for (const clave of distanciaPares.keys()) {
-    objetivosParPorClave.set(clave, {
-      distancia: distanciaPares.get(clave)!,
-      tarifa: tarifaPares.get(clave)!,
-      holgura: {
-        valor: holguraPorClave.get(clave)!,
-        peorCasoAplicado: false,
-        motivo: null,
-        unidad: 'días',
-        linaje: [],
-      },
+    objetivosParPorClave.set(clave, { distancia: distanciaPares.get(clave)!, tarifa: tarifaPares.get(clave)! })
+  }
+
+  // ── Rating y horas por operador (S-A10 Paso 5b.3) ─────────────────────────
+  // Unión operador ↔ conductor por código exacto y 1:1 (Paso 3). Ningún
+  // nombre entra acá: el conector ya solo entrega `{ id, prefijoFn }`.
+  const { conductorPorOperadorId, conflictos } = resolverConductoresDeOperadores(operadores.datos, conductores.datos)
+  const prefijoPorConductorId = new Map(conductores.datos.map((c) => [c.id, c.prefijoFn]))
+  const codigosDeConductores = new Set(
+    conductores.datos.map((c) => c.prefijoFn?.trim()).filter((codigo): codigo is string => !!codigo),
+  )
+  const procReporte = reporteConductores.procedencia
+  const CAMPO_UNION = 'fn (código antes de " - ")'
+
+  const calificacionesPorConductorId = new Map<string, (number | null)[]>()
+  for (const fila of reporteConductores.datos.scores) {
+    const lista = calificacionesPorConductorId.get(fila.driver_id) ?? []
+    lista.push(fila.safety_score)
+    calificacionesPorConductorId.set(fila.driver_id, lista)
+  }
+
+  const minutosPorConductorId = new Map<string, (number | null)[]>()
+  for (const fila of reporteConductores.datos.detail) {
+    const fecha = fila.date?.slice(0, 10)
+    if (!fecha || fecha < ventanaHoras.desde || fecha > ventanaHoras.hasta) continue
+    const lista = minutosPorConductorId.get(fila.driver_id) ?? []
+    lista.push(fila.ignOnTime)
+    minutosPorConductorId.set(fila.driver_id, lista)
+  }
+
+  function codigoCoincideConAlgunConductor(op: OperadorPrismaCrudo): boolean {
+    const codigo = op.cod_trabajador?.trim()
+    return !!codigo && codigosDeConductores.has(codigo)
+  }
+
+  function motivoSinConductor(op: OperadorPrismaCrudo): string {
+    // El código existe del lado de Startrack pero no se unió: fue ambiguo.
+    if (codigoCoincideConAlgunConductor(op)) {
+      return 'el código del operador coincide con más de un conductor de Startrack o de un operador de Prisma: no se unió'
+    }
+    return 'el operador no tiene un conductor de Startrack con el mismo código'
+  }
+
+  function linajeUnion(conductorId: string): Linaje {
+    // valorCrudo = solo el código: nunca `fn` entero (trae el nombre).
+    return crearLinaje(conductores, CAMPO_UNION, prefijoPorConductorId.get(conductorId) ?? null)
+  }
+
+  function calcularRating(op: OperadorPrismaCrudo): ObjetivoCrudo {
+    const conductorId = conductorPorOperadorId.get(String(op.id))
+    if (conductorId === undefined) return { valor: null, motivo: motivoSinConductor(op), linaje: [] }
+
+    const union = linajeUnion(conductorId)
+    const calificaciones = calificacionesPorConductorId.get(conductorId) ?? []
+    if (calificaciones.length === 0) {
+      return {
+        valor: null,
+        motivo: 'el conductor unido por código no tiene calificación en el reporte de conductores de Startrack',
+        linaje: [union],
+      }
+    }
+    if (calificaciones.length > 1) {
+      // No se promedia: dos calificaciones para un mismo conductor no dicen
+      // cuál vale.
+      return {
+        valor: null,
+        motivo: 'más de una calificación para el conductor',
+        linaje: [crearLinaje(procReporte, 'scores[].safety_score', calificaciones), union],
+      }
+    }
+    const [calificacion] = calificaciones
+    const linaje = [crearLinaje(procReporte, 'scores[].safety_score', calificacion), union]
+    if (calificacion === null) {
+      return { valor: null, motivo: 'la calificación del conductor viene sin safety_score', linaje }
+    }
+    return { valor: calificacion, motivo: null, linaje }
+  }
+
+  let filasSinIgnOnTime = 0
+
+  function calcularHoras(op: OperadorPrismaCrudo): ObjetivoCrudo {
+    const conductorId = conductorPorOperadorId.get(String(op.id))
+    if (conductorId === undefined) return { valor: null, motivo: motivoSinConductor(op), linaje: [] }
+
+    const minutos = minutosPorConductorId.get(conductorId) ?? []
+    const linaje = [crearLinaje(procReporte, 'detail[].ignOnTime', minutos), linajeUnion(conductorId)]
+    if (minutos.length === 0) {
+      // Unido y sin filas en la ventana: 0 h reales, no peor caso.
+      return {
+        valor: 0,
+        motivo: `sin actividad registrada en Startrack en los últimos ${DIAS_VENTANA_HORAS} días`,
+        linaje,
+      }
+    }
+
+    const conDato = minutos.filter((m): m is number => m !== null)
+    filasSinIgnOnTime += minutos.length - conDato.length
+    if (conDato.length === 0) {
+      // Tiene actividad, pero ninguna fila trae ignOnTime: un null no se
+      // convierte en 0.
+      return { valor: null, motivo: 'las filas de actividad del conductor en la ventana vienen sin ignOnTime', linaje }
+    }
+    // ignOnTime en minutos (unidad inferida: todos los valores observados ≤ 1440).
+    return { valor: conDato.reduce((suma, m) => suma + m, 0) / 60, motivo: null, linaje }
+  }
+
+  const ratingCrudoPorOperadorId = new Map<string, ObjetivoCrudo>()
+  const horasCrudasPorOperadorId = new Map<string, ObjetivoCrudo>()
+  for (const op of operadores.datos) {
+    ratingCrudoPorOperadorId.set(String(op.id), calcularRating(op))
+    horasCrudasPorOperadorId.set(String(op.id), calcularHoras(op))
+  }
+
+  // Peor caso sobre los operadores candidatos de esta corrida: la unión de
+  // `operadoresPorSolicitud`.
+  const operadorIdsCandidatos = new Set<string>()
+  for (const ops of operadoresLibresPorSolicitud.values()) {
+    for (const op of ops) operadorIdsCandidatos.add(String(op.id))
+  }
+  const soloCandidatos = (crudos: Map<string, ObjetivoCrudo>) =>
+    new Map([...operadorIdsCandidatos].map((id) => [id, crudos.get(id)!]))
+
+  const ratingOperadores = sustituirPeorCaso(
+    soloCandidatos(ratingCrudoPorOperadorId),
+    'pts',
+    'ratingOperador',
+    'minimo',
+    avisos,
+  )
+  const horasOperadores = sustituirPeorCaso(
+    soloCandidatos(horasCrudasPorOperadorId),
+    'h',
+    'horasOperador',
+    'maximo',
+    avisos,
+  )
+
+  const objetivosOperadorPorId = new Map<string, ObjetivosOperador>()
+  for (const id of operadorIdsCandidatos) {
+    objetivosOperadorPorId.set(id, { ratingOperador: ratingOperadores.get(id)!, horasOperador: horasOperadores.get(id)! })
+  }
+
+  for (const [nombre, valores] of [
+    ['ratingOperador', ratingOperadores],
+    ['horasOperador', horasOperadores],
+  ] as const) {
+    const conPeorCaso = [...valores.values()].filter((v) => v.peorCasoAplicado).length
+    if (conPeorCaso > 0) {
+      avisos.push(`${nombre}: peor caso declarado en ${conPeorCaso} de ${valores.size} operadores candidatos`)
+    }
+  }
+
+  // ── Peor opción válida por solicitud (S-A10 Paso 5b.5) ────────────────────
+  const peorOpcionPorSolicitudId = new Map<string, Record<IdSoftConstraint, PeorOpcionValida>>()
+  for (const s of solicitudesEvaluables.values()) {
+    const pares = (paresPorSolicitud.get(s.id) ?? []).map(
+      (equipo) => objetivosParPorClave.get(clavePar(s.id, String(equipo.id)))!,
+    )
+    const ops = (operadoresLibresPorSolicitud.get(s.id) ?? []).map((op) => objetivosOperadorPorId.get(String(op.id))!)
+    peorOpcionPorSolicitudId.set(s.id, {
+      distancia: peorEntreReales(
+        pares.map((p) => p.distancia),
+        'maximo',
+      ),
+      tarifa: peorEntreReales(
+        pares.map((p) => p.tarifa),
+        'maximo',
+      ),
+      ratingOperador: peorEntreReales(
+        ops.map((o) => o.ratingOperador),
+        'minimo',
+      ),
+      horasOperador: peorEntreReales(
+        ops.map((o) => o.horasOperador),
+        'maximo',
+      ),
     })
   }
 
-  const manualPorSolicitudId = new Map<string, InfoManual>()
-  for (const [solicitudId, equipoManual] of manualEquipoPorSolicitudId) {
-    manualPorSolicitudId.set(solicitudId, {
-      maquina: { id: String(equipoManual.id), codigoActivo: dato(equipoManual.no_activo, procEquipos, 'no_activo') },
-      objetivosParciales: {
-        distancia: sinSustitucion(distanciaCrudaManualPorSolicitudId.get(solicitudId)!, 'km'),
-        tarifa: sinSustitucion(tarifaCrudaManualPorSolicitudId.get(solicitudId)!, 'USD/h'),
-        holgura: {
-          valor: null,
-          peorCasoAplicado: false,
-          motivo: 'la ocupación previa de la máquina es desconocida (la ventana actual es la de esta misma asignación)',
-          unidad: 'días',
-          linaje: [],
-        },
-      },
-    })
+  // ── EntradaSolver — solo ids y enteros: sin nombres, coordenadas ni textos ──
+  // Orden de llegada: rango por `created_at` (trae hora). 0 = la primera en
+  // llegar; marcas iguales comparten rango; una solicitud sin `created_at`
+  // interpretable va después de todas y se avisa — nunca se inventa una fecha.
+  const marcaPorSolicitudId = new Map<string, number | null>()
+  for (const s of solicitudesEvaluables.values()) {
+    const marca = s.creadaEn.valor ? Date.parse(s.creadaEn.valor) : Number.NaN
+    marcaPorSolicitudId.set(s.id, Number.isNaN(marca) ? null : marca)
+  }
+  const marcasDistintas = [
+    ...new Set([...marcaPorSolicitudId.values()].filter((marca): marca is number => marca !== null)),
+  ].sort((x, y) => x - y)
+  const rangoPorMarca = new Map(marcasDistintas.map((marca, indice) => [marca, indice]))
+  const sinCreadaEn = [...marcaPorSolicitudId.values()].filter((marca) => marca === null).length
+  if (sinCreadaEn > 0) {
+    avisos.push(`${sinCreadaEn} solicitudes sin created_at interpretable: van al final del orden de llegada`)
   }
 
-  // ── 4d.10-11: EntradaSolver — solo ids y enteros ──────────────────────────
-  const solicitudesSolver = [...solicitudesEvaluables.values()].map((s) => ({
-    id: s.id,
-    inicioDia: diffDias(hoy, s.inicioEfectivo),
-    finDia: diffDias(hoy, s.fin.valor!),
-  }))
+  const solicitudesSolver = [...solicitudesEvaluables.values()].map((s) => {
+    const marca = marcaPorSolicitudId.get(s.id) ?? null
+    return {
+      id: s.id,
+      inicioDia: diffDias(hoy, s.inicioEfectivo),
+      finDia: diffDias(hoy, s.fin.valor!),
+      rangoLlegada: marca === null ? marcasDistintas.length : rangoPorMarca.get(marca)!,
+    }
+  })
 
   const paresSolver: EntradaSolver['pares'] = []
   for (const [solicitudId, candidatas] of paresPorSolicitud) {
     for (const equipo of candidatas) {
-      const clave = clavePar(solicitudId, String(equipo.id))
-      const objetivos = objetivosParPorClave.get(clave)!
+      const objetivos = objetivosParPorClave.get(clavePar(solicitudId, String(equipo.id)))!
       paresSolver.push({
         solicitudId,
         maquinaId: String(equipo.id),
         distanciaM: Math.round(objetivos.distancia.valor! * 1000),
         tarifaCentavos: Math.round(objetivos.tarifa.valor! * 100),
-        holguraDias: objetivos.holgura.valor!,
       })
     }
   }
-
-  const maquinaIdsUsadas = new Set(paresSolver.map((p) => p.maquinaId))
 
   const operadoresPorSolicitudSolver: EntradaSolver['operadoresPorSolicitud'] = [
     ...operadoresLibresPorSolicitud.entries(),
   ].map(([solicitudId, ops]) => ({ solicitudId, operadorIds: ops.map((o) => String(o.id)) }))
 
-  const operadorIdsUsados = new Set(operadoresPorSolicitudSolver.flatMap((o) => o.operadorIds))
-
-  const continuidad: EntradaSolver['continuidad'] = []
-  const vistos = new Set<string>()
-  for (const equipo of datos.equipos.datos) {
-    const maquinaId = String(equipo.id)
-    if (!maquinaIdsUsadas.has(maquinaId)) continue
-    const detalle = detallePorEquipoId.get(maquinaId)
-    for (const asociado of detalle?.datos.associated_operators ?? []) {
-      const operadorId = String(asociado.id)
-      if (!operadorIdsUsados.has(operadorId)) continue
-      const clave = `${maquinaId}::${operadorId}`
-      if (vistos.has(clave)) continue
-      vistos.add(clave)
-      continuidad.push({ maquinaId, operadorId })
+  const operadoresSolver: EntradaSolver['operadores'] = [...operadorIdsCandidatos].map((operadorId) => {
+    const objetivos = objetivosOperadorPorId.get(operadorId)!
+    return {
+      operadorId,
+      ratingDecimas: Math.round(objetivos.ratingOperador.valor! * 10),
+      minutosMotor: Math.round(objetivos.horasOperador.valor! * 60),
     }
-  }
+  })
 
   const entradaSolver: EntradaSolver = {
     solicitudes: solicitudesSolver,
     pares: paresSolver,
     operadoresPorSolicitud: operadoresPorSolicitudSolver,
-    continuidad,
+    operadores: operadoresSolver,
     pila: peticion.pila,
     tiempoLimitePorNivelS: TIEMPO_LIMITE_POR_NIVEL_S,
+  }
+
+  // ── Cobertura de operadores, sobre TODOS los operadores de Prisma ─────────
+  const coberturaOperadores: CoberturaOperadores = {
+    total: operadores.datos.length,
+    conConductor: conductorPorOperadorId.size,
+    conRating: [...ratingCrudoPorOperadorId.values()].filter((o) => o.valor !== null).length,
+    conHoras: [...horasCrudasPorOperadorId.values()].filter((o) => o.valor !== null).length,
+    ventanaHoras: { desde: ventanaHoras.desde, hasta: ventanaHoras.hasta },
+    conflictosIdentidad: conflictos,
+  }
+
+  const sinConductorMismoCodigo = operadores.datos.filter(
+    (op) => !conductorPorOperadorId.has(String(op.id)) && !codigoCoincideConAlgunConductor(op),
+  ).length
+  if (sinConductorMismoCodigo > 0) {
+    avisos.push(`${sinConductorMismoCodigo} operadores sin conductor de Startrack con el mismo código`)
+  }
+  if (conflictos > 0) {
+    avisos.push(`${conflictos} conflictos de identidad operador↔conductor: no se unieron`)
+  }
+  if (filasSinIgnOnTime > 0) {
+    avisos.push(`${filasSinIgnOnTime} filas de actividad sin ignOnTime`)
   }
 
   // ── Horizonte: desde hoy hasta la mayor fecha_fin evaluada u ocupación vigente ──
@@ -569,13 +768,6 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
   for (const s of solicitudesEvaluables.values()) hasta = maxFecha(hasta, s.fin.valor!)
   for (const equipo of datos.equipos.datos) {
     if (equipo.fecha_fin_uso) hasta = maxFecha(hasta, equipo.fecha_fin_uso)
-  }
-
-  const operadoresAsociadosPorMaquinaId = new Map<string, Set<string>>()
-  for (const equipo of datos.equipos.datos) {
-    const detalle = detallePorEquipoId.get(String(equipo.id))
-    const ids = new Set((detalle?.datos.associated_operators ?? []).map((a) => String(a.id)))
-    operadoresAsociadosPorMaquinaId.set(String(equipo.id), ids)
   }
 
   const operadoresPorId = new Map<string, OperadorPrismaCrudo>()
@@ -588,12 +780,15 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     candidatasPorSolicitudId,
     motivoSinCandidatasPorSolicitudId,
     objetivosParPorClave,
-    manualPorSolicitudId,
+    objetivosOperadorPorId,
+    peorOpcionPorSolicitudId,
+    confirmadaRotaPorSolicitudId,
+    codigoProyectoPorSolicitudId,
     excluidas,
     avisos,
     horizonte: { desde: hoy, hasta },
-    operadoresAsociadosPorMaquinaId,
     operadoresPorId,
     procedenciaOperadores: operadores,
+    coberturaOperadores,
   }
 }

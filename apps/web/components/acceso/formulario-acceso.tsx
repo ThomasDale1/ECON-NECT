@@ -133,7 +133,7 @@ export function FormularioAcceso({ desde, hayClavesConfiguradas }: Props) {
             <p
               id="error-acceso"
               role="alert"
-              className="font-label text-[13px] text-veredicto-riesgo"
+              className="font-label text-sm text-destructive"
             >
               {error}
             </p>

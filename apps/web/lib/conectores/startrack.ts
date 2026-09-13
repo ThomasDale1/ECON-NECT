@@ -13,6 +13,7 @@
 // se implementa antes que cualquier lector, como pide S-A1 §1.
 
 import 'server-only'
+import type { CodigoConductorStartrack, ReporteConductoresStartrack } from '@/lib/canonico/tipos-crudos'
 import { asegurarEntornoCargado } from './entorno'
 import { SesionExpirada, ErrorConector, ErrorEscritura } from './errores'
 import { conCache, invalidarCache } from './cache'
@@ -178,6 +179,109 @@ export function leerGeocercas(): Promise<RespuestaConector<unknown[]>> {
 
 export function leerConductores(): Promise<RespuestaConector<unknown[]>> {
   return leerLista('ajax/drivers.php?cmd=list')
+}
+
+// ── Operadores del optimizador (S-A10 Paso 2) ───────────────────────────────
+//
+// Los dos lectores de abajo PROYECTAN dentro del conector: lo que no se
+// necesita (nombres, correos, teléfonos, alertas) no sale de la función.
+// `fn` de `ajax/drivers.php` junta el código de trabajador y el nombre del
+// conductor (`"código - nombre"`), y `detailAlerts[].driver.name` del reporte
+// trae el nombre otra vez (AGENTS.md §1.2).
+
+const SEPARADOR_FN = ' - '
+
+function prefijoDeFn(fn: unknown): string | null {
+  if (typeof fn !== 'string') return null
+  const indice = fn.indexOf(SEPARADOR_FN)
+  // Sin separador, `fn` es solo un nombre: nunca se devuelve entero.
+  if (indice === -1) return null
+  const prefijo = fn.slice(0, indice).trim()
+  return prefijo === '' ? null : prefijo
+}
+
+/** Código de trabajador de cada conductor, sin nombre. Reusa `leerConductores()`
+ * (mismo caché, sin segunda llamada). Un registro sin `i` no se puede unir a
+ * nada y no se devuelve. */
+export async function leerCodigosConductor(): Promise<RespuestaConector<CodigoConductorStartrack[]>> {
+  const respuesta = await leerConductores()
+  const codigos: CodigoConductorStartrack[] = []
+  for (const crudo of respuesta.datos) {
+    if (typeof crudo !== 'object' || crudo === null) continue
+    const { i, fn } = crudo as { i?: unknown; fn?: unknown }
+    if (i === null || i === undefined) continue
+    codigos.push({ id: String(i), prefijoFn: prefijoDeFn(fn) })
+  }
+  return { datos: codigos, linaje: respuesta.linaje }
+}
+
+/** Id del reporte de conductores de Startrack, verificado contra el sandbox el
+ * 13 de septiembre de 2026 (`ajax/report.php?id=32&format=json`). */
+export const ID_REPORTE_CONDUCTORES = 32
+
+/** El reporte es histórico: no cambia en segundos como la flota. */
+const TTL_REPORTE_CONDUCTORES_MS = 5 * 60 * 1000
+
+function numeroONulo(valor: unknown): number | null {
+  if (typeof valor === 'number' && Number.isFinite(valor)) return valor
+  if (typeof valor === 'string' && valor.trim() !== '' && Number.isFinite(Number(valor))) return Number(valor)
+  return null
+}
+
+function idConductor(valor: unknown): string | null {
+  if (valor === null || valor === undefined) return null
+  const id = String(valor).trim()
+  return id === '' ? null : id
+}
+
+/** Calificación (`scores[].safety_score`) y actividad diaria
+ * (`detail[].ignOnTime`) de los conductores entre `desde` y `hasta`
+ * (AAAA-MM-DD, inclusive). La respuesta válida no trae `success`; la vencida
+ * trae `success:false` y `peticionAjax` reautentica por el cuerpo. */
+export function leerReporteConductores(
+  desde: string,
+  hasta: string,
+): Promise<RespuestaConector<ReporteConductoresStartrack>> {
+  const endpoint =
+    `ajax/report.php?id=${ID_REPORTE_CONDUCTORES}&format=json` +
+    `&start_date=${desde}&start_time=00%3A00&end_date=${hasta}&end_time=23%3A59&driver_ids=&retdat=1`
+
+  return conCache(
+    `startrack:${endpoint}`,
+    async () => {
+      const cuerpo = await peticionAjax(endpoint)
+      if (!Array.isArray(cuerpo.scores) || !Array.isArray(cuerpo.detail)) {
+        // Nunca vacío en silencio (AGENTS.md §3.3).
+        throw new ErrorConector(PLATAFORMA, endpoint, 'respuesta sin scores/detail')
+      }
+
+      const scores: ReporteConductoresStartrack['scores'] = []
+      for (const fila of cuerpo.scores as unknown[]) {
+        if (typeof fila !== 'object' || fila === null) continue
+        const { driver_id, safety_score } = fila as { driver_id?: unknown; safety_score?: unknown }
+        const id = idConductor(driver_id)
+        if (id === null) continue
+        scores.push({ driver_id: id, safety_score: numeroONulo(safety_score) })
+      }
+
+      const detail: ReporteConductoresStartrack['detail'] = []
+      for (const fila of cuerpo.detail as unknown[]) {
+        if (typeof fila !== 'object' || fila === null) continue
+        const { driver_id, date, ignOnTime } = fila as { driver_id?: unknown; date?: unknown; ignOnTime?: unknown }
+        const id = idConductor(driver_id)
+        if (id === null) continue
+        detail.push({
+          driver_id: id,
+          date: typeof date === 'string' ? date : null,
+          ignOnTime: numeroONulo(ignOnTime),
+        })
+      }
+
+      // `detailAlerts` no se copia: se descarta entero.
+      return envolver<ReporteConductoresStartrack>({ scores, detail }, PLATAFORMA, endpoint)
+    },
+    TTL_REPORTE_CONDUCTORES_MS,
+  )
 }
 
 /** Solo para pruebas: olvida la cookie de sesión entre casos. */

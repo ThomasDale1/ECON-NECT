@@ -47,14 +47,19 @@ sesión. Lo pide el usuario, o no pasa.
 ## Fase extendida — optimizador (tras S-C2)
 
 Planeados el 12 de septiembre de 2026 contra la cobertura real del sandbox. Solo
-datos en vivo: sin lowboy ni horario laboral (no existen en el sandbox), clima
-como alerta. Ver [AGENTS.md §12.1](../AGENTS.md).
+datos en vivo: sin lowboy ni horario laboral (no existen en el sandbox). El
+clima salió en S-A10. Ver [AGENTS.md §12.1](../AGENTS.md).
 
 | Archivo | Carril | Sprint | Cuándo | Bloquea a |
 |---|---|---|---|---|
 | [S-A7-optimizador.md](S-A7-optimizador.md) | 🟦 A | S-A7 | tras S-C2 · **Paso 1 (contrato) primero** · P1 (S-A4) le gana si compiten | B y C, hasta que exista `lib/optimizador/tipos.ts` |
 | [S-B4-calendario.md](S-B4-calendario.md) | 🟪 B | S-B4 | en cuanto exista el contrato | — |
 | [S-C4-kpis-optimizador.md](S-C4-kpis-optimizador.md) | 🟩 C | S-C4 | en cuanto exista el contrato | A conecta los KPIs al final |
+| [S-A10-replaneacion.md](S-A10-replaneacion.md) | 🟦→🟩→🟪 A, C, B | S-A10 | 13 sep., **una sola sesión**, sobre S-A7/S-B4/S-C4 ya construidos · P1 le gana si compiten | — |
+
+⚠ **S-A10 reemplaza en parte a S-A7, S-B4 y S-C4:** clima, holgura, continuidad
+de operador, comparación contra la asignación manual y KPI de lluvia salieron.
+Donde contradigan, manda S-A10.
 
 ⚠ **Sin datos de ejemplo en ninguno de los tres.** B construye contra los tipos y
 verifica contra la ruta real; las pruebas corren en vivo con `npm run test:vivo`.

@@ -1,11 +1,12 @@
-// Lectura en vivo de los insumos del optimizador (S-A7 Paso 4c). server-only:
-// es la única puerta de este módulo al mundo exterior (AGENTS.md §4.3) — todo
-// lo que sigue (adaptador.ts, ensamblar.ts, planear.ts) recibe estos datos ya
-// leídos y no conoce HTTP.
+// Lectura en vivo de los insumos del optimizador (S-A7 Paso 4c, ampliado en
+// S-A10 Paso 5a). server-only: es la única puerta de este módulo al mundo
+// exterior (AGENTS.md §4.3) — todo lo que sigue (adaptador.ts, ensamblar.ts,
+// planear.ts) recibe estos datos ya leídos y no conoce HTTP.
 
 import 'server-only'
 import { comoFuente } from '@/lib/canonico/fuentes'
 import type {
+  CodigoConductorStartrack,
   DatosCrudos,
   DetalleEquipoPrismaCrudo,
   EquipoPrismaCrudo,
@@ -15,6 +16,7 @@ import type {
   GeocercaStartrackCruda,
   OperadorPrismaCrudo,
   ProcedenciaFuente,
+  ReporteConductoresStartrack,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
   TipoTareaStartrackCrudo,
@@ -22,9 +24,15 @@ import type {
 } from '@/lib/canonico/tipos-crudos'
 import * as prisma from '@/lib/conectores/prisma'
 import * as startrack from '@/lib/conectores/startrack'
+import { DIAS_VENTANA_HORAS } from './tipos'
 
 export type DetalleEquipoConProcedencia = {
   datos: DetalleEquipoPrismaCrudo
+  procedencia: ProcedenciaFuente
+}
+
+export type ReporteConductoresConProcedencia = {
+  datos: ReporteConductoresStartrack
   procedencia: ProcedenciaFuente
 }
 
@@ -36,21 +44,38 @@ export type InsumosOptimizador = {
    * propia llamada — a diferencia de una lista, no comparten un único
    * `leidoEn`. */
   detallesPorEquipoId: Record<string, DetalleEquipoConProcedencia>
+  /** Solo `{ id, prefijoFn }` por conductor: el nombre nunca sale del conector. */
+  conductores: FuenteCruda<CodigoConductorStartrack>
+  /** Rating y horas de motor por conductor, ya proyectados (sin `detailAlerts`). */
+  reporteConductores: ReporteConductoresConProcedencia
+  /** Los 30 días que terminan hoy, inclusive (America/El_Salvador). */
+  ventanaHoras: { desde: string; hasta: string }
+}
+
+function restarDias(fecha: string, dias: number): string {
+  const [anio, mes, dia] = fecha.split('-').map(Number)
+  return new Date(Date.UTC(anio, mes - 1, dia) - dias * 86_400_000).toISOString().slice(0, 10)
 }
 
 /** Lee en paralelo todo lo que necesita el adaptador del optimizador:
  * equipos, solicitudes, vehículos, geocercas, tareas, tipos de tarea,
- * operadores, y el detalle de cada equipo (Paso 4c). */
-export async function leerInsumosOptimizador(): Promise<InsumosOptimizador> {
-  const [equipos, solicitudes, vehiculos, geocercas, tareas, tiposTarea, operadores] = await Promise.all([
-    prisma.leerEquipos(),
-    prisma.leerSolicitudes(),
-    startrack.leerVehiculos(),
-    startrack.leerGeocercas(),
-    startrack.leerTareas(),
-    startrack.leerTiposTarea(),
-    prisma.leerOperadores(),
-  ])
+ * operadores, códigos de conductor y reporte de conductores de la ventana de
+ * horas, y el detalle de cada equipo (Paso 4c / S-A10 Paso 5a). */
+export async function leerInsumosOptimizador(hoy: string): Promise<InsumosOptimizador> {
+  const ventanaHoras = { desde: restarDias(hoy, DIAS_VENTANA_HORAS - 1), hasta: hoy }
+
+  const [equipos, solicitudes, vehiculos, geocercas, tareas, tiposTarea, operadores, conductores, reporte] =
+    await Promise.all([
+      prisma.leerEquipos(),
+      prisma.leerSolicitudes(),
+      startrack.leerVehiculos(),
+      startrack.leerGeocercas(),
+      startrack.leerTareas(),
+      startrack.leerTiposTarea(),
+      prisma.leerOperadores(),
+      startrack.leerCodigosConductor(),
+      startrack.leerReporteConductores(ventanaHoras.desde, ventanaHoras.hasta),
+    ])
 
   const listaEquipos = equipos.datos as EquipoPrismaCrudo[]
   const detallesPorEquipoId: Record<string, DetalleEquipoConProcedencia> = {}
@@ -108,5 +133,20 @@ export async function leerInsumosOptimizador(): Promise<InsumosOptimizador> {
     },
     operadores: comoFuente<OperadorPrismaCrudo>(operadores),
     detallesPorEquipoId,
+    conductores: {
+      datos: conductores.datos,
+      plataforma: conductores.linaje.plataforma,
+      endpoint: conductores.linaje.endpoint,
+      leidoEn: conductores.linaje.leidoEn,
+    },
+    reporteConductores: {
+      datos: reporte.datos,
+      procedencia: {
+        plataforma: reporte.linaje.plataforma,
+        endpoint: reporte.linaje.endpoint,
+        leidoEn: reporte.linaje.leidoEn,
+      },
+    },
+    ventanaHoras,
   }
 }

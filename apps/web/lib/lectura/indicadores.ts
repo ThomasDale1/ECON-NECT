@@ -38,12 +38,11 @@ export type IndicadorCalculado = Kpi & {
   origen: OrigenCifra[]
 }
 
-/** Los tres KPIs que nacen del optimizador (S-C4). No se calculan acá: los
+/** Los dos KPIs que nacen del optimizador (S-C4, S-A10). No se calculan acá: los
  * devuelve `POST /api/optimizar` con la propuesta, porque dependen de la pila
  * de prioridades que el usuario arma en la pantalla de planeación. */
 const IDS_DEL_OPTIMIZADOR = new Set([
   'ahorro-por-objetivo-optimizador',
-  'lluvia-clases-sensibles-optimizador',
   'cobertura-plan-optimizador',
 ])
 

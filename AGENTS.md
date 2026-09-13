@@ -5,6 +5,12 @@
 > `PROTOCOLO-DATOS-ECON-V2.md`. Si algo de esos archivos contradice a este, manda
 > este. Vocabulario unificado: **el producto habla español**, incluidos los
 > nombres de tipos, estados y archivos.
+>
+> **Actualizado el 13 de septiembre de 2026 a las 01:50 CST** (planeación de
+> [S-A10](prompts/S-A10-replaneacion.md)): el clima (Open-Meteo) sale del
+> producto, la pila del optimizador pasa a distancia · tarifa · rating de
+> operador · horas de operador, y el plan se rehace solo ante una máquina que
+> deja de operar. Ver §6, §7.1, §9 y §12.1.
 
 Sos un **ingeniero principal full-stack y agente de implementación** trabajando en
 **ECON NECT**: el **middleware visual** de la operación de maquinaria de Grupo
@@ -71,6 +77,12 @@ Las afirmaciones de evidencia se escriben como **hechos estructurales**
 > toca git, ni logs, ni capturas de pantalla del entregable: los scripts que
 > los leen (`npm run leer`, `npm run reconciliar`) solo imprimen nombres de
 > campo, veredictos y conteos — nunca estos valores.
+> **Tercero y cuarto** (verificado 13 de septiembre de 2026, planeación de
+> S-A10): en `ajax/drivers.php` el campo `fn` junta el código de trabajador y
+> el **nombre** del conductor (`"código - nombre"`), y el reporte de
+> conductores (`ajax/report.php?id=32`) trae `detailAlerts[].driver.name`. Los
+> lectores de S-A10 proyectan dentro del conector: solo sale el código antes
+> de `" - "`, y `detailAlerts` se descarta entero.
 
 **Antes de cada commit:** revisar que no entren secretos, volcados ni capturas.
 `git status` antes de `git add .`, siempre.
@@ -364,10 +376,9 @@ esa sección nombra — nunca dentro de `apps/web`:**
 - **Python 3 + FastAPI + OR-Tools (CP-SAT)**, únicamente en `services/solver/`
   (S-A7). Se comunica con Next.js por HTTP; no se importa como librería de
   Node.
-- **Open-Meteo** (API pública de clima, sin clave), únicamente en
-  `lib/conectores/clima.ts` (S-A7): `server-only`, coordenada redondeada a 1
-  decimal y sin logs. No es un dato de ECON; es una fuente externa que solo
-  alimenta una alerta.
+- ~~Open-Meteo~~ — **retirado el 13 de septiembre de 2026 (S-A10)**: el clima
+  salió del producto por decisión del usuario. No se reinstala ni se vuelve a
+  llamar.
 - **@dnd-kit** (`core`, `sortable`, `utilities`), únicamente en
   `components/calendario/` (S-B4), para la pila de prioridades reordenable. La
   instala A en S-A7.
@@ -436,6 +447,18 @@ Detalle completo en [01 Parte E](01-DEFINICION-DE-NEGOCIO.md).
 - **`remote_id` existe en vehículos, geocercas y tareas de Startrack, y está
   vacío en todos los registros.** Es nuestra recomendación central de
   arquitectura.
+- **El reporte de conductores de Startrack** (`ajax/report.php?id=32&format=json&start_date=…&end_date=…&driver_ids=&retdat=1`)
+  no es una lista `{success, data}`: devuelve `timezone`, `detail[]` (por
+  conductor y día: `ignOnTime`, `movingTime`, `distance`…), `detailAlerts[]` y
+  `scores[]` (`safety_score` 0–100). Su `driver_id` es el `i` de
+  `ajax/drivers.php`. `ignOnTime` va en **minutos, inferido** (todos ≤ 1440;
+  la web lo muestra en horas y minutos). Verificado 13 sep. 2026.
+- **Operador de Prisma ↔ conductor de Startrack se une por código:** el texto
+  de `fn` antes de `" - "` es idéntico al `cod_trabajador` en 15 de 16
+  operadores, 1:1. Nunca por nombre.
+- **Prisma no tiene detalle de operador por id** (`/api/maquinaria/operadores/{id}`
+  → 405), y **ninguna fecha de solicitud ni de uso de equipo trae hora**: todo
+  es `AAAA-MM-DD`.
 
 ---
 
@@ -491,6 +514,11 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
    principio C.3 que P1: Betinho sugiere y reenvía; el jefe confirma; recién
    ahí se actualiza un dato. Prueba de que una sugerencia sin confirmar no
    cambia ningún estado.
+8. **El replan ante una máquina caída solo propone** (S-A10). Hay que probar,
+   en vivo y transformando insumos reales, tres cosas: que una APROBADA cuya
+   máquina deja de operar recibe un reemplazo **sin usar esa máquina**; que
+   `cambios` nombra el motivo real; y que **ningún nombre de conductor** llega
+   a la respuesta.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -566,8 +594,12 @@ el criterio de honestidad.
 Un microservicio Python (`services/solver/`, FastAPI + OR-Tools CP-SAT) que
 propone, **para cada solicitud real de Prisma, qué máquina y qué operador**
 asignar en las fechas pedidas. La UI es un timeline estilo Notion, con filas
-por máquina y columnas por día. Prompts: [S-A7](prompts/S-A7-optimizador.md) ·
-[S-B4](prompts/S-B4-calendario.md) · [S-C4](prompts/S-C4-kpis-optimizador.md).
+por máquina y vistas **Semana** (columnas por día) y **Día** (columnas de hora,
+con bloques de día completo porque Prisma no registra hora). Prompts:
+[S-A7](prompts/S-A7-optimizador.md) · [S-B4](prompts/S-B4-calendario.md) ·
+[S-C4](prompts/S-C4-kpis-optimizador.md), **reemplazados en parte por
+[S-A10](prompts/S-A10-replaneacion.md)** (13 sep. 2026): donde contradigan,
+manda S-A10.
 
 > **Replaneado el 12 de septiembre de 2026 contra la cobertura real del
 > sandbox.** Solo datos en vivo, también en las pruebas. **Lo que el sandbox no
@@ -591,19 +623,36 @@ Las fechas de la solicitud son fijas. Una solicitud sin opción queda como **"si
 asignación posible", con su motivo**; `infactible` global solo si no se asigna
 ninguna.
 
+**Demanda:** las solicitudes PENDIENTE con período vigente. Una APROBADA es una
+decisión humana y el optimizador no la toca, **salvo que su máquina confirmada
+ya no pueda operar** (falla activa, paro u OBSOLETA). En ese caso vuelve a la
+demanda y se propone un reemplazo, y la UI aclara que la asignación en Prisma
+no se modifica.
+
 **Soft constraints** (preferencias que se optimizan sin violar ninguna hard
 constraint). Solo entran las que salen de campos reales:
 - distancia en línea recta entre geocercas (origen desconocido = **peor caso
   declarado**);
 - tarifa efectiva en USD/h (sin dato = peor caso declarado);
-- continuidad de operador;
-- holgura antes del inicio.
+- **operador con mejor rating**: `safety_score` (0–100) del reporte de
+  conductores de Startrack, unido al operador de Prisma por código (sin dato =
+  peor caso declarado);
+- **operador con menos horas trabajadas**: minutos con motor encendido
+  (`ignOnTime`) de los últimos 30 días. Un conductor unido pero sin actividad
+  registrada cuenta como 0 h; sin conductor unido, peor caso declarado.
 
-**Clima, solo como alerta.** No entra a la pila ni mueve fechas. Se consulta a
-Open-Meteo desde `lib/conectores/clima.ts`, con la coordenada redondeada a 1
-decimal y sin logs. Un día de lluvia es probabilidad ≥ 50 %. Las clases
-sensibles las marca el usuario: es criterio del planificador, no un dato de
-ECON.
+La holgura antes del inicio y la continuidad de operador **salieron** el 13 de
+septiembre de 2026.
+
+**Clima: retirado** el 13 de septiembre de 2026 por decisión del usuario. Ya no
+hay Open-Meteo, clases sensibles, alerta ni KPI de lluvia.
+
+**Replan ante cambios repentinos.** La página vuelve a optimizar en vivo cada
+60 s, rehaciendo todo el plan. El navegador manda solo los ids del plan
+anterior, y el servidor (puro, en `ensamblar`) devuelve `cambios`: qué
+asignación cambió y por qué (p. ej. *"CF-01 ya no puede operar: falla activa"*).
+En la demo, la falla se registra **en Prisma, sobre `NECT_EQUIPO_PROPIO`**;
+NECT no escribe nada.
 
 **La pila de prioridades es del usuario, no nuestra.** La UI deja reordenar las
 soft constraints en una pila (drag-and-drop). El solver optimiza la de más
@@ -617,10 +666,15 @@ solicitudes cubiertas.
 
 **KPIs nuevos de C** (con sus seis campos de [01 D.7](01-DEFINICION-DE-NEGOCIO.md),
 igual que cualquier otro KPI del catálogo):
-- ahorro proyectado por objetivo: asignación manual observada vs. propuesta,
-  solo donde ambas tienen dato real y con la cobertura a la vista;
-- asignaciones con lluvia probable en clases sensibles;
-- cobertura del plan.
+- **ahorro del plan frente a la peor opción válida**, por objetivo: tarifa
+  (USD/h, sin total, porque el sandbox no tiene horas por jornada), distancia
+  (km), rating (pts) y horas de operador (h). Se compara solo entre valores
+  reales, con la cobertura a la vista, y va arriba de todo en `/planeacion`;
+- **solicitudes cubiertas** (N de M), con la lista de no cubiertas, su motivo y
+  la acción.
+
+El KPI de lluvia y la comparación contra la asignación manual salieron el 13 de
+septiembre de 2026.
 
 El KPI de transporte (lowboy) salió: el sandbox no modela transporte. **Si un
 comparativo no tiene dato, el KPI dice qué dato falta, igual que cualquier

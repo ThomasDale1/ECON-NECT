@@ -294,14 +294,38 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
     critico: false,
   },
   {
-    modulo: 'Tareas',
-    campoPrisma: 'operador asignado (módulo Solicitudes u Operadores; nombre exacto de columna no confirmado)',
-    campoStartrack: 'Asignar (módulo Tareas), Conductor (módulo Vehículos)',
+    modulo: 'Operadores',
+    campoPrisma: 'cod_trabajador (/api/maquinaria/operadores)',
+    campoStartrack: 'fn (ajax/drivers.php, módulo Conductores)',
     tipoRelacion: 'requiere parseo',
     transformacion:
-      'El valor de Startrack junta el código de motorista y el nombre completo separados por guion largo (formato observado: "código — nombre"); extraer el código antes de comparar contra el operador de Prisma.',
+      'En la API, `fn` junta el código de trabajador y el nombre del conductor separados por " - " (el diccionario lo documenta con guion largo). Tomar el texto antes del primer " - ", recortado, y compararlo exacto contra `cod_trabajador`; unir solo si el código es único en los dos lados, y si no, no unir ninguno. Nunca por nombre: el nombre no sale del conector. Asignar (módulo Tareas) y Conductor (módulo Vehículos) referencian al mismo conductor según el diccionario, pero esos dos campos no se volvieron a verificar contra la API.',
     evidencia:
-      'Diccionario de datos, hoja STARTRACK (módulo Tareas, fila 33, y módulo Vehículos, fila 13): tipo "Usuario / referencia", con ejemplo en formato "código — nombre completo" (el nombre del ejemplo no se transcribe, AGENTS.md §1.2). Confirma 01 Parte E.8: "código embebido en texto libre" y "una columna con dos significados — nombre de usuario en unos registros, nombre de empresa en otros".',
+      'Verificado contra la API real el 13 de septiembre de 2026: `fn` de `ajax/drivers.php` con forma `código - nombre`; el prefijo coincide exacto y 1:1 con `cod_trabajador` en 15 de 16 operadores; 0 duplicados. Antecedente: diccionario de datos, hoja STARTRACK (módulo Tareas, fila 33, y módulo Vehículos, fila 13): tipo "Usuario / referencia", con ejemplo en formato "código — nombre completo" (el nombre del ejemplo no se transcribe, AGENTS.md §1.2). Confirma 01 Parte E.8: "código embebido en texto libre".',
+    confianza: 'alta',
+    critico: false,
+  },
+  {
+    modulo: 'Conductores',
+    campoPrisma: null,
+    campoStartrack: 'Calificación de seguridad del conductor — scores[].safety_score (ajax/report.php?id=32, reporte de conductores)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion:
+      'Valor de 0 a 100, más alto = mejor. Se une al operador de Prisma por el código de la fila anterior (`driver_id` = `i` de `ajax/drivers.php`). Si un conductor trae más de una calificación, no se promedia.',
+    evidencia:
+      'Verificado contra la API real el 13 de septiembre de 2026: el reporte no es una lista `{success, data}` sino `timezone`, `detail[]`, `detailAlerts[]` y `scores[]`; `scores[]` trae `driver_id` y `safety_score` numérico, con fila para 9 conductores. `detailAlerts[]` trae el nombre del conductor y se descarta al leer (AGENTS.md §1.2).',
+    confianza: 'alta',
+    critico: false,
+  },
+  {
+    modulo: 'Conductores',
+    campoPrisma: null,
+    campoStartrack: 'Horas con motor encendido por conductor y día — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion:
+      'Unidad minutos, inferida. Para las horas trabajadas de un operador se suman las filas de su conductor en los últimos 30 días y se dividen entre 60.',
+    evidencia:
+      'Verificado contra la API real el 13 de septiembre de 2026: `detail[]` trae una fila por conductor y día (`driver_id`, `vehicle_id`, `date`, `ignOnTime`, `movingTime`, `distance`…), con actividad para 10 conductores. La unidad no está declarada: se infiere minutos porque todos los valores observados son ≤ 1440 y la web de Startrack los muestra en horas y minutos.',
     confianza: 'media',
     critico: false,
   },
@@ -351,6 +375,19 @@ export const MATRIZ_MAPEO: FilaMapeo[] = [
       'Corrección verificada el 12 de septiembre contra `GET /api/job`, campo `remote_id`: ECON no lo llena en su operación; los valores presentes en el sandbox son escrituras de prueba de los equipos del hackathon — aparece poblado en parte de las tareas del pool compartido, incluida una nuestra que enlaza una solicitud por `remote_id`. La recomendación de arquitectura se mantiene y se refuerza: el mecanismo persiste, falta que Prisma lo llene sistemáticamente. No aparece como fila propia en el diccionario compartido.',
     confianza: 'alta',
     critico: true,
+  },
+
+  {
+    modulo: 'Solicitudes',
+    campoPrisma: 'created_at (solicitudes de maquinaria de Prisma)',
+    campoStartrack: null,
+    tipoRelacion: 'solo en Prisma',
+    transformacion:
+      'Define el orden de llegada del optimizador: primero en pedir, primero en ser atendido. A diferencia de fecha_inicio y fecha_fin, trae fecha y hora. Una solicitud sin valor interpretable va después de todas y se avisa; nunca se inventa una fecha.',
+    evidencia:
+      'Verificado contra la API real el 13 de septiembre de 2026: created_at con fecha y hora en 20 de 20 solicitudes; 15 valores distintos entre las 15 PENDIENTE vigentes, sin empates. Startrack no tiene la solicitud.',
+    confianza: 'alta',
+    critico: false,
   },
 
   // ── Mantenimiento (Startrack) ────────────────────────────────────────

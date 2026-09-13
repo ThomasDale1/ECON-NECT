@@ -3,8 +3,10 @@
 
 import { tareaFinalizada } from './catalogos'
 import type {
+  CodigoConductorStartrack,
   EquipoPrismaCrudo,
   GeocercaStartrackCruda,
+  OperadorPrismaCrudo,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
   VehiculoStartrackCrudo,
@@ -213,4 +215,50 @@ export function geocercaDeProyecto(
   geocercas: GeocercaStartrackCruda[],
 ): GeocercaStartrackCruda | null {
   return geocercaPorCodigoProyecto(equipo.project_name, geocercas)
+}
+
+/** operador de Prisma ↔ conductor de Startrack (S-A10 Paso 3). Une solo si el
+ * código antes de `" - "` en `fn` es IDÉNTICO al `cod_trabajador`, después de
+ * recortar los dos, y el código es único en los dos lados. Verificado el 13 de
+ * septiembre de 2026: 15 de 16 operadores con exactamente un conductor.
+ *
+ * Nunca por nombre ni por parecido. Si un código coincide con más de un
+ * conductor, o con más de un operador, no se une ninguno de esos y cuenta un
+ * conflicto: elegir "el primero" sería inventar la equivalencia (AGENTS.md
+ * §1.1). Un operador sin coincidencia no aparece en el mapa. */
+export function resolverConductoresDeOperadores(
+  operadores: OperadorPrismaCrudo[],
+  conductores: CodigoConductorStartrack[],
+): { conductorPorOperadorId: Map<string, string>; conflictos: number } {
+  const conductoresPorCodigo = new Map<string, string[]>()
+  for (const conductor of conductores) {
+    const codigo = conductor.prefijoFn?.trim()
+    if (!codigo) continue
+    const lista = conductoresPorCodigo.get(codigo) ?? []
+    lista.push(conductor.id)
+    conductoresPorCodigo.set(codigo, lista)
+  }
+
+  const operadoresPorCodigo = new Map<string, string[]>()
+  for (const operador of operadores) {
+    const codigo = operador.cod_trabajador?.trim()
+    if (!codigo) continue
+    const lista = operadoresPorCodigo.get(codigo) ?? []
+    lista.push(String(operador.id))
+    operadoresPorCodigo.set(codigo, lista)
+  }
+
+  const conductorPorOperadorId = new Map<string, string>()
+  let conflictos = 0
+  for (const [codigo, operadorIds] of operadoresPorCodigo) {
+    const conductorIds = conductoresPorCodigo.get(codigo)
+    if (!conductorIds) continue
+    if (operadorIds.length !== 1 || conductorIds.length !== 1) {
+      conflictos++
+      continue
+    }
+    conductorPorOperadorId.set(operadorIds[0], conductorIds[0])
+  }
+
+  return { conductorPorOperadorId, conflictos }
 }

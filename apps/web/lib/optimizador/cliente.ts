@@ -24,12 +24,12 @@ function baseUrl(): string {
 }
 
 /** Llama a `POST /optimizar`. Timeout = (cantidad de niveles × tiempo límite
- * por nivel) + 10s (Paso 4e) — el nivel 0 (cobertura) siempre corre, más uno
- * por cada elemento de la pila. Nunca loguea el cuerpo de la petición ni de
+ * por nivel) + 10s (Paso 4e) — un nivel por elemento de la pila (la cobertura
+ * va dentro de la pila desde el 13 de septiembre de 2026). Nunca loguea el cuerpo de la petición ni de
  * la respuesta (AGENTS.md §12.1). */
 export async function optimizarEnSolver(entrada: EntradaSolver): Promise<SalidaSolver> {
   const endpoint = '/optimizar'
-  const niveles = 1 + entrada.pila.length
+  const niveles = Math.max(entrada.pila.length, 1)
   const timeoutMs = niveles * entrada.tiempoLimitePorNivelS * 1000 + 10_000
 
   const controlador = new AbortController()

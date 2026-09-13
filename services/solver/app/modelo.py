@@ -1,4 +1,4 @@
-# El modelo CP-SAT (S-A7 Paso 2). Puro respecto a HTTP: recibe `EntradaSolver`
+# El modelo CP-SAT (S-A7 Paso 2, pila de S-A10 Paso 6). Puro respecto a HTTP: recibe `EntradaSolver`
 # ya validada, devuelve `SalidaSolver`. Nunca loguea ni persiste su entrada.
 #
 # Las hard constraints que dependen de datos (clase, operabilidad, ventana
@@ -94,19 +94,6 @@ def optimizar(entrada: EntradaSolver) -> SalidaSolver:
                 if _se_encima(dias_por_solicitud[s1], dias_por_solicitud[s2]):
                     model.Add(y[(s1, operador_id)] + y[(s2, operador_id)] <= 1)
 
-    # Continuidad: z[t,m,o] linealizado, solo para los pares (m,o) declarados.
-    z: dict[tuple[str, str, str], cp_model.IntVar] = {}
-    for c in entrada.continuidad:
-        for s_id in ids_solicitud:
-            clave_x = (s_id, c.maquina_id)
-            clave_y = (s_id, c.operador_id)
-            if clave_x in x and clave_y in y:
-                zv = model.NewBoolVar(f"z_{s_id}_{c.maquina_id}_{c.operador_id}")
-                model.Add(zv <= x[clave_x])
-                model.Add(zv <= y[clave_y])
-                model.Add(zv >= x[clave_x] + y[clave_y] - 1)
-                z[(s_id, c.maquina_id, c.operador_id)] = zv
-
     def expr_cobertura():
         return sum(a.values()) if a else 0
 
@@ -116,35 +103,79 @@ def optimizar(entrada: EntradaSolver) -> SalidaSolver:
     def expr_tarifa():
         return sum(p.tarifa_centavos * x[(p.solicitud_id, p.maquina_id)] for p in entrada.pares)
 
-    def expr_holgura():
-        return sum(p.holgura_dias * x[(p.solicitud_id, p.maquina_id)] for p in entrada.pares)
+    rating_por_operador: dict[str, int] = {o.operador_id: o.rating_decimas for o in entrada.operadores}
+    minutos_por_operador: dict[str, int] = {o.operador_id: o.minutos_motor for o in entrada.operadores}
 
-    def expr_continuidad():
-        return sum(z.values()) if z else 0
+    def expr_rating():
+        # Operador con mejor rating: Σ rating_decimas[o] · y[t,o] → maximizar.
+        return sum(rating_por_operador[o_id] * var for (_, o_id), var in y.items()) if y else 0
+
+    def expr_horas():
+        # Operador con menos horas trabajadas: Σ minutos_motor[o] · y[t,o] → minimizar.
+        return sum(minutos_por_operador[o_id] * var for (_, o_id), var in y.items()) if y else 0
 
     EXPRESION_POR_OBJETIVO = {
         "cobertura": expr_cobertura,
         "distancia": expr_distancia,
         "tarifa": expr_tarifa,
-        "holgura": expr_holgura,
-        "continuidadOperador": expr_continuidad,
+        "ratingOperador": expr_rating,
+        "horasOperador": expr_horas,
     }
     SENTIDO_POR_OBJETIVO = {
         "cobertura": "max",
         "distancia": "min",
         "tarifa": "min",
-        "holgura": "max",
-        "continuidadOperador": "max",
+        "ratingOperador": "max",
+        "horasOperador": "min",
     }
 
-    niveles_a_optimizar: list[ObjetivoNivel] = ["cobertura", *entrada.pila]
+    # La cobertura va dentro de la pila (13 sep. 2026): el esquema ya validó
+    # que esté y que vaya antes que distancia, tarifa, rating y horas.
+    niveles_a_optimizar: list[ObjetivoNivel] = list(entrada.pila)
 
     niveles_resultado: list[NivelSalida] = []
     solver = cp_model.CpSolver()
     solver.parameters.max_time_in_seconds = entrada.tiempo_limite_por_nivel_s
     solver.parameters.random_seed = SEMILLA_FIJA
 
+    # Orden de llegada (primero en pedir, primero en ser atendido):
+    # lexicográfico por rango de llegada. Para cada rango, del primero al
+    # último, se maximiza cuántas solicitudes de ese rango quedan cubiertas y se
+    # fija ese óptimo antes de pasar al siguiente: una solicitud anterior nunca
+    # pierde su máquina para cubrir otras posteriores. Por pasos y no con pesos
+    # 2^rango, para no desbordar los coeficientes con muchas solicitudes.
+    ids_por_rango: dict[int, list[str]] = defaultdict(list)
+    for s in entrada.solicitudes:
+        ids_por_rango[s.rango_llegada].append(s.id)
+
+    def optimizar_orden_llegada() -> NivelSalida:
+        rangos = sorted(ids_por_rango.keys())
+        if not rangos:
+            return NivelSalida(objetivo="ordenLlegada", valor=0, probado_optimo=True)
+        probado = True
+        solver.parameters.max_time_in_seconds = max(entrada.tiempo_limite_por_nivel_s / len(rangos), 0.2)
+        try:
+            for rango in rangos:
+                expr_rango = sum(a[s_id] for s_id in ids_por_rango[rango])
+                model.Maximize(expr_rango)
+                status_rango = solver.Solve(model)
+                if status_rango not in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+                    raise NivelInfactibleError("ordenLlegada", solver.StatusName(status_rango))
+                valor_rango = round(solver.ObjectiveValue())
+                if status_rango == cp_model.OPTIMAL:
+                    model.Add(expr_rango == valor_rango)
+                else:
+                    probado = False
+                    model.Add(expr_rango >= valor_rango)
+        finally:
+            solver.parameters.max_time_in_seconds = entrada.tiempo_limite_por_nivel_s
+        cubiertas = sum(solver.Value(v) for v in a.values())
+        return NivelSalida(objetivo="ordenLlegada", valor=cubiertas, probado_optimo=probado)
+
     for objetivo in niveles_a_optimizar:
+        if objetivo == "ordenLlegada":
+            niveles_resultado.append(optimizar_orden_llegada())
+            continue
         expr = EXPRESION_POR_OBJETIVO[objetivo]()
         sentido = SENTIDO_POR_OBJETIVO[objetivo]
         if sentido == "max":

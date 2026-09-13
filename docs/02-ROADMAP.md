@@ -103,8 +103,9 @@ la mañana. **Si vamos tarde, se corta de abajo hacia arriba, sin discutirlo:**
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
-  0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4 — fase
-                                                      extendida, ver AGENTS.md §12)
+  0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4, replaneado
+                                                      en S-A10 — fase extendida,
+                                                      ver AGENTS.md §12)
   ── LÍNEA ROJA: nada de aquí para arriba se corta ──
       Conectores · mapeo de datos en vivo · reglas · ficha unificada ·
       bandeja de incoherencias · matriz de mapeo · RACI ·
@@ -392,7 +393,8 @@ propone: no escribe nada.** Prompt: [prompts/S-A7-optimizador.md](../prompts/S-A
 > sandbox** (medida en vivo, solo conteos). Quedó fuera todo lo que el sandbox no
 > expone: **lowboy, cabezal, horario laboral y velocidad de traslado.** Ninguno
 > existe en Prisma ni en Startrack, y un supuesto inventado se vería como dato en
-> la demo (C.1). La única fuente externa es el clima, y solo como alerta.
+> la demo (C.1). La única fuente externa era el clima, como alerta; **salió el
+> 13 de septiembre de 2026** ([S-A10](../prompts/S-A10-replaneacion.md)).
 
 - **Solo datos en vivo, también en las pruebas: nada inventado.** Los insumos
   son:
@@ -425,17 +427,14 @@ propone: no escribe nada.** Prompt: [prompts/S-A7-optimizador.md](../prompts/S-A
   - distancia en línea recta entre geocercas (origen desconocido = peor caso
     declarado);
   - tarifa efectiva, en USD/h (moneda inferida: la operación es en El Salvador);
-  - continuidad de operador (`associated_operators`);
-  - holgura antes del inicio.
+  - ~~continuidad de operador~~ y ~~holgura antes del inicio~~ → reemplazadas
+    en S-A10 por **operador con mejor rating** y **operador con menos horas
+    trabajadas** (Startrack, unidos a Prisma por código).
 
   Una de menor prioridad nunca empeora a una de mayor.
-- **Clima:** alerta en la tarjeta, no mueve nada.
-  - Fuente: Open-Meteo, con la coordenada redondeada a 1 decimal y sin logs.
-  - Día de lluvia = probabilidad ≥ 50 %.
-  - Las clases sensibles las marca el usuario.
+- ~~**Clima**~~: retirado en S-A10.
 - Archivos: `lib/optimizador/` (contrato, adaptador, cliente, verificador,
-  orquestador) + `lib/conectores/clima.ts` + `app/api/optimizar/route.ts` (ruta
-  delgada).
+  orquestador) + `app/api/optimizar/route.ts` (ruta delgada).
 
 **Termina cuando:** con el sandbox vivo, `POST /api/optimizar` devuelve una
 propuesta que el verificador aprueba. Además, `npm run test:vivo` demuestra tres
@@ -456,8 +455,9 @@ Contra el contrato de `lib/optimizador/tipos.ts` de A y contra la ruta real,
   con el motivo.
 - Panel de **pila de prioridades** reordenable (@dnd-kit + botones ↑↓): "más
   arriba se protege primero" tiene que ser legible sin explicación.
-- Casillas de **clases sensibles a la lluvia** (criterio del planificador) y
-  alerta de lluvia en la tarjeta.
+- ~~Casillas de clases sensibles a la lluvia~~: retiradas en S-A10, que además
+  agrega la vista **Día** (00:00–24:00), los KPIs arriba de todo y el aviso de
+  cambios del replan automático.
 - Re-optimizar llama a `POST /api/optimizar` y refresca el calendario.
 - **"Sin asignación posible" es un estado de UI de primera clase** (mismo
   espíritu que `SIN_EVIDENCIA`): nunca se fuerza una tarjeta. Es neutro, nunca
@@ -479,12 +479,12 @@ mismos seis campos, sin excepción. Prompt: [prompts/S-C4-kpis-optimizador.md](.
 
 - Tres KPIs nuevos en `lib/kpi/catalogo.ts`, con su cálculo puro en
   `lib/kpi/optimizador.ts`:
-  - **Ahorro proyectado por objetivo:** compara la asignación manual observada
-    de las solicitudes aprobadas contra la propuesta, objetivo por objetivo, solo
-    donde ambas tienen dato real y con la cobertura a la vista.
-  - **Asignaciones con lluvia probable en clases sensibles.**
-  - **Cobertura del plan:** solicitudes con asignación posible sobre el total
-    evaluable.
+  - **Ahorro proyectado por objetivo** → en S-A10 pasa a ser **ahorro frente a
+    la peor opción válida** (tarifa, distancia, rating y horas de operador),
+    porque ninguna aprobada tenía asignación manual comparable.
+  - ~~Asignaciones con lluvia probable en clases sensibles~~: retirado en S-A10.
+  - **Cobertura del plan** → en S-A10 pasa a ser **"Solicitudes cubiertas: N de
+    M"**, con las no cubiertas y su motivo.
 - El "costo evitado de transporte (lowboy)" **salió**: el sandbox no modela
   transporte.
 - La moneda es **USD, inferida** (la operación es en El Salvador; Prisma no la
@@ -494,6 +494,28 @@ mismos seis campos, sin excepción. Prompt: [prompts/S-C4-kpis-optimizador.md](.
 
 **Termina cuando:** tras correr el optimizador, los tres tiles muestran su cifra
 con la fórmula visible, o dicen qué dato falta.
+
+---
+
+### 🟦🟩🟪 S-A10 — Replaneación del optimizador · *fase extendida, 13 sep. 01:50 CST* · Carriles A → C → B, una sola sesión
+
+Corrige y mejora `/planeacion` con feedback directo del usuario. Prompt:
+[prompts/S-A10-replaneacion.md](../prompts/S-A10-replaneacion.md).
+
+- **KPIs arriba de todo:** ahorro frente a la peor opción válida (USD/h, km,
+  pts, h) y solicitudes cubiertas (N de M, con motivos).
+- **Pila nueva:** distancia · tarifa · operador con mejor rating · operador con
+  menos horas trabajadas. Salen la holgura, la continuidad y el clima completo.
+- **Vista Día** con horas de 00:00 a 24:00 (bloques de día completo: Prisma no
+  registra hora). Sale el panel lateral del día.
+- **Replan automático cada 60 s:** una APROBADA cuya máquina deja de operar
+  vuelve a la demanda con un reemplazo propuesto, y el servidor devuelve
+  `cambios` con su motivo. Nada se escribe.
+
+**Termina cuando:** `/planeacion` abre con los KPIs arriba y la pila nueva; al
+registrar una falla en Prisma sobre `NECT_EQUIPO_PROPIO`, en ≤ ~105 s aparece
+el aviso *"Plan rehecho…"* con el reemplazo; y `test:vivo` pasa las pruebas de
+identidad sin fugas, APROBADA rota y cambios. Se corta primero la vista Día.
 
 ---
 

@@ -84,53 +84,36 @@ export const CATALOGO_KPI: Kpi[] = [
   },
   {
     id: 'ahorro-por-objetivo-optimizador',
-    nombre: 'Ahorro proyectado por objetivo (asignación manual vs. optimizador)',
+    nombre: 'Ahorro del plan frente a la peor opción válida',
     queMide:
-      'En las solicitudes APROBADA que ya tienen una máquina asignada a mano en Prisma, cuánto mejora la asignación que propone el optimizador en cada objetivo de la pila (distancia, tarifa efectiva, holgura, continuidad de operador). Solo cuenta los casos donde ambas asignaciones tienen dato real.',
+      'Por cada solicitud que el plan cubre, cuánto mejor es la máquina y el operador elegidos que la peor opción que también cumplía todas las restricciones duras de esa solicitud, en tarifa efectiva (USD/h), distancia al proyecto (km), rating del operador (pts, Startrack) y horas trabajadas del operador (h con motor encendido, últimos 30 días).',
     porQueImporta:
-      'Compara la propuesta contra lo que la operación hizo de verdad, no contra un escenario imaginado. Es el argumento de reducción de costos y tiempos muertos, con su cobertura a la vista (01 E.6).',
+      'Muestra el costo de asignar sin criterio dentro de lo que es válido: la diferencia entre la mejor y la peor decisión posible con la flota y la gente disponibles hoy. Es el argumento de costo por hora, traslado, seguridad y reparto de carga, con su cobertura a la vista.',
     formula:
-      'Por objetivo, Σ sobre las aprobadas comparables de (valor manual − valor propuesto) para distancia y tarifa, y de (valor propuesto − valor manual) para holgura y continuidad. Positivo = la propuesta es mejor. Comparable = ambos valores no nulos y sin peor caso aplicado.',
+      'Por objetivo, Σ sobre las asignaciones comparables de (peor − elegido) para tarifa, distancia y horas, y de (elegido − peor) para rating. Positivo = el plan es mejor. Comparable = valor elegido real (no nulo y sin peor caso) y peor opción con dato real. Para rating se muestra además el promedio por asignación.',
     referencia:
-      'Contra 0 (la asignación manual observada). Cobertura verificada el 12 de septiembre de 2026: la tarifa efectiva está poblada en 8 de 16 equipos; la distancia, la holgura y la continuidad de la asignación manual no son calculables, porque el sandbox no registra dónde estaba la máquina antes de moverse, su ocupación previa ni el operador de la solicitud. La cobertura de cada objetivo se muestra junto al número. Moneda: USD inferido (la operación es en El Salvador; Prisma no la declara).',
+      'Contra 0 (elegir la peor opción válida). La peor opción se evalúa por separado para cada objetivo y solo entre valores reales. Cobertura verificada el 13 de septiembre de 2026: tarifa efectiva en 8 de 16 equipos; rating en 9 de 16 operadores; horas en 10 de 16 (0 h si el conductor unido no tuvo actividad); unión operador↔conductor por código en 15 de 16. Sin total en USD: el sandbox no registra horas por jornada. Moneda: USD inferido (la operación es en El Salvador; Prisma no la declara).',
     accionQueDispara:
-      'Revisar con Logística las solicitudes donde la propuesta mejora la tarifa antes de confirmar la siguiente asignación. Si la cobertura es baja, pedir que se registre el origen y el operador de cada asignación.',
+      'Confirmar con Logística la asignación propuesta antes de asignar a mano. Si un objetivo tiene baja cobertura, pedir que se registre el dato faltante (tarifa efectiva en Prisma, o el código de trabajador en el nombre del conductor en Startrack).',
     porQueNingunaPlataformaLoVeSola:
-      'Prisma tiene la asignación manual y la tarifa, y Startrack tiene las geocercas que dan la distancia. Ninguna de las dos compara lo asignado contra una asignación alternativa óptima.',
-    datoFaltante: null,
-  },
-  {
-    id: 'lluvia-clases-sensibles-optimizador',
-    nombre: 'Asignaciones con lluvia probable en clases sensibles',
-    queMide:
-      'De las asignaciones propuestas para clases que el planificador marcó como sensibles a la lluvia (trabajos como aplanar tierra o aplicar mezclas), cuántas tienen al menos un día con probabilidad máxima de precipitación ≥ 50 % dentro de su período.',
-    porQueImporta:
-      'Una máquina movilizada para trabajar en días de lluvia es tiempo muerto pagado. La operación es en El Salvador, en temporada de lluvias en septiembre. Anticiparlo permite reprogramar antes de movilizar.',
-    formula:
-      'Conteo de asignaciones con clase ∈ clases sensibles y al menos un día con precipitation_probability_max ≥ 50 %, sobre el total de asignaciones de clases sensibles. Las que no tienen pronóstico se reportan aparte.',
-    referencia:
-      'Contra 0. Fuente: pronóstico diario de Open-Meteo (16 días, zona America/El_Salvador, coordenada de la geocerca del proyecto redondeada a 1 decimal). Las clases sensibles son criterio del planificador, no un dato de Prisma ni de Startrack. Un día fuera del horizonte de pronóstico cuenta como "sin pronóstico", nunca como día seco.',
-    accionQueDispara:
-      'Reprogramar la solicitud con la Gerencia de Proyecto, o preparar un plan alterno de trabajo antes de movilizar la máquina.',
-    porQueNingunaPlataformaLoVeSola:
-      'Prisma tiene las fechas y la clase, y Startrack la geocerca del proyecto. Ninguna de las dos integra un pronóstico del clima.',
+      'Prisma tiene las solicitudes, la disponibilidad y la tarifa; Startrack tiene las geocercas, la calificación y las horas de motor de cada conductor. Ninguna une al operador con su conductor ni compara la decisión contra las alternativas válidas.',
     datoFaltante: null,
   },
   {
     id: 'cobertura-plan-optimizador',
-    nombre: 'Cobertura del plan de asignación',
+    nombre: 'Solicitudes cubiertas por el plan',
     queMide:
-      'Proporción de solicitudes evaluables (PENDIENTE o APROBADA con período vigente) para las que existe una asignación que respeta todas las restricciones duras.',
+      'De las solicitudes con período vigente (PENDIENTE, y APROBADA cuya máquina confirmada ya no puede operar), cuántas tienen máquina y operador que cumplen todas las restricciones duras.',
     porQueImporta:
-      'Dice cuánta demanda de maquinaria puede cubrir la flota actual sin romper la disponibilidad real. Las solicitudes que no se cubren son un faltante de flota que hoy se descubre tarde.',
+      'Dice cuánta demanda de maquinaria puede cubrir la flota actual sin romper la disponibilidad real, incluida la solicitud que se queda sin máquina porque la confirmada cayó. Las solicitudes que no se cubren son un faltante de flota que hoy se descubre tarde.',
     formula:
-      'Asignaciones propuestas ÷ (asignaciones propuestas + solicitudes sin asignación posible). Las excluidas (período vencido) no entran al denominador y se reportan aparte.',
+      'Cubiertas de evaluadas, donde evaluadas = cubiertas + sin asignación posible. Las excluidas (período vencido) se reportan aparte.',
     referencia:
-      'Contra 100 %. Cada solicitud no cubierta trae su motivo concreto: clase, operabilidad, ventana u operador.',
+      'Contra el total de evaluadas: todas cubiertas. Cada solicitud no cubierta trae su motivo concreto: clase, operabilidad, ventana u operador, y la lista va en orden de llegada (created_at). Si en la pila el orden de llegada va antes que la cobertura, el plan puede cubrir menos a propósito: una solicitud anterior no pierde su máquina para cubrir otras posteriores.',
     accionQueDispara:
-      'Escalar a Logística las solicitudes sin asignación posible para rentar, reprogramar o reasignar.',
+      'Por cada no cubierta, según su motivo: rentar (0 máquinas de la clase), reprogramar (máquinas ocupadas en la ventana) o reasignar operador.',
     porQueNingunaPlataformaLoVeSola:
-      'Prisma tiene la demanda y la ocupación, pero no evalúa si toda la demanda cabe a la vez respetando la disponibilidad real, que ni siquiera es un campo (01 E.2). Startrack no ve la demanda.',
+      'Prisma tiene la demanda y la ocupación, pero no evalúa si toda la demanda cabe a la vez respetando la disponibilidad real, que ni siquiera es un campo (01 E.2), ni propone un reemplazo cuando una máquina confirmada deja de operar. Startrack no ve la demanda.',
     datoFaltante: null,
   },
 ]

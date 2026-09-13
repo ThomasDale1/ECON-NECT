@@ -1,6 +1,6 @@
 import { Exo, Lato, Roboto_Condensed } from 'next/font/google'
 import { BarraLateral } from '@/components/comando/barra-lateral'
-import type { SaludFuente } from '@/lib/tipos/canonico'
+import { leerFlota } from '@/lib/lectura/flota'
 
 /**
  * Envoltorio de las pantallas de ECON NECT: barra lateral fija + área de trabajo.
@@ -22,21 +22,20 @@ const robotoCondensed = Roboto_Condensed({
   display: 'swap',
 })
 
-// DATOS FABRICADOS — no provienen del sandbox de ECON.
-// TODO carril A: reemplazar por la salud real de cada conector cuando exista la
-// ruta de API. La barra lateral ya consume el tipo del contrato, así que el
-// cambio es sustituir esta constante por la lectura del servidor.
-const SALUD: SaludFuente[] = [
-  { plataforma: 'prisma', estado: 'ok', ultimaLecturaBuena: null, latenciaMs: null },
-  { plataforma: 'startrack', estado: 'ok', ultimaLecturaBuena: null, latenciaMs: null },
-]
+// La salud de cada conector es real desde S-A3: sale de `lib/lectura/flota.ts`,
+// que mide cada plataforma por separado y declara la que no respondió. No pasa
+// por `GET /api/salud` porque esto ya corre en el servidor; la caché de
+// conectores (45 s) evita que cada navegación vuelva a golpear el sandbox.
+export const dynamic = 'force-dynamic'
 
-export default function NectLayout({ children }: { children: React.ReactNode }) {
+export default async function NectLayout({ children }: { children: React.ReactNode }) {
+  const { salud } = await leerFlota({ incluirPosicionEnVivo: false })
+
   return (
     <div
       className={`${exo.variable} ${lato.variable} ${robotoCondensed.variable} flex min-h-screen bg-background font-sans text-foreground antialiased`}
     >
-      <BarraLateral salud={SALUD} />
+      <BarraLateral salud={salud} />
       <div className="flex min-w-0 flex-1 flex-col">{children}</div>
     </div>
   )

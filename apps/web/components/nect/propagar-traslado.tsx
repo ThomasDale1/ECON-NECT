@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { CircleCheck } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
@@ -160,7 +161,7 @@ export function PropagarTraslado({
           )}
 
           {estado.fase === 'error' && (
-            <p role="alert" className="font-label text-sm text-veredicto-riesgo">
+            <p role="alert" className="font-label text-sm text-destructive">
               {estado.mensaje}
             </p>
           )}
@@ -190,7 +191,8 @@ export function PropagarTraslado({
 
           {estado.fase === 'hecho' && (
             <div className="flex flex-col gap-2">
-              <p className="font-label text-sm text-veredicto-coherente">
+              <p className="flex items-center gap-2 font-label text-sm">
+                <CircleCheck aria-hidden className="size-4 shrink-0" />
                 Tarea creada{estado.rastro.tareaCreadaId ? ` · id ${estado.rastro.tareaCreadaId}` : ''}.
               </p>
               <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-label text-[12px] text-muted-foreground">

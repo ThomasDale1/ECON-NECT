@@ -1,33 +1,26 @@
-// Pruebas EN VIVO de los KPIs del optimizador (S-C4 §Pruebas). Nunca corren
-// en `npm run test` (vitest.config.ts las excluye) — requieren el sandbox
-// real y el solver local levantado. Corren con `npm run test:vivo`.
+// Pruebas EN VIVO de los KPIs del optimizador (S-C4 §Pruebas, reescritas en
+// S-A10 Paso 11). Nunca corren en `npm run test` (vitest.config.ts las
+// excluye) — requieren el sandbox real y el solver local levantado. Corren
+// con `npm run test:vivo`.
 //
 // Regla de esta suite (AGENTS.md §1.2/§9.6): sin datos inventados. Cada caso
 // se recuenta a mano sobre una respuesta real de `planear()` — nunca
-// fixtures ni `toMatchSnapshot`. Si el sandbox o el solver no responden, la
-// prueba falla con un mensaje etiquetado — nunca `skip` en silencio.
+// fixtures ni `toMatchSnapshot`. Los `expect` son sobre conteos y booleanos:
+// ningún valor aparece en un mensaje de falla. Si el sandbox o el solver no
+// responden, la prueba falla con un mensaje etiquetado — nunca `skip` en
+// silencio.
 
 import { beforeAll, describe, expect, it } from 'vitest'
-import { CATALOGO_CLASE_EQUIPO } from '@/lib/canonico/catalogos'
 import { asegurarEntornoCargado } from '@/lib/conectores/entorno'
-import { leerInsumosOptimizador } from '@/lib/optimizador/insumos'
 import { planear } from '@/lib/optimizador/planear'
-import { SOFT_CONSTRAINTS } from '@/lib/optimizador/tipos'
+import { PRIORIDADES_PILA, SOFT_CONSTRAINTS, type RespuestaOptimizar } from '@/lib/optimizador/tipos'
 import { calcularKpisOptimizador } from './optimizador'
 
 asegurarEntornoCargado()
 
-beforeAll(async () => {
-  try {
-    await leerInsumosOptimizador()
-  } catch (error) {
-    throw new Error(
-      `PRECONDICIÓN FALLIDA: el sandbox no respondió (PRISMA_BASE_URL/STARTRACK_BASE_URL en .env.local): ${
-        error instanceof Error ? error.message : String(error)
-      }`,
-    )
-  }
+let respuesta: RespuestaOptimizar
 
+beforeAll(async () => {
   const solverBaseUrl = process.env.SOLVER_BASE_URL
   if (!solverBaseUrl) {
     throw new Error('PRECONDICIÓN FALLIDA: falta SOLVER_BASE_URL en .env.local')
@@ -43,90 +36,85 @@ beforeAll(async () => {
         })`,
     )
   }
-}, 60_000)
 
-describe('calcularKpisOptimizador — pruebas en vivo (S-C4)', () => {
-  it('1. cobertura recontada a mano: asignadas / (asignadas + sinAsignacion), excluidas fuera', async () => {
-    const respuesta = await planear({ pila: [...SOFT_CONSTRAINTS], clasesSensiblesLluvia: [] })
+  try {
+    respuesta = await planear({ pila: [...PRIORIDADES_PILA], planAnterior: null })
+  } catch (error) {
+    throw new Error(
+      `PRECONDICIÓN FALLIDA: el sandbox o el solver no respondieron al planear: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    )
+  }
+}, 120_000)
+
+describe('calcularKpisOptimizador — pruebas en vivo (S-C4 / S-A10)', () => {
+  it('1. cubiertas recontadas a mano: cubiertas, evaluadas, no cubiertas y excluidas', () => {
     const kpis = calcularKpisOptimizador(respuesta)
+    const cubiertas = kpis.solicitudesCubiertas
 
-    const evaluadasEsperadas = respuesta.asignaciones.length + respuesta.sinAsignacion.length
-    expect(kpis.coberturaPlan.asignadas).toBe(respuesta.asignaciones.length)
-    expect(kpis.coberturaPlan.evaluadas).toBe(evaluadasEsperadas)
-    expect(kpis.coberturaPlan.excluidas).toBe(respuesta.excluidas.length)
-
-    if (evaluadasEsperadas === 0) {
-      expect(kpis.coberturaPlan.valor).toBeNull()
-      expect(kpis.coberturaPlan.datoFaltante).not.toBeNull()
-    } else {
-      expect(kpis.coberturaPlan.valor).toBeCloseTo(respuesta.asignaciones.length / evaluadasEsperadas)
-      expect(kpis.coberturaPlan.datoFaltante).toBeNull()
-    }
+    expect(cubiertas.cubiertas).toBe(respuesta.asignaciones.length)
+    expect(cubiertas.evaluadas).toBe(cubiertas.cubiertas + respuesta.sinAsignacion.length)
+    expect(cubiertas.noCubiertas.length).toBe(respuesta.sinAsignacion.length)
+    expect(cubiertas.excluidas).toBe(respuesta.excluidas.length)
+    expect(cubiertas.datoFaltante === null).toBe(cubiertas.evaluadas > 0)
   })
 
-  it('2. lluvia: pila vacía de clases → datoFaltante; con todas las clases del catálogo, conteo coincide con recuento manual por clima.estado', async () => {
-    const respuestaVacia = await planear({ pila: [...SOFT_CONSTRAINTS], clasesSensiblesLluvia: [] })
-    const kpisVacia = calcularKpisOptimizador(respuestaVacia)
-    expect(kpisVacia.lluviaClasesSensibles.asignacionesConLluvia).toBeNull()
-    expect(kpisVacia.lluviaClasesSensibles.datoFaltante).not.toBeNull()
-
-    const respuestaTodas = await planear({
-      pila: [...SOFT_CONSTRAINTS],
-      clasesSensiblesLluvia: [...CATALOGO_CLASE_EQUIPO],
-    })
-    const kpisTodas = calcularKpisOptimizador(respuestaTodas)
-
-    const sensibles = respuestaTodas.asignaciones.filter((a) => a.clima.estado !== 'no_aplica')
-    const sinPronostico = sensibles.filter((a) => a.clima.estado === 'sin_pronostico').length
-    const conLluvia = sensibles.filter((a) => a.clima.estado === 'evaluado' && a.clima.diasConLluvia >= 1).length
-
-    expect(kpisTodas.lluviaClasesSensibles.asignacionesSensibles).toBe(sensibles.length)
-    expect(kpisTodas.lluviaClasesSensibles.sinPronostico).toBe(sinPronostico)
-
-    if (sensibles.length > 0 && sinPronostico === sensibles.length) {
-      expect(kpisTodas.lluviaClasesSensibles.asignacionesConLluvia).toBeNull()
-      expect(kpisTodas.lluviaClasesSensibles.datoFaltante).not.toBeNull()
-    } else {
-      expect(kpisTodas.lluviaClasesSensibles.asignacionesConLluvia).toBe(conLluvia)
-      expect(kpisTodas.lluviaClasesSensibles.datoFaltante).toBeNull()
-    }
-  })
-
-  it('3. ahorro: comparables nunca cuenta null ni peorCasoAplicado; mejoraTotal coincide con suma manual con el sentido de cada objetivo', async () => {
-    const respuesta = await planear({ pila: [...SOFT_CONSTRAINTS], clasesSensiblesLluvia: [] })
+  it('2. ahorro: comparables sin nulos ni peor caso, toda mejora ≥ 0 y mejoraTotal igual a la suma manual', () => {
     const kpis = calcularKpisOptimizador(respuesta)
 
-    expect(kpis.ahorroPorObjetivo.map((k) => k.objetivo)).toEqual(respuesta.pila)
-
-    const conManual = respuesta.asignaciones.filter((a) => a.manual !== null)
-    const totalAprobadasEsperado = conManual.length + respuesta.sinAsignacion.filter((s) => s.manual !== null).length
+    expect(kpis.ahorroPorObjetivo.map((k) => k.objetivo)).toEqual([...SOFT_CONSTRAINTS])
 
     for (const kpi of kpis.ahorroPorObjetivo) {
       const objetivo = kpi.objetivo
-      const comparablesEsperadas = conManual.filter((a) => {
-        const propuesta = a.objetivos[objetivo]
-        const manual = a.manual!.objetivos[objetivo]
-        return (
-          propuesta.valor !== null && manual.valor !== null && !propuesta.peorCasoAplicado && !manual.peorCasoAplicado
-        )
+      const comparablesManual = respuesta.asignaciones.filter(
+        (a) =>
+          a.objetivos[objetivo].valor !== null &&
+          !a.objetivos[objetivo].peorCasoAplicado &&
+          a.peorOpcionValida[objetivo].valor !== null,
+      )
+      const mejoras = comparablesManual.map((a) => {
+        const elegido = a.objetivos[objetivo].valor!
+        const peor = a.peorOpcionValida[objetivo].valor!
+        return objetivo === 'ratingOperador' ? elegido - peor : peor - elegido
       })
 
-      expect(kpi.comparables).toBe(comparablesEsperadas.length)
-      expect(kpi.totalAprobadas).toBe(totalAprobadasEsperado)
+      expect(kpi.comparables, `${objetivo}: comparables no coincide con el recuento manual`).toBe(comparablesManual.length)
+      expect(kpi.asignaciones).toBe(respuesta.asignaciones.length)
+      expect(kpi.enPila).toBe(respuesta.pila.includes(objetivo))
+      expect(
+        mejoras.filter((m) => m < -1e-9).length,
+        `${objetivo}: una mejora por asignación comparable es negativa`,
+      ).toBe(0)
 
-      if (comparablesEsperadas.length === 0) {
-        expect(kpi.mejoraTotal).toBeNull()
-        expect(kpi.datoFaltante).not.toBeNull()
+      if (comparablesManual.length === 0) {
+        expect(kpi.mejoraTotal === null && kpi.mejoraPromedio === null, `${objetivo}: sin comparables la cifra no es null`).toBe(
+          true,
+        )
+        expect(kpi.datoFaltante !== null, `${objetivo}: sin comparables no trae datoFaltante`).toBe(true)
       } else {
-        const minimiza = objetivo === 'distancia' || objetivo === 'tarifa'
-        const sumaManual = comparablesEsperadas.reduce((suma, a) => {
-          const valorPropuesto = a.objetivos[objetivo].valor!
-          const valorManual = a.manual!.objetivos[objetivo].valor!
-          return suma + (minimiza ? valorManual - valorPropuesto : valorPropuesto - valorManual)
-        }, 0)
-        expect(kpi.mejoraTotal).toBeCloseTo(sumaManual)
+        const sumaManual = mejoras.reduce((suma, m) => suma + m, 0)
+        expect(
+          kpi.mejoraTotal !== null && Math.abs(kpi.mejoraTotal - sumaManual) < 1e-6,
+          `${objetivo}: mejoraTotal no coincide con la suma manual`,
+        ).toBe(true)
+        expect(
+          kpi.mejoraPromedio !== null && Math.abs(kpi.mejoraPromedio - sumaManual / comparablesManual.length) < 1e-6,
+          `${objetivo}: mejoraPromedio no coincide con la suma manual / comparables`,
+        ).toBe(true)
         expect(kpi.datoFaltante).toBeNull()
       }
     }
+  })
+
+  it('3. las no cubiertas se listan en orden de llegada (created_at), sin marca al final', () => {
+    const kpis = calcularKpisOptimizador(respuesta)
+    const marca = (valor: string | null) => {
+      const m = valor ? Date.parse(valor) : Number.NaN
+      return Number.isNaN(m) ? Number.POSITIVE_INFINITY : m
+    }
+    const marcas = kpis.solicitudesCubiertas.noCubiertas.map((s) => marca(s.creadaEn))
+    const inversiones = marcas.filter((m, i) => i > 0 && m < marcas[i - 1]).length
+    expect(inversiones, 'una no cubierta aparece antes que otra que llegó primero').toBe(0)
   })
 })

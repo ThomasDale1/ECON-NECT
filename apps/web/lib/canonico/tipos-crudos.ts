@@ -145,6 +145,25 @@ export type EstadoVehiculoStartrackCrudo = {
   reason: string | null
 }
 
+/** Proyección de un conductor de `ajax/drivers.php?cmd=list` (S-A10 Paso 2).
+ * ⚠ `fn` trae el código de trabajador Y el nombre del conductor
+ * (`"código - nombre"`); el conector solo deja salir el código. Nunca se tipa
+ * `fn` entero, ni `ln`, ni correo, ni teléfono (AGENTS.md §1.2). */
+export type CodigoConductorStartrack = {
+  id: string // `i`, igual al `driver_id` del reporte de conductores
+  prefijoFn: string | null // texto de `fn` antes del primer " - ", recortado; null si no hay separador
+}
+
+/** Proyección del reporte de conductores (`ajax/report.php?id=32`), verificado
+ * el 13 de septiembre de 2026. `detailAlerts` se descarta entero dentro del
+ * conector: trae `driver.name` (AGENTS.md §1.2). */
+export type ReporteConductoresStartrack = {
+  scores: { driver_id: string; safety_score: number | null }[]
+  /** Una fila por conductor y día. `ignOnTime` en minutos, unidad inferida
+   * (todos los valores observados ≤ 1440). */
+  detail: { driver_id: string; date: string | null; ignOnTime: number | null }[]
+}
+
 /** Procedencia de una fuente completa (una lista), la misma forma que
  * `RespuestaConector.linaje` de lib/conectores/tipos.ts pero copiada acá en
  * vez de importada — lib/canonico no conoce HTTP ni la capa de conectores

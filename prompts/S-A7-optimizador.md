@@ -1,5 +1,15 @@
 # S-A7 — Optimizador de planeación: contrato, solver CP-SAT y adaptador en vivo
 
+> ⚠ **Reemplazado en parte por [S-A10](S-A10-replaneacion.md) (13 sep. 2026,
+> 01:50 CST).** Ya no rigen:
+> - el clima: `clima.ts`, Open-Meteo, `AlertaClima` y `clasesSensiblesLluvia`;
+> - los objetivos `holgura` y `continuidadOperador`;
+> - `AsignacionManual` y la exclusión total de las APROBADA (vuelven a la
+>   demanda si su máquina deja de operar).
+>
+> El contrato vigente es el de S-A10. Donde este archivo contradiga a S-A10,
+> manda S-A10.
+
 **Carril A · fase extendida, priorizada tras S-C2 ([AGENTS.md §12.1](../AGENTS.md))**
 **Si S-A7 compite por la misma hora con S-A4 (propagación P1), P1 va primero.
 Siempre.**

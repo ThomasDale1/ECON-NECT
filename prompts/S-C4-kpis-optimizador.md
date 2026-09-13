@@ -1,5 +1,16 @@
 # S-C4 — KPIs del optimizador
 
+> ⚠ **Reemplazado en parte por [S-A10](S-A10-replaneacion.md) (13 sep. 2026,
+> 01:50 CST).**
+> - `lluvia-clases-sensibles-optimizador` sale.
+> - `ahorro-por-objetivo-optimizador` pasa a medir contra la **peor opción
+>   válida** (tarifa, distancia, rating y horas de operador), no contra la
+>   asignación manual.
+> - `cobertura-plan-optimizador` pasa a ser **"Solicitudes cubiertas por el
+>   plan"**.
+>
+> Donde este archivo contradiga a S-A10, manda S-A10.
+
 **Carril C · fase extendida, priorizada tras S-C2 ([AGENTS.md §12.1](../AGENTS.md))**
 **Depende de:** el contrato `lib/optimizador/tipos.ts` (S-A7, Paso 1) para
 arrancar, y de `planear()` (S-A7) para la prueba en vivo.
