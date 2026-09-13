@@ -79,6 +79,8 @@ async function main() {
   lecturas.push(await medir('startrack', 'vehiculos', startrack.leerVehiculos))
   lecturas.push(await medir('startrack', 'geocercas', startrack.leerGeocercas))
   lecturas.push(await medir('startrack', 'conductores', startrack.leerConductores))
+  lecturas.push(await medir('startrack', 'tareas', startrack.leerTareas))
+  lecturas.push(await medir('startrack', 'tipos_tarea', startrack.leerTiposTarea))
 
   for (const l of lecturas) {
     if (l.estado === 'ok') {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { desenvolverStartrack, leerVehiculos, _reiniciarParaPruebas } from './startrack'
+import { desenvolverStartrack, leerVehiculos, leerTareas, _reiniciarParaPruebas } from './startrack'
 import { SesionExpirada } from './errores'
 import { limpiarCache } from './cache'
 
@@ -93,5 +93,101 @@ describe('reautenticación de Startrack', () => {
     )
     // Primer intento + el único reintento permitido. Nunca un tercero.
     expect(llamadasAVehicles).toHaveLength(2)
+  })
+})
+
+describe('peticionApiJson (lector de tareas, Paso 0 de S-A2)', () => {
+  // Prueba obligatoria del Paso 0: la superficie REST moderna (`/api/job`) SÍ
+  // usa 401 para sesión vencida (a diferencia de varios endpoints legado).
+  it('reautentica y reintenta una vez ante un 401 de la superficie /api/', async () => {
+    const llamadas: string[] = []
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.includes('login.php')) {
+          llamadas.push('login')
+          return new Response(null, {
+            status: 302,
+            headers: { 'set-cookie': 'PHPSESSID=abc123; Path=/' },
+          })
+        }
+
+        llamadas.push('job')
+        const vecesQueLlegoAJob = llamadas.filter((l) => l === 'job').length
+        if (vecesQueLlegoAJob === 1) {
+          return new Response(null, { status: 401 })
+        }
+        return new Response(JSON.stringify({ success: true, data: [{ id: 1 }], count: 1 }), {
+          status: 200,
+        })
+      }),
+    )
+
+    const resultado = await leerTareas()
+
+    expect(resultado.datos).toEqual([{ id: 1 }])
+    expect(llamadas).toEqual(['login', 'job', 'login', 'job'])
+  })
+
+  // Prueba obligatoria del Paso 0: la misma superficie también puede devolver
+  // 200 con success:false (01 E.7) — el fallo que se ve como éxito. Cubierto
+  // por desenvolverStartrack incluso cuando el status ya pasó el chequeo 401.
+  it('reautentica y reintenta una vez ante 200-con-success:false de la superficie /api/', async () => {
+    const llamadas: string[] = []
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.includes('login.php')) {
+          llamadas.push('login')
+          return new Response(null, {
+            status: 302,
+            headers: { 'set-cookie': 'PHPSESSID=abc123; Path=/' },
+          })
+        }
+
+        llamadas.push('job')
+        const vecesQueLlegoAJob = llamadas.filter((l) => l === 'job').length
+        if (vecesQueLlegoAJob === 1) {
+          return new Response(JSON.stringify({ success: false, errorMsg: 'auth error' }), {
+            status: 200,
+          })
+        }
+        return new Response(JSON.stringify({ success: true, data: [{ id: 1 }], count: 1 }), {
+          status: 200,
+        })
+      }),
+    )
+
+    const resultado = await leerTareas()
+
+    expect(resultado.datos).toEqual([{ id: 1 }])
+    expect(llamadas).toEqual(['login', 'job', 'login', 'job'])
+  })
+
+  it('no reintenta una segunda vez si la sesión sigue vencida tras reautenticar', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: string | URL | Request) => {
+        const url = String(input)
+        if (url.includes('login.php')) {
+          return new Response(null, {
+            status: 302,
+            headers: { 'set-cookie': 'PHPSESSID=abc123; Path=/' },
+          })
+        }
+        return new Response(null, { status: 401 })
+      }),
+    )
+
+    await expect(leerTareas()).rejects.toThrow(SesionExpirada)
+
+    const llamadasAJob = (fetch as ReturnType<typeof vi.fn>).mock.calls.filter(([entrada]) =>
+      String(entrada).includes('job'),
+    )
+    expect(llamadasAJob).toHaveLength(2)
   })
 })

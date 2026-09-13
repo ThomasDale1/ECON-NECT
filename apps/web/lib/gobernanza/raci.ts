@@ -56,7 +56,7 @@ export const RACI_PROCESO: FilaRaci[] = [
     },
     estado: 'propuesta',
     fuente:
-      '01 Parte D.5: "Gerencia Técnica de Proyectos... es quien origina la solicitud", y el diccionario de datos de Prisma lo confirma documentalmente — el campo "Solicita" del módulo Solicitudes de maquinaria se describe como "Solicitante del equipo (Gerente de Proyecto)" (ver lib/mapeo/matriz.ts). Licitaciones como consultada por su rol en Preconstrucción (01 Parte B).',
+      '01 Parte D.5: "Gerencia Técnica de Proyectos... es quien origina la solicitud", y el diccionario de datos de Prisma lo confirma documentalmente — el campo "Solicita" del módulo Solicitudes de maquinaria se describe como "Solicitante del equipo (Gerente de Proyecto)" (ver lib/mapeo/matriz.ts). Licitaciones como consultada por su rol en Preconstrucción (01 Parte B). Refuerzo estructural: el organigrama de Gerencia Técnica de ECON agrupa a Licitaciones y a Control de Costos bajo la misma gerencia técnica que Gerencia de Proyecto — consistente con que ambas aparezcan como Consultadas (C) junto a quien origina la solicitud.',
     preguntaRelacionada:
       '02 §3, pregunta 1: "¿Quién aprueba realmente una solicitud de maquinaria, y quién la origina?" (el origen ya tiene respaldo documental; la aprobación sigue abierta)',
   },
@@ -102,7 +102,7 @@ export const RACI_PROCESO: FilaRaci[] = [
     },
     estado: 'propuesta',
     fuente:
-      'Propuesta del equipo, alineada con la línea punteada 1 del TO-BE (01 Parte B): "solicitud aprobada / viaja como tarea".',
+      'Propuesta del equipo, alineada con la línea punteada 1 del TO-BE (01 Parte B): "solicitud aprobada / viaja como tarea". Refuerzo estructural: el organigrama de Logística y Maquinaria de ECON ubica a los Operadores de Equipos bajo Logística vía un Supervisor de Campo — consistente con Logística como Aprueba (A) y Operadores como Responsable (R) en este paso.',
   },
   {
     paso: 'Confirmar indisponibilidad técnica',
@@ -115,7 +115,8 @@ export const RACI_PROCESO: FilaRaci[] = [
       'Control de Costos': null,
     },
     estado: 'propuesta',
-    fuente: 'Propuesta del equipo: Mantenimiento como autoridad técnica sobre la falla.',
+    fuente:
+      'Propuesta del equipo: Mantenimiento como autoridad técnica sobre la falla. Refuerzo estructural: el organigrama de Mantenimiento de ECON lo posiciona como autoridad técnica exclusiva sobre el estado de la falla — consistente con Mantenimiento como Aprueba (A) aquí y Responsable (R) en "Reasignar por mantenimiento" (rolResponsable de R4 en lib/reglas).',
     preguntaRelacionada:
       '02 §3, pregunta 6: "Cuando un equipo dice DISPONIBLE pero tiene una falla activa, ¿cuál manda para ustedes?"',
   },
@@ -130,7 +131,8 @@ export const RACI_PROCESO: FilaRaci[] = [
       'Control de Costos': null,
     },
     estado: 'propuesta',
-    fuente: 'Propuesta del equipo, sin validar.',
+    fuente:
+      'Propuesta del equipo, sin validar. Refuerzo estructural: el organigrama de Mantenimiento de ECON lo posiciona como autoridad técnica exclusiva sobre la falla — consistente con Mantenimiento como Responsable (R) aquí (rolResponsable de R4 en lib/reglas).',
     preguntaRelacionada:
       '02 §3, pregunta 2: "¿Quién decide que un equipo sale de operación: Mantenimiento o Logística?"',
   },
@@ -176,7 +178,7 @@ export const RACI_PROCESO: FilaRaci[] = [
     },
     estado: 'propuesta',
     fuente:
-      '01 Parte D.5: "Control de Costos... aparece en el AS-IS y en el TO-BE; cierra el ciclo de dinero".',
+      '01 Parte D.5: "Control de Costos... aparece en el AS-IS y en el TO-BE; cierra el ciclo de dinero". Refuerzo estructural: "Licitaciones y Control de Costos" cuelgan de Gerencia Técnica en el organigrama de ECON — consistente con Control de Costos como Aprueba (A) al cerrar el ciclo de dinero que la misma gerencia técnica origina.',
   },
 ]
 
@@ -196,6 +198,23 @@ export const ROL_A_AGENTE: Record<Rol, Agente | null> = {
 
 export function agenteResponsablePorRol(rol: Rol): Agente | null {
   return ROL_A_AGENTE[rol]
+}
+
+/** Id de regla de A (`lib/reglas`, R1…R8) → `paso` de `RACI_PROCESO` que la
+ * resuelve. No duplica el id ni el `rolResponsable` de la regla — esos se
+ * leen de la propia regla (`ResultadoRegla.regla`, `ResultadoRegla.
+ * rolResponsable`) y de `ROL_A_AGENTE` arriba. Esto solo agrega el paso del
+ * proceso, para que la bandeja de incoherencias diga qué paso y qué agente
+ * resuelve cada una (criterio 3.4: un enlace utilizable, no decorativo). */
+export const PASO_DE_REGLA: Record<string, string> = {
+  R1: 'Programar el traslado',
+  R2: 'Programar el traslado',
+  R3: 'Programar el traslado',
+  R4: 'Reasignar por mantenimiento',
+  R5: 'Asignar equipo y operador',
+  R6: 'Asignar equipo y operador',
+  R7: 'Asignar equipo y operador',
+  R8: 'Asignar equipo y operador',
 }
 
 function csvEscape(valor: string): string {

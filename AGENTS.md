@@ -65,7 +65,12 @@ Las afirmaciones de evidencia se escriben como **hechos estructurales**
 
 > Ojo concreto: el endpoint de conductores de Startrack devuelve correos,
 > teléfonos y respuestas de seguridad en texto plano de personal real de ECON.
-> Eso no toca git, ni logs, ni capturas de pantalla del entregable.
+> **El endpoint de tareas (`GET /api/job`) también** — trae `contact_name`,
+> `contact_email` y `phone_number` en texto plano (verificado 12 de septiembre
+> de 2026, al implementar el lector de tareas de S-A2). Ninguno de los dos
+> toca git, ni logs, ni capturas de pantalla del entregable: los scripts que
+> los leen (`npm run leer`, `npm run reconciliar`) solo imprimen nombres de
+> campo, veredictos y conteos — nunca estos valores.
 
 **Antes de cada commit:** revisar que no entren secretos, volcados ni capturas.
 `git status` antes de `git add .`, siempre.
@@ -218,29 +223,57 @@ Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
 
 | Carril | Rol | Construye |
 |---|---|---|
-| **A · Núcleo** | Backend & Integración | Conectores, modelo canónico, reglas, rutas de API, propagación |
+| **A · Núcleo** | Backend & Integración | Conectores, mapeo de datos en vivo, reglas, rutas de API, propagación |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa |
 | **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch |
+
+> **Nota de nombre:** esta capa de A (`lib/canonico/` + `lib/reglas/`) no se
+> describe como "modelo canónico" — por definición formal, un modelo canónico
+> implica una tabla/esquema maestro que se reescribe, y esto no reescribe nada:
+> lee, resuelve identidad y calcula un veredicto **en memoria**, por request, y
+> se descarta al responder. Se la nombra **"mapeo de datos en vivo"** en la
+> prosa de este archivo. El calificativo "en vivo" es a propósito: distingue
+> esta capa de la **matriz de mapeo de campos** de C (Entregable 2,
+> `lib/mapeo/`), que es estática y tipada — esta otra corre por request, sobre
+> los datos reales de cada equipo, y no persiste nada. La ruta de carpeta
+> (`lib/canonico/`) no cambia — es solo la palabra en la documentación.
 
 ### 4.2 Propiedad de directorios — **nadie edita territorio ajeno**
 
 ```
 apps/web/
-  lib/conectores/       A   Única puerta al mundo exterior. server-only
-  lib/canonico/         A   Identidad, estados, modelo unificado, linaje
-  lib/reglas/           A   Reglas de coherencia, una por archivo
-  lib/tipos/            A   El contrato. Congelado a las 17:30
-  app/api/              A   Rutas delgadas
-  components/           B   UI
-  app/(nect)/           B   Rutas de vista
-  app/globals.css       B   Design system
-  lib/mapeo/            C   Matriz de mapeo tipada
-  lib/gobernanza/       C   Matriz RACI tipada
-  lib/kpi/              C   Catálogo de indicadores
-  lib/acceso/           C   Verificación de clave por rol
-docs/entregables/       D   Diagrama, decisiones, deck, README
-prompts/                —   Prompts de implementación (sesión 1)
+  lib/conectores/          A   Única puerta al mundo exterior. server-only
+  lib/canonico/            A   Identidad, estados, modelo unificado, linaje
+  lib/reglas/              A   Reglas de coherencia, una por archivo
+  lib/tipos/               A   El contrato. Congelado a las 17:30
+  app/api/                 A   Rutas delgadas
+  lib/optimizador/         A   Fase extendida (§12). Tipos de hard/soft
+                                constraints, cliente HTTP a services/solver/,
+                                adaptador desde el mapeo de datos en vivo
+  lib/betinho/             A   Fase extendida (§12). Orquestación de Betinho:
+                                triage de incidentes, forecast, redacción de
+                                escalamiento — cliente de un modelo
+                                open-source autoalojado, nunca de un
+                                proveedor en la nube
+  components/              B   UI
+  app/(nect)/              B   Rutas de vista
+  app/globals.css          B   Design system
+  components/calendario/   B   Fase extendida (§12). Calendario de
+                                planeación estilo Notion (S-B4)
+  app/(nect)/planeacion/   B   Fase extendida (§12). Ruta de la vista de
+                                planeación
+  lib/mapeo/               C   Matriz de mapeo tipada
+  lib/gobernanza/          C   Matriz RACI tipada
+  lib/kpi/                 C   Catálogo de indicadores
+  lib/acceso/              C   Verificación de clave por rol
+docs/entregables/          D   Diagrama, decisiones, deck, README
+prompts/                   —   Prompts de implementación (sesión 1)
+services/solver/           A   Fase extendida (§12). Microservicio Python
+                                (FastAPI + OR-Tools/CP-SAT). Único código
+                                Python del repo — no es parte de apps/web,
+                                se despliega aparte y solo se toca al
+                                construir S-A7
 ```
 
 **Archivos compartidos, con dueño único:** `package.json` (el de `apps/web` y el
@@ -264,8 +297,8 @@ Root Directory = `apps/web`.
   cliente ve una credencial jamás.
 - **`lib/canonico` no conoce HTTP.** Recibe datos ya leídos y devuelve el modelo
   unificado. Es la capa que se puede probar sin red.
-- **`lib/reglas` no conoce ni HTTP ni React.** Funciones puras: entran datos
-  canónicos, sale un veredicto con su justificación.
+- **`lib/reglas` no conoce ni HTTP ni React.** Funciones puras: entran datos ya
+  unificados, sale un veredicto con su justificación.
 - **Las rutas de API son delgadas.** Ninguna lógica de reconciliación vive en una
   ruta. Reciben, validan con Zod, delegan, responden.
 - **La UI solo muestra.** Nunca recalcula reconciliación en el cliente.
@@ -307,8 +340,15 @@ documentación oficial.
 *(Cuando S-A0 termine, reemplazar las filas en cursiva por el nombre exacto que
 quedó instalado.)*
 
-**Retiradas del proyecto** (no las invoques): `supabase`, `whatsapp`, `or-tools`,
-`speech-to-text`, `n8n`, `mcp-sdk`, `claude-api`.
+**Reactivadas para las fases extendidas (§12), antes retiradas:**
+
+| Skill | Origen | Para qué |
+|---|---|---|
+| `or-tools` | externa, `npx skills find or-tools` | Único uso: `services/solver/` (S-A7) — CP-SAT, hard/soft constraints. Nunca dentro de `apps/web` |
+| `whatsapp` | externa, `npx skills find whatsapp` | Único uso: si S-A9 necesita el webhook de WhatsApp de Twilio. Si S-A9 no arranca, no se instala nada de esto |
+
+**Retiradas del proyecto** (no las invoques): `supabase`, `speech-to-text`, `n8n`,
+`mcp-sdk`, `claude-api`.
 
 ---
 
@@ -319,15 +359,36 @@ quedó instalado.)*
 solo si se construye S-A6** (el SDK `openai` no se instala hasta entonces) ·
 Vercel.
 
-**No usar:**
+**Usar, solo para las fases extendidas de §12, y solo en los directorios que
+esa sección nombra — nunca dentro de `apps/web`:**
+- **Python 3 + FastAPI + OR-Tools (CP-SAT)**, únicamente en `services/solver/`
+  (S-A7). Se comunica con Next.js por HTTP; no se importa como librería de
+  Node.
+- **Twilio** (SDK de Node), únicamente en `lib/conectores/twilio.ts` (S-A9) —
+  sigue siendo `server-only`, como todo `lib/conectores/`.
+- **Un cliente HTTP a un modelo open-source autoalojado** (p. ej. servido con
+  Ollama u otro runtime local/propio), únicamente en `lib/betinho/` (S-A8).
+  **No es** "otro proveedor de LLM" en el sentido de la regla de abajo: corre
+  fuera de la nube de un tercero, que es justamente lo que evita el problema
+  de NDA de la §1.5.
+
+**No usar, en el alcance base (línea roja + escalera §0.5 de 02-ROADMAP):**
 - Ninguna base de datos, ni Supabase ni otra, para datos de ECON.
-- Otro proveedor de LLM que no sea OpenAI. **Ningún SDK de LLM entra al
-  `package.json` antes de que S-A6 arranque.**
-- Twilio, WhatsApp, OR-Tools, Python, puppeteer, qrcode.
+- Otro proveedor de LLM en la nube que no sea OpenAI para el copiloto S-A6.
+  **Ningún SDK de LLM en la nube entra al `package.json` antes de que S-A6
+  arranque.**
+- Twilio, WhatsApp, OR-Tools, Python, puppeteer, qrcode — **excepto** donde
+  §12 y la excepción de arriba lo autorizan explícitamente para una fase
+  extendida concreta.
 - Lógica de reconciliación dentro de una ruta de API o de un componente.
-- **Machine learning.** La confianza es una heurística determinística y
-  documentada. Venderla como IA nos hunde en el criterio de honestidad que
-  usamos como diferenciador.
+- **Machine learning dentro del motor de veredicto/reconciliación**
+  (`lib/canonico/`, `lib/reglas/`). Esa capa sigue siendo una heurística
+  determinística y documentada — es la línea roja de honestidad (C.1, H.3 de
+  01). Venderla como IA nos hunde en el criterio de honestidad que usamos como
+  diferenciador. **Fuera de esa capa**, en las fases extendidas explícitamente
+  marcadas como asesoría (forecast de Betinho), sí se permite un modelo
+  estadístico o heurística de ML — siempre etiquetado como predicción y nunca
+  mezclado ni presentado como el veredicto determinístico.
 
 ---
 
@@ -361,6 +422,10 @@ Detalle completo en [01 Parte E](01-DEFINICION-DE-NEGOCIO.md).
 - **Las coordenadas** se documentan como enteros escalados y se devuelven en
   grados decimales.
 - **La sesión de Startrack expira.** El conector reautentica y reintenta una vez.
+- **El endpoint de tareas de Startrack (`GET /api/job`) trae PII de contacto en
+  texto plano** (`contact_name`, `contact_email`, `phone_number`), igual que
+  conductores — ver el "ojo concreto" de §1.2. Cualquier lector o pantalla que
+  toque tareas tiene que tratarlo con el mismo cuidado.
 - **`remote_id` existe en vehículos, geocercas y tareas de Startrack, y está
   vacío en todos los registros.** Es nuestra recomendación central de
   arquitectura.
@@ -384,6 +449,10 @@ en `.env.local`, que está en `.gitignore`.
 | `NECT_CLAVE_DIRECCION` | Clave de acceso, Dirección de Operaciones |
 | `NECT_EQUIPO_PROPIO` · `NECT_PROYECTO_PROPIO` | Recursos sobre los que se permite propagar (S-A4) |
 | `OPENAI_API_KEY` | Solo si se construye el copiloto (S-A6) |
+| `SOLVER_BASE_URL` | Solo si se construye el optimizador (S-A7): URL del microservicio Python de `services/solver/` |
+| `TWILIO_ACCOUNT_SID` · `TWILIO_AUTH_TOKEN` · `TWILIO_FROM_NUMBER` | Solo si se construye el canal de incidentes (S-A9). El número es el de prueba de Twilio, nunca uno real de un trabajador |
+| `BETINHO_MODEL_BASE_URL` · `BETINHO_MODEL_NAME` | Solo si se construye Betinho (S-A8): endpoint del modelo open-source autoalojado |
+| `NECT_CONTACTOS_ESCALAMIENTO` | Solo si se construye S-A9: a qué rol (no a qué persona) reenvía Betinho un incidente triado. Nunca un número o correo real de ECON — eso es dato de sandbox/personal y cae bajo §1.2 |
 
 *(Agregar aquí y en `.env.example` cada variable nueva.)*
 
@@ -402,6 +471,16 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
    recurso ajeno; no alcanza con esconder el botón.
 5. **Conectores** — reautentican ante sesión expirada, **incluido el caso del 200
    con `success:false`**. Esta es obligatoria: es el fallo que se ve como éxito.
+
+**Si se construyen las fases extendidas de §12, además:**
+
+6. **El optimizador nunca viola una hard constraint.** Un caso sin solución
+   factible (p. ej. ningún operador disponible en el horario pedido) devuelve
+   **infactible con la razón**, nunca una asignación forzada que la incumpla.
+7. **Twilio y Betinho nunca ejecutan una acción por su cuenta.** Mismo
+   principio C.3 que P1: Betinho sugiere y reenvía; el jefe confirma; recién
+   ahí se actualiza un dato. Prueba de que una sugerencia sin confirmar no
+   cambia ningún estado.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -439,3 +518,121 @@ pruebas relevantes. Agregar `build` cuando cambien rutas o configuración.
 8. No edites un directorio que no es de tu carril.
 9. Un KPI que no dispara una acción no entra.
 10. Dormir entre 06:30 y 08:00 es parte del plan, no una concesión.
+11. El optimizador, Betinho y el canal de incidentes (§12) son fases
+    extendidas: se cortan **antes** que cualquier ítem de la línea roja o de
+    la escalera base §0.5 de 02-ROADMAP.
+
+---
+
+# 12. Fases extendidas — optimizador, Betinho y canal de incidentes
+
+> Agregado el 12 de septiembre de 2026, con el reloj corriendo. **Todo lo de
+> esta sección es stretch**: se reparte dentro de los cuatro carriles
+> existentes (no hay carril E), va **debajo** de la línea roja de la escalera
+> de recorte, y no reemplaza ni un solo ítem obligatorio de §§1–11. Detalle de
+> sprints, orden y "termina cuando" en
+> [02-ROADMAP.md, sprints S-A7 a S-A9, S-B4 y S-C4](02-ROADMAP.md).
+>
+> **Repriorizado con S-C2 ya cerrado:** el optimizador (§12.1) dejó de ser "si
+> sobra tiempo al final" — se construye **apenas termina S-C2**, antes que
+> S-A3/S-C3/S-A4/S-B2. Sigue siendo stretch en el sentido de la escalera de
+> recorte (§0.5 de 02-ROADMAP): si compite por la misma hora de Carril A que
+> S-A4 (propagación P1), **P1 va primero, siempre.** Betinho (§12.2) y el
+> canal de incidentes (§12.3) no cambiaron: siguen para el tramo final de la
+> noche, lo primero que se corta.
+
+**Por qué existe esta sección y no contradice a H.3 de 01:** el 01 (Parte H.3)
+dice hoy "no corre un solver", "no tiene canal de WhatsApp", "no usa ML" — eso
+sigue siendo cierto **para el motor de veredicto/reconciliación** (línea roja,
+`lib/canonico/` + `lib/reglas/`), que no se toca. Lo que agrega esta sección es
+una **capa nueva y separada**, explícitamente marcada como propuesta que se
+intenta si sobra tiempo, nunca como reemplazo del motor determinístico que gana
+el criterio de honestidad.
+
+### 12.1 El optimizador de planeación (S-A7 + S-B4 + S-C4) — **se construye apenas termina S-C2**
+
+Un microservicio Python (`services/solver/`, FastAPI + OR-Tools CP-SAT) que
+propone **a quién, con qué máquina, dónde y cuánto tiempo**, sobre una UI de
+calendario estilo Notion.
+
+**Hard constraints** (si no se cumplen, la asignación no es válida — el solver
+la descarta, no la sugiere):
+- Disponibilidad real de la máquina (cruce de las tres máquinas de estado de
+  Prisma, [01 E.2](01-DEFINICION-DE-NEGOCIO.md), no solo el campo `estado`).
+- Disponibilidad del operador.
+- Horas laborales permitidas.
+- Disponibilidad de lowboy + cabezal para transportar la máquina, si la máquina
+  lo requiere para moverse.
+
+**Soft constraints** (preferencias, se optimizan sin violar ninguna hard
+constraint): distancia, precio/costo, tiempo estimado, y las que el usuario
+agregue.
+
+**La pila de prioridades es del usuario, no nuestra.** La UI deja reordenar las
+soft constraints en una pila (drag-and-drop). El solver optimiza la de más
+arriba **al máximo** antes de sacrificar algo de ella para mejorar una de más
+abajo — es decir, una constraint de menor prioridad solo cede terreno a una de
+mayor prioridad, nunca al revés. Esto es lexicográfico, no un promedio
+ponderado a ciegas: hay que decirlo así en la documentación técnica para que
+sea defendible en Q&A.
+
+**KPIs nuevos de C** (con sus cinco campos de [01 D.7](01-DEFINICION-DE-NEGOCIO.md),
+igual que cualquier otro KPI del catálogo): ahorro proyectado de la asignación
+óptima vs. la asignación manual observada, y costo evitado de transporte
+redundante (lowboy). **Si no hay suficiente histórico para calcular el
+comparativo, el KPI dice qué dato falta — igual que cualquier otro** (C.1).
+
+**No hace lo que H.3 seguía prohibiendo para el resto del producto:** el
+solver no reasigna nada por su cuenta. Propone; el humano confirma en la UI;
+recién ahí, si corresponde, se dispara una propagación (P1/P2 ya existentes) —
+mismo principio C.3.
+
+### 12.2 Betinho (S-A8) — agente local, modelo open-source
+
+Un agente que corre con un **modelo open-source autoalojado** (nunca un
+proveedor de IA en la nube — así se evita el problema de NDA de §1.5, no se
+sortea).
+
+- **Forecast de mantenimiento preventivo**, a partir de kilometraje, horas de
+  motor encendido, temperatura y las demás señales que el sandbox exponga
+  realmente. **Si el sandbox no expone una señal, el forecast lo dice — no se
+  inventa un sensor que no existe** (mismo principio que C.1: honestidad sobre
+  completitud). Es un modelo estadístico/ML explícitamente etiquetado como
+  predicción, nunca mezclado con el veredicto determinístico de `lib/reglas/`.
+- Puede leer las sugerencias del optimizador (§12.1) y redactarlas en lenguaje
+  llano para quien decide.
+
+**Prioridad más baja de la escalera extendida** — es lo primero que se corta
+si el reloj aprieta.
+
+### 12.3 Canal de incidentes de campo (S-A9) — Twilio + Betinho
+
+Un trabajador en campo reporta un incidente por Twilio (SMS/WhatsApp de
+prueba). Betinho lo analiza y **redacta un reenvío** al jefe correspondiente
+según el tipo de incidente — nunca decide ni ejecuta nada por su cuenta.
+**El jefe confirma** (o pide otra sugerencia) y **entonces** se actualiza el
+dato correspondiente en Prisma/Startrack, con el mismo mecanismo de
+confirmación explícita y rastro que ya rige toda propagación (C.3, D.6 de 01).
+
+**Reglas de datos, iguales a las de §1.2:** ningún número de teléfono real de
+un trabajador de ECON entra al repositorio, a un log, ni a una captura del
+entregable. La demo usa el número de prueba de Twilio. El texto del incidente
+vive solo en el caché volátil en memoria — igual que cualquier otro dato de
+ECON (C.2) — nunca se persiste.
+
+**Prioridad más baja de la escalera extendida**, junto con Betinho — es de lo
+primero que se corta si el reloj aprieta.
+
+### 12.4 Dónde entran en la escalera de recorte, y cuándo se construyen
+
+Ver la escalera actualizada en [02-ROADMAP.md §0.5](02-ROADMAP.md). En breve:
+el optimizador y sus KPIs de ahorro (§12.1) se insertan **justo debajo de la
+línea roja** — si el reloj aprieta, se cortan después que el mapa (S-B3) y las
+propagaciones P2/P3 (S-A5), y **nunca** a costa de S-A4 (propagación P1: si
+compiten por la misma hora de Carril A, P1 va primero, siempre). Eso es
+prioridad de **corte**; la prioridad de **construcción** es distinta y más
+alta: S-A7/S-B4/S-C4 arrancan **apenas cierra S-C2**, antes que S-A3, S-C3,
+S-A4 y S-B2 en el orden del documento (ver [02-ROADMAP.md §1](02-ROADMAP.md)).
+Betinho (§12.2) y el canal de incidentes (§12.3) no cambiaron: van **al fondo
+de toda la escalera**, tanto en corte como en construcción — son lo primero
+que se corta y lo último que se intenta.
