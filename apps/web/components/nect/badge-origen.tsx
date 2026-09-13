@@ -57,7 +57,6 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
   const contenido = (
     <>
       {plataforma === 'startrack' ? (
-        // El logo es la etiqueta: el `alt` lleva el nombre de la plataforma.
         <Image
           src="/startrack.png"
           alt={etiqueta}
@@ -67,7 +66,13 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
         />
       ) : (
         <>
-          <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', punto)} />
+          <Image
+            src="/prisma.png"
+            alt=""
+            width={16}
+            height={16}
+            className="size-3.5 shrink-0"
+          />
           {etiqueta}
         </>
       )}
