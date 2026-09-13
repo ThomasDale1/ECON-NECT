@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, type MouseEvent } from 'react'
 import Image from 'next/image'
 import { Check, ExternalLink } from 'lucide-react'
 import type { Plataforma } from '@/lib/tipos/canonico'
@@ -93,16 +93,26 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
     return <span className={clases}>{contenido}</span>
   }
 
-  async function copiarCodigo() {
-    if (!equipo) return
+  async function copiar(texto: string) {
     try {
-      await navigator.clipboard.writeText(equipo)
+      await navigator.clipboard.writeText(texto)
       setCopiado(true)
       setTimeout(() => setCopiado(false), 2500)
     } catch {
-      // Sin permiso de portapapeles el enlace sigue abriendo la plataforma; no se
-      // interrumpe la navegación por no haber podido copiar.
+      // Sin portapapeles el enlace sigue abriendo.
     }
+  }
+
+  function alPulsar(e: MouseEvent<HTMLAnchorElement>) {
+    if (plataforma === 'prisma' && href) {
+      e.preventDefault()
+      void copiar(href)
+      // Misma ventana nombrada: el primer click puede pedir login (SameSite=strict).
+      // Los siguientes navegan esa pestaña, ya con cookie de primer partido.
+      window.open(href, 'nect-prisma')
+      return
+    }
+    if (plataforma === 'startrack' && equipo) void copiar(equipo)
   }
 
   const destino =
@@ -114,8 +124,8 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
     <a
       href={href}
       target="_blank"
-      rel="noopener noreferrer"
-      onClick={plataforma === 'startrack' ? copiarCodigo : undefined}
+      rel={plataforma === 'prisma' ? 'noopener' : 'noopener noreferrer'}
+      onClick={alPulsar}
       aria-label={
         plataforma === 'prisma'
           ? `Abrir la ficha de Prisma (se abre en otra pestaña)`
@@ -125,7 +135,7 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
       }
       title={
         plataforma === 'prisma'
-          ? 'Abrir la ficha del equipo en Prisma'
+          ? 'Abre Prisma en una pestaña reutilizable. El primer login queda ahi; si pide sesion, pega la URL copiada.'
           : equipo
             ? `Copia ${equipo} y abre ${destino}. Pegá el código en el filtro o la búsqueda.`
             : `Abrir ${etiqueta}`
@@ -138,7 +148,11 @@ export function BadgeOrigen({ plataforma, corto = false, href, equipo, className
       )}
     >
       {contenido}
-      {copiado && <span className="sr-only">Código {equipo} copiado</span>}
+      {copiado && (
+        <span className="sr-only">
+          {plataforma === 'prisma' ? 'URL de Prisma copiada' : `Código ${equipo} copiado`}
+        </span>
+      )}
     </a>
   )
 }
