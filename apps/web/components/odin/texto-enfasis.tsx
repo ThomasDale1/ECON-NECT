@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
  * libre. No interpreta: solo resalta tokens que el motor ya usa.
  */
 const TOKEN =
-  /SIN_EVIDENCIA|EN_RIESGO|COHERENTE|ATENCION|OBSOLETA|DISPONIBLE|OCUPADA|APROBADA|CANCELED|Canceled|CORRECTIVO_EN_PROCESO|EN_RUTA|Startrack|Prisma/g
+  /Dispositivo de rastreo en reparación|Se usa de vez en cuando|Fuera de servicio|Fuera de línea|En línea|Mantenimiento|Almorzando|Vacaciones|Reunión|Normal|SIN_EVIDENCIA|EN_RIESGO|COHERENTE|ATENCION|OBSOLETA|DISPONIBLE|OCUPADA|APROBADA|CANCELED|Canceled|CORRECTIVO_EN_PROCESO|EN_RUTA|Startrack|Prisma/g
 
 const ESTILO: Record<string, string> = {
   EN_RIESGO: 'bg-veredicto-riesgo-fondo text-veredicto-riesgo',
@@ -21,6 +21,17 @@ const ESTILO: Record<string, string> = {
   Canceled: 'bg-muted text-muted-foreground',
   CORRECTIVO_EN_PROCESO: 'bg-veredicto-atencion-fondo text-veredicto-atencion',
   EN_RUTA: 'bg-muted text-foreground',
+
+  Normal: 'bg-veredicto-coherente-fondo text-veredicto-coherente',
+  Mantenimiento: 'bg-veredicto-atencion-fondo text-veredicto-atencion',
+  'Fuera de servicio': 'bg-veredicto-riesgo-fondo text-veredicto-riesgo',
+  'Dispositivo de rastreo en reparación': 'bg-veredicto-atencion-fondo text-veredicto-atencion',
+  'Se usa de vez en cuando': 'bg-muted text-foreground',
+  'En línea': 'bg-veredicto-coherente-fondo text-veredicto-coherente',
+  'Fuera de línea': 'bg-veredicto-atencion-fondo text-veredicto-atencion',
+  Almorzando: 'bg-muted text-foreground',
+  Reunión: 'bg-muted text-foreground',
+  Vacaciones: 'bg-muted text-muted-foreground',
   Prisma: 'bg-origen-prisma/10 text-origen-prisma',
   Startrack: 'bg-origen-startrack/10 text-origen-startrack',
 }
