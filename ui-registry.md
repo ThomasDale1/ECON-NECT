@@ -482,6 +482,70 @@ Tokens de color: `bg-marca` para la propuesta; rayado gris compartido (`CLASE_OC
 Notas: S-A10 Paso 10e. Todo bloque va de 00:00 a 24:00 porque Prisma registra solicitudes y uso por fecha, sin hora — la nota fija debajo de la grilla lo dice. Filtra la misma `RespuestaOptimizar` que la semana (no calcula choques ni candidatas) y resume "N máquinas con ocupación · N propuestas · N sin asignación posible". La ocupación de una máquina que no puede operar agrega "la máquina ya no opera"; una propuesta con `reemplazaConfirmada` lleva la etiqueta "Reemplaza a {código} (confirmada en Prisma)". La hora actual (America/El_Salvador) se lee con `useSyncExternalStore` sobre un intervalo, no durante el render. 13 sep. 2026: la ocupación usa el mismo rótulo que la semana (`rotuloOcupacion`) más las fechas reales de uso `inicio → fin` en `font-mono text-[10px]`, para que un bloque de 00:00 a 24:00 no oculte que el uso empezó antes o termina ese día.
 Registrado: S-A10 · 13 de septiembre de 2026
 
+### TarjetaMantenimiento
+File: apps/web/components/mantenimiento/tarjeta-mantenimiento.tsx
+Tipo: card
+Clases: card baseline `rounded-xl border border-border bg-card p-6 shadow-card`; gauge circular con `conic-gradient`; tabla de registros en `overflow-x-auto`.
+Tokens de color: `--color-veredicto-atencion` para aviso, `--color-veredicto-riesgo` para urgente/vencido, violeta solo para faltantes (`SIN_EVIDENCIA`). El mantenimiento preventivo no cambia el veredicto del motor.
+Notas: consume `GET /api/mantenimiento/[id]`, no recalcula en cliente. Todo numero visible esta respaldado por `VerOrigen` o por la tabla de registros usados. Incluye `PanelParametros` y `DialogoOrdenTaller`; los parametros viven en `localStorage`.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### PanelParametrosMantenimiento
+File: apps/web/components/mantenimiento/panel-parametros.tsx
+Tipo: formulario
+Clases: card baseline; `Input`, `Label` y `Button` de shadcn; checkbox nativo con `accent-primary`.
+Tokens de color: ninguno propio; es configuracion local, no severidad. Los textos degradados usan `text-muted-foreground`.
+Notas: escribe solo `localStorage['nect.mantenimiento.parametros']`, validado por el schema del servidor al consultar. Si el rol no puede programar taller, el panel queda de solo lectura.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### DialogoOrdenTaller
+File: apps/web/components/mantenimiento/dialogo-orden-taller.tsx
+Tipo: overlay
+Clases: `Dialog`/`DialogContent`/`DialogFooter` de shadcn; acciones con `Button`; rastro en `font-mono`.
+Tokens de color: errores en `text-destructive`; exito con icono y texto neutro, no con escala de veredicto.
+Notas: siempre exige confirmacion explicita antes de llamar `POST /api/propagar/taller`. El servidor vuelve a verificar rol, sesion y recurso propio; el boton no es autorizacion.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### BadgeMantenimientoPreventivo
+File: apps/web/components/mantenimiento/badge-mantenimiento.tsx
+Tipo: badge
+Clases: `Badge variant="outline"` + `Tooltip`; icono `Wrench` de lucide.
+Tokens de color: ambar/rojo solo para niveles de alerta preventiva; no usa verde para "todo bien" porque el badge se oculta cuando no hay alertas.
+Notas: vive en `BarraSuperior` y consume el proveedor global. Resume conteo de aviso/urgente/vencido sin exponer datos de sandbox.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### NotificadorMantenimiento
+File: apps/web/components/mantenimiento/notificador-mantenimiento.tsx
+Tipo: badge
+Clases: boton `Button variant="outline" size="icon"` con `Tooltip`.
+Tokens de color: ninguno propio; la notificacion del navegador no es severidad visual dentro de la app.
+Notas: se activa solo por clic del usuario. Deduplica alertas por equipo/nivel en `localStorage['nect.mantenimiento.notificados']`; no registra contenido de ECON.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### ProveedorMantenimiento
+File: apps/web/components/mantenimiento/proveedor-mantenimiento.tsx
+Tipo: overlay
+Clases: sin UI propia.
+Tokens de color: no aplica.
+Notas: unifica el fetch a `/api/mantenimiento` cada 60 s, pausa con pestana oculta y escucha cambios de parametros. Evita solapar requests y solo entrega el contrato calculado por servidor.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### TablaExcepciones · seccion mantenimiento
+File: apps/web/components/comando/tabla-excepciones.tsx
+Tipo: tabla
+Clases: reutiliza la tabla de excepciones y agrega un `rowgroup` visual para "Mantenimiento preventivo por horometro".
+Tokens de color: mantiene la escala de veredicto para filas del motor y usa ambar/rojo solo en el badge de alerta preventiva. La seccion no cambia `BadgeVeredicto`.
+Notas: la seccion aparece solo para `rol=MANTENIMIENTO` y enlaza a la ficha, donde vive la accion P4/P3. Evita mezclar alertas predictivas con reglas de coherencia.
+Registrado: S-A11 · 13 de septiembre de 2026
+
+### ExpedienteVivo
+File: apps/web/components/expediente/expediente-vivo.tsx
+Tipo: card + tabla narrativa
+Clases: contenedores `rounded-xl border border-border bg-card shadow-card`; selector lateral `rounded-lg border`; mini tiles `bg-muted/50`; botones/enlaces con altura `h-8` y foco visible.
+Tokens de color: usa `BadgeVeredicto` para el veredicto; verde/ambar/violeta solo en estados de cadena de decision y huecos, sin introducir una escala nueva.
+Notas: vista de demo ejecutiva en `/expediente`. No lee APIs ni recalcula reglas en cliente: recibe `EquipoUnificado[]` ya calculado por `leerEquiposUnificados`, permite seleccionar un equipo y recompone la historia problema -> evidencia -> responsable -> decision -> escritura posible. P1 aparece solo cuando la regla R3 ya lo habilita, mediante `PropagarTraslado`; O.D.I.N. queda como enlace de explicacion de solo lectura.
+Registrado: Feature extra - 13 de septiembre de 2026
+
 ### AvisoCambios
 File: apps/web/components/calendario/aviso-cambios.tsx
 Tipo: card (alerta)
@@ -489,3 +553,19 @@ Clases: `Alert`/`AlertTitle`/`AlertDescription` de shadcn, variante por defecto;
 Tokens de color: ninguno de §1.1 — un plan rehecho no es un veredicto; ícono `ArrowRightLeft` para que el significado no dependa del color.
 Notas: S-A10 Paso 10f. Título "Plan rehecho por un cambio en el sandbox · {hora}" y una línea por cambio: `PROY-### — {máquina · operador | sin asignar} → {máquina · operador | sin asignación posible} — {motivo}`. El diff y los motivos los calcula el servidor (`lib/optimizador/ensamblar.ts`); este componente solo los lista. Una actualización con cambios nuevos lo reemplaza; "Entendido" lo cierra.
 Registrado: S-A10 · 13 de septiembre de 2026
+
+### TarjetaSinAsignacion
+File: apps/web/components/calendario/tarjeta-sin-asignacion.tsx
+Tipo: overlay (card flotante al hover)
+Clases: `Popover`/`PopoverTrigger`/`PopoverContent` de shadcn (base-ui) con `openOnHover` (`delay` 150 ms, `closeDelay` 150 ms); también abre con foco y clic (el disparador es un `<button>`). Contenido `w-[30rem] max-w-[calc(100vw-2rem)] max-h-(--available-height) overflow-y-auto p-0`, secciones separadas con `border-t border-border px-4 py-3` y títulos en `font-label text-[10px] font-bold uppercase tracking-widest text-muted-foreground`; motivo del servidor en `rounded-lg border border-dashed border-border bg-muted`.
+Tokens de color: ninguno de §1.1 — "sin asignación posible" sigue neutro (nunca rojo ni violeta). El paso del embudo donde se cae la solicitud se marca con `border-foreground/40 bg-muted` e ícono `X` relleno en `bg-foreground`, así el significado no depende del color.
+Notas: la envuelven la barra gris de `TimelineMaquinas` y el bloque de `VistaDia` (reemplaza al `title` nativo). Secciones: cabecera (clase · proyecto, estado, ventana, `created_at`, "Ver origen" de la solicitud, motivo tal cual); APROBADA con máquina rota (si `reemplazaConfirmada`); embudo de las cuatro restricciones duras con los conteos de `candidatas` del servidor; "Por qué se decidió así" — si un paso del embudo llega a 0 es restricción dura y la pila no influye; si no, nombra la métrica que decide primero (orden de llegada si va arriba de cobertura, si no cobertura), el valor en que quedó fijado y los niveles de desempate en el orden de la pila, y dice explícitamente que el solver no reporta qué nivel desempató esa solicitud; propuestas de la misma clase que se enciman (código de proyecto, máquina, código de operador, si pidieron antes o después); máquinas de la clase con su situación (propuesta, ocupada, no opera, libre); acción sugerida. No recalcula el plan: listar máquinas y propuestas que se enciman es presentación, igual que posicionar barras. Nunca muestra nombres de operador ni de conductor.
+Registrado: feedback directo · 13 de septiembre de 2026
+
+### PanelReprogramacion
+File: apps/web/components/calendario/panel-reprogramacion.tsx
+Tipo: card + tabla
+Clases: contenedor `rounded-xl border border-dashed border-foreground/30 bg-card p-5 shadow-card` (el borde punteado dice "no es el plan real"); `Badge variant="outline"` "Vista previa"; tres mini tiles `rounded-lg bg-muted/50` (entran en otras fechas, atraso total, atraso más largo); tabla en `overflow-x-auto rounded-lg border border-border` con `<caption className="sr-only">`, `<th scope="col">` y `<th scope="row">`; fecha pedida tachada en `text-muted-foreground line-through`; `Skeleton` mientras calcula; `Alert variant="destructive"` si falla.
+Tokens de color: ninguno de §1.1 — una reprogramación propuesta no es un veredicto.
+Notas: se abre con "Ver reprogramación propuesta (N)" junto a Re-optimizar (solo si hay solicitudes sin asignación posible) y vive arriba del calendario. Mientras está abierta, `Planeador` pausa la actualización cada 60 s y el calendario muestra `plan` de `POST /api/optimizar/reprogramacion` (lib/optimizador/reprogramar.ts). "Recalcular" la rehace; "Cerrar vista previa" vuelve al plan real y retoma la actualización; Re-optimizar también la cierra. Lista las no reprogramables con su motivo del servidor. No guarda nada, ni en Prisma ni en el navegador; solo códigos de operador. En `TimelineMaquinas` y `VistaDia`, la propuesta movida lleva `CLASE_REPROGRAMADA` (contorno punteado blanco sobre `bg-marca`), ícono `CalendarClock` y "+N d · vista previa"; el `title` y el `sr-only` dicen fechas pedidas → propuestas (`tituloReprogramada`).
+Registrado: feedback directo · 13 de septiembre de 2026

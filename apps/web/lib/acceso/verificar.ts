@@ -90,6 +90,18 @@ export function puedePropagar(rol: RolSesion): boolean {
   return rol === 'LOGISTICA' || rol === 'ADMIN'
 }
 
+/**
+ * Quién puede abrir o cerrar la orden de taller preventiva (S-A11, P4 + P3).
+ *
+ * Sale de la RACI (`lib/gobernanza/raci.ts`, paso "Abrir la orden de taller
+ * preventiva"): la Gerencia de Mantenimiento es R y A. No cambia
+ * `puedePropagar`: el traslado sigue siendo de Logística. `ADMIN` escribe por
+ * ser la llave de demo, sujeto igual a la restricción de recurso propio.
+ */
+export function puedeProgramarTaller(rol: RolSesion): boolean {
+  return rol === 'MANTENIMIENTO' || rol === 'ADMIN'
+}
+
 /** Las claves, leídas uno por uno con referencia estática a `process.env` —
  * nunca por índice dinámico, que en el runtime del borde no se sustituye. */
 function claveDe(rol: RolSesion): string | undefined {

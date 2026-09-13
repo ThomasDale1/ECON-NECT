@@ -24,7 +24,11 @@ export type IdSoftConstraint = (typeof SOFT_CONSTRAINTS)[number]
 export const PRIORIDADES_PILA = ['cobertura', ...SOFT_CONSTRAINTS, 'ordenLlegada'] as const
 export type IdPrioridad = (typeof PRIORIDADES_PILA)[number]
 
-/** Ventana de horas trabajadas: 30 días que terminan hoy (inclusive), America/El_Salvador. */
+/** Ventana de lectura del reporte de conductores: 30 días que terminan hoy
+ * (inclusive), America/El_Salvador. ⚠ El `ignOnTime` que devuelve es el
+ * contador acumulado de horas de motor del vehículo, no horas del día
+ * (verificado el 13 de septiembre de 2026): la ventana decide qué filas se
+ * leen, no qué se suma. */
 export const DIAS_VENTANA_HORAS = 30
 
 /** La cobertura tiene que estar en la pila y antes que distancia, tarifa,
@@ -275,4 +279,45 @@ export type SalidaSolver = {
   estado: 'ok' | 'sin_asignaciones'
   asignaciones: { solicitudId: string; maquinaId: string; operadorId: string }[]
   niveles: { objetivo: IdPrioridad; valor: number; probadoOptimo: boolean }[]
+}
+
+// ── Vista previa de reprogramación (pedido directo del usuario, 13 sep. 2026) ──
+// Navegador → POST /api/optimizar/reprogramacion. Solo propone: no se escribe
+// nada en Prisma ni en Startrack. El cálculo vive en lib/optimizador/reprogramar.ts.
+
+export const PeticionReprogramarSchema = PeticionOptimizarSchema.pick({ pila: true })
+export type PeticionReprogramar = { pila: IdPrioridad[] }
+
+type ResumenSolicitudReprogramacion = {
+  solicitudId: string
+  codigoProyecto: string | null
+  clase: string | null
+  /** Una APROBADA cuya máquina confirmada ya no puede operar. */
+  eraAprobada: boolean
+}
+
+export type SolicitudReprogramada = ResumenSolicitudReprogramacion & {
+  /** fecha_inicio / fecha_fin tal como las devuelve Prisma. */
+  original: { inicio: string; fin: string }
+  /** La ventana propuesta: misma cantidad de días que la original. */
+  propuesta: { inicio: string; fin: string }
+  dias: number
+  /** Días entre la fecha_inicio pedida y la propuesta. */
+  atrasoDias: number
+  maquina: { id: string; codigoActivo: string | null }
+  operador: { id: string; codTrabajador: string | null }
+}
+
+export type SolicitudNoReprogramable = ResumenSolicitudReprogramacion & { motivo: string }
+
+export type RespuestaReprogramacion = {
+  generadoEn: string
+  /** El plan como quedaría con las fechas propuestas. Las solicitudes ya
+   * cubiertas conservan máquina, operador y fechas. En las reprogramadas,
+   * `inicio`/`fin` traen la fecha propuesta como valor, pero el linaje
+   * conserva el valor crudo de Prisma. */
+  plan: RespuestaOptimizar
+  reprogramadas: SolicitudReprogramada[]
+  noReprogramables: SolicitudNoReprogramable[]
+  llamadasSolver: number
 }

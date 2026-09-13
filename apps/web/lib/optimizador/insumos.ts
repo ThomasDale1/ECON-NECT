@@ -46,7 +46,7 @@ export type InsumosOptimizador = {
   detallesPorEquipoId: Record<string, DetalleEquipoConProcedencia>
   /** Solo `{ id, prefijoFn }` por conductor: el nombre nunca sale del conector. */
   conductores: FuenteCruda<CodigoConductorStartrack>
-  /** Rating y horas de motor por conductor, ya proyectados (sin `detailAlerts`). */
+  /** Rating y horas de motor acumuladas por conductor, ya proyectados (sin `detailAlerts`). */
   reporteConductores: ReporteConductoresConProcedencia
   /** Los 30 días que terminan hoy, inclusive (America/El_Salvador). */
   ventanaHoras: { desde: string; hasta: string }

@@ -14,6 +14,9 @@
 
 import 'server-only'
 import type { CodigoConductorStartrack, ReporteConductoresStartrack } from '@/lib/canonico/tipos-crudos'
+import { hoyElSalvador } from '@/lib/mantenimiento/fechas'
+import type { FilaSerieDiaria, HorometroVivo, SerieDiaria } from '@/lib/mantenimiento/tipos'
+import type { Linaje } from '@/lib/tipos/canonico'
 import { asegurarEntornoCargado } from './entorno'
 import { SesionExpirada, ErrorConector, ErrorEscritura } from './errores'
 import { conCache, invalidarCache } from './cache'
@@ -200,6 +203,54 @@ export function leerConductores(): Promise<RespuestaConector<unknown[]>> {
   return leerLista('ajax/drivers.php?cmd=list')
 }
 
+// ── Geometría de las geocercas (13 de septiembre de 2026) ───────────────────
+//
+// **Corrección de un hallazgo previo.** El proyecto documentaba en tres puntos
+// que "Startrack publica el centro de la geocerca pero no su radio", y de ahí
+// que no se pudiera afirmar "dentro" ni "fuera". La afirmación salió de sondear
+// `ajax/namedPlaces.php?cmd=list`, que efectivamente devuelve nueve campos sin
+// geometría (id, name, address, group_id, created_by, creation_date, user_ids,
+// x, y).
+//
+// El radio sí existe, en la superficie REST moderna — el mismo patrón que ya
+// había pasado con las tareas, donde `ajax/jobs.php` daba 404 y la ruta buena
+// era `GET /api/job`. Verificado en vivo contra el sandbox:
+//
+//   GET /api/pois  → 20 registros. `radius` poblado en 20 de 20 (18 con valor
+//   mayor que cero), `is_round` con los dos valores 0 y 1, `geom` en 20 de 20,
+//   `corners` en 2 de 20.
+//
+// La otra vía es `ajax/namedPlaces.php?cmd=detail&id=<id>`, que agrega
+// `radius`, `is_round`, `vertices` y `bounding_box_wkt`. Se elige `/api/pois`
+// porque resuelve las 20 en una sola llamada en vez de una por geocerca.
+//
+// Proyecta dentro del conector: de todos los campos del POI salen solo los seis
+// que la cascada de ubicación necesita. `contact`, `url`, `photo_id` y los de
+// recurrencia de visitas no se leen.
+const ENDPOINT_POIS = 'api/pois'
+
+export function leerGeocercasConGeometria(): Promise<RespuestaConector<unknown[]>> {
+  return conCache(`startrack:${ENDPOINT_POIS}`, async () => {
+    const cuerpo = await peticionApiJson(ENDPOINT_POIS)
+    const lista = Array.isArray(cuerpo.data) ? (cuerpo.data as unknown[]) : []
+
+    const proyectadas = lista.map((cruda) => {
+      const p = cruda as Record<string, unknown>
+      return {
+        id: p.id,
+        name: p.name ?? null,
+        x: p.x ?? null,
+        y: p.y ?? null,
+        // Llegan como texto en la respuesta real; se parsean en la capa canónica.
+        radius: p.radius ?? null,
+        is_round: p.is_round ?? null,
+      }
+    })
+
+    return envolver(proyectadas as unknown[], PLATAFORMA, ENDPOINT_POIS)
+  })
+}
+
 // ── Operadores del optimizador (S-A10 Paso 2) ───────────────────────────────
 //
 // Los dos lectores de abajo PROYECTAN dentro del conector: lo que no se
@@ -253,8 +304,9 @@ function idConductor(valor: unknown): string | null {
   return id === '' ? null : id
 }
 
-/** Calificación (`scores[].safety_score`) y actividad diaria
- * (`detail[].ignOnTime`) de los conductores entre `desde` y `hasta`
+/** Calificación (`scores[].safety_score`) y contador acumulado de horas de
+ * motor (`detail[].ignOnTime`, en horas — ver tipos-crudos) de los conductores
+ * con actividad entre `desde` y `hasta`
  * (AAAA-MM-DD, inclusive). La respuesta válida no trae `success`; la vencida
  * trae `success:false` y `peticionAjax` reautentica por el cuerpo. */
 export function leerReporteConductores(
@@ -300,6 +352,133 @@ export function leerReporteConductores(
       return envolver<ReporteConductoresStartrack>({ scores, detail }, PLATAFORMA, endpoint)
     },
     TTL_REPORTE_CONDUCTORES_MS,
+  )
+}
+
+// ── Horómetro GPS y serie diaria (S-A11 Paso 2) ─────────────────────────────
+//
+// Dos reportes más de `ajax/report.php`, proyectados dentro del conector igual
+// que el de conductores. Lo que no se necesita **no sale de la función**:
+// `place`, `route`, `driver_id`, `heading`, `distance`, `duration`, `poiId` del
+// reporte 22; `driver` (un nombre — AGENTS.md §1.2), `summary`, las matrices y
+// `fmtDates` del reporte 3. Los reportes 45 y 37 (PII masiva) y 13 no se
+// llaman nunca.
+
+/** Estado de flota: `curOperatingHours` por vehículo. Verificado el 13 de
+ * septiembre de 2026 (14 filas; coincide con `ign_on_time` de
+ * `api/vehicle/{id}/status` en 14/14). */
+export const ID_REPORTE_FLOTA = 22
+
+/** Resumen Diario: `ignOnTime` en **segundos** por vehículo y día (Σ ÷ 3600 =
+ * horómetro vivo en 14/14). Verificado el 13 de septiembre de 2026. */
+export const ID_REPORTE_RESUMEN_DIARIO = 3
+
+/** El contador cambia con la operación: mismo orden que el estado de flota. */
+const TTL_HOROMETROS_MS = 60 * 1000
+
+/** La serie es histórica por día; 5 min como el reporte de conductores. */
+const TTL_RESUMEN_DIARIO_MS = 5 * 60 * 1000
+
+function idVehiculo(valor: unknown): string | null {
+  if (valor === null || valor === undefined) return null
+  const id = String(valor).trim()
+  return id === '' ? null : id
+}
+
+/** Horómetro y odómetro acumulados de cada vehículo, leídos en una sola
+ * llamada. De cada fila salen **solo** `vehicle_id`, `curOperatingHours` y
+ * `curOdometer`; el resto se descarta acá. */
+export function leerHorometrosFlota(): Promise<RespuestaConector<HorometroVivo[]>> {
+  const hoy = hoyElSalvador()
+  const endpoint =
+    `ajax/report.php?id=${ID_REPORTE_FLOTA}&format=json` +
+    `&start_date=${hoy}&end_date=${hoy}&vehicle_ids=&driver_ids=&retdat=1`
+
+  return conCache(
+    `startrack:${endpoint}`,
+    async () => {
+      const cuerpo = await peticionAjax(endpoint)
+      if (!Array.isArray(cuerpo.detail)) {
+        throw new ErrorConector(PLATAFORMA, endpoint, 'respuesta sin detail')
+      }
+      const leidoEn = new Date().toISOString()
+      const filas: HorometroVivo[] = []
+      for (const fila of cuerpo.detail as unknown[]) {
+        if (typeof fila !== 'object' || fila === null) continue
+        const { vehicle_id, curOperatingHours, curOdometer } = fila as {
+          vehicle_id?: unknown
+          curOperatingHours?: unknown
+          curOdometer?: unknown
+        }
+        const id = idVehiculo(vehicle_id)
+        if (id === null) continue
+        filas.push({
+          vehiculoId: id,
+          horasMotor: numeroONulo(curOperatingHours),
+          odometroKm: numeroONulo(curOdometer),
+          linaje: {
+            plataforma: PLATAFORMA,
+            endpoint,
+            campo: 'curOperatingHours',
+            valorCrudo: curOperatingHours ?? null,
+            leidoEn,
+          },
+        })
+      }
+      return envolver(filas, PLATAFORMA, endpoint)
+    },
+    TTL_HOROMETROS_MS,
+  )
+}
+
+/** Serie diaria de motor encendido entre `desde` y `hasta` (AAAA-MM-DD,
+ * inclusive). Varias filas por vehículo y día se conservan todas: el cálculo
+ * las suma. `timezone` del cuerpo viaja en el linaje para que la ficha pueda
+ * decir en qué zona están los días. */
+export function leerResumenDiario(desde: string, hasta: string): Promise<RespuestaConector<SerieDiaria>> {
+  const endpoint =
+    `ajax/report.php?id=${ID_REPORTE_RESUMEN_DIARIO}&format=json` +
+    `&start_date=${desde}&end_date=${hasta}&vehicle_ids=&driver_ids=&retdat=1`
+
+  return conCache(
+    `startrack:${endpoint}`,
+    async () => {
+      const cuerpo = await peticionAjax(endpoint)
+      if (!Array.isArray(cuerpo.detail)) {
+        throw new ErrorConector(PLATAFORMA, endpoint, 'respuesta sin detail')
+      }
+      const leidoEn = new Date().toISOString()
+      const filas: FilaSerieDiaria[] = []
+      for (const fila of cuerpo.detail as unknown[]) {
+        if (typeof fila !== 'object' || fila === null) continue
+        // `driver` NO se desestructura: es un nombre y muere acá.
+        const { vehicleId, date, ignOnTime, timeInMotion, idling } = fila as {
+          vehicleId?: unknown
+          date?: unknown
+          ignOnTime?: unknown
+          timeInMotion?: unknown
+          idling?: unknown
+        }
+        const id = idVehiculo(vehicleId)
+        if (id === null || typeof date !== 'string' || date.length < 10) continue
+        filas.push({
+          vehiculoId: id,
+          fecha: date.slice(0, 10),
+          motorEncendidoSeg: numeroONulo(ignOnTime),
+          enMovimientoSeg: numeroONulo(timeInMotion),
+          ralentiSeg: numeroONulo(idling),
+        })
+      }
+      const linaje: Linaje = {
+        plataforma: PLATAFORMA,
+        endpoint,
+        campo: 'detail[].ignOnTime',
+        valorCrudo: { timezone: typeof cuerpo.timezone === 'string' ? cuerpo.timezone : null },
+        leidoEn,
+      }
+      return envolver<SerieDiaria>({ desde, hasta, filas, linaje }, PLATAFORMA, endpoint)
+    },
+    TTL_RESUMEN_DIARIO_MS,
   )
 }
 
@@ -497,4 +676,251 @@ export async function crearTarea(
   invalidarCache('startrack:api/job')
 
   return envolver(comoObjeto, PLATAFORMA, ENDPOINT_CREAR_TAREA)
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura — Propagación P3 (S-A11 Paso 2c): estado del vehículo.
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Misma familia que `crearTarea`: `ErrorEscritura`, sin reintento ante
+// `success:false`, sin caché. Tres reglas propias:
+//
+// 1. **Nunca se manda un cuerpo que no salió de la propia API.** Primero `GET
+//    api/vehicle/{id}` (55 campos); si falla, se aborta. El PUT lleva ese
+//    mismo objeto con `status` reemplazado — `status` llega como texto y se
+//    respeta el tipo observado ("1" Mantenimiento, "0" Normal).
+// 2. **Se verifica y se revierte.** Un GET después del PUT confirma que
+//    `status` cambió y que ningún otro campo cambió; si algo más cambió, se
+//    revierte con el objeto original y se lanza `ErrorEscritura` con la lista.
+// 3. **PII de ida y vuelta, nunca de salida.** `engine_num`, `license_plate`,
+//    `vin` y `driver_id` viajan dentro del cuerpo porque la API lo exige; no se
+//    registran, no se devuelven a la ruta, no se muestran. El rastro solo
+//    nombra `status`.
+
+export type EstadoVehiculoEscribible = '0' | '1'
+
+/** Cuerpo de `GET api/vehicle/{id}`: `{ success, data }` con 55 campos
+ * (verificado el 13 de septiembre de 2026). Se tipa laxo a propósito: el PUT
+ * espeja lo leído sin interpretar ningún campo salvo `status`. */
+export type VehiculoStartrackCompleto = Record<string, unknown>
+
+async function leerVehiculoCompleto(
+  vehiculoId: string,
+): Promise<{ endpoint: string; datos: VehiculoStartrackCompleto }> {
+  const endpoint = `api/vehicle/${vehiculoId}`
+  const cuerpo = await peticionApiJson(endpoint)
+  const datos = cuerpo.data
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      'GET sin `data`: no se escribe un cuerpo que no salió de la API',
+    )
+  }
+  return { endpoint, datos: datos as VehiculoStartrackCompleto }
+}
+
+/** Lectura de verificación, sin caché: sirve para saber en qué estado está
+ * el vehículo antes de abrir o cerrar una orden. Solo devuelve `status` y el
+ * conteo de campos — el objeto completo trae PII y se queda acá. */
+export async function leerVehiculo(
+  vehiculoId: string,
+): Promise<RespuestaConector<{ status: string | null; campos: number }>> {
+  const { endpoint, datos } = await leerVehiculoCompleto(vehiculoId)
+  return envolver(
+    { status: datos.status == null ? null : String(datos.status), campos: Object.keys(datos).length },
+    PLATAFORMA,
+    endpoint,
+  )
+}
+
+/** Campos que difieren entre dos lecturas del mismo vehículo, comparando por
+ * JSON (los valores llegan como texto, arreglos o null). */
+export function camposQueDifieren(
+  antes: VehiculoStartrackCompleto,
+  despues: VehiculoStartrackCompleto,
+): string[] {
+  const claves = new Set([...Object.keys(antes), ...Object.keys(despues)])
+  const distintos: string[] = []
+  for (const clave of claves) {
+    if (JSON.stringify(antes[clave] ?? null) !== JSON.stringify(despues[clave] ?? null)) {
+      distintos.push(clave)
+    }
+  }
+  return distintos.sort()
+}
+
+async function ponerRecurso(endpoint: string, cuerpo: VehiculoStartrackCompleto): Promise<void> {
+  const { baseUrl } = config()
+  if (!cookieSesion) await iniciarSesion()
+
+  const intentar = async (): Promise<Response> =>
+    fetch(`${baseUrl}/${endpoint}`, {
+      method: 'PUT',
+      headers: { Cookie: cookieSesion!, 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify(cuerpo),
+    })
+
+  let respuesta = await intentar()
+  if (respuesta.status === 401) {
+    // 401 = el servidor no procesó nada; reautenticar una sola vez es seguro.
+    await iniciarSesion()
+    respuesta = await intentar()
+  }
+
+  let json: unknown = null
+  try {
+    json = await respuesta.json()
+  } catch {
+    // Un PUT puede responder sin cuerpo; el GET de verificación decide.
+  }
+  const comoObjeto = (json ?? {}) as Record<string, unknown>
+
+  if (!respuesta.ok) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `status ${respuesta.status}: ${String(comoObjeto.errorMsg ?? comoObjeto.message ?? 'sin detalle')}`,
+    )
+  }
+  if (comoObjeto.success === false) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      String(comoObjeto.errorMsg ?? 'la plataforma respondió success:false sin detalle'),
+    )
+  }
+}
+
+export type RastroEstadoVehiculo = {
+  antes: string | null
+  despues: string | null
+  endpoint: string
+  metodo: 'PUT'
+  hora: string
+}
+
+/**
+ * Cambia `status` del vehículo en Startrack de ida (`'1'` Mantenimiento) o de
+ * vuelta (`'0'` Normal). Solo la llama `lib/propagacion/taller.ts`, después de
+ * la restricción de recurso propio; esta función no la vuelve a verificar
+ * porque no conoce Prisma ni el proyecto — igual que `crearTarea`.
+ *
+ * `camposIgnorados`: campos que el servidor actualiza solo al escribir. Se
+ * declaran desde lo observado en el no-op del Paso 9, nunca se adivinan acá.
+ * Vacío = cualquier diferencia fuera de `status` revierte.
+ */
+export async function actualizarEstadoVehiculo(
+  vehiculoId: string,
+  status: EstadoVehiculoEscribible,
+  camposIgnorados: string[] = [],
+): Promise<RastroEstadoVehiculo> {
+  const { endpoint, datos: original } = await leerVehiculoCompleto(vehiculoId)
+  const antes = original.status == null ? null : String(original.status)
+
+  await ponerRecurso(endpoint, { ...original, status })
+
+  const { datos: verificado } = await leerVehiculoCompleto(vehiculoId)
+  const despues = verificado.status == null ? null : String(verificado.status)
+
+  const alterados = camposQueDifieren(original, verificado).filter(
+    (campo) => campo !== 'status' && !camposIgnorados.includes(campo),
+  )
+  if (alterados.length > 0) {
+    // Se revierte con el objeto original tal cual salió de la API; si la
+    // reversión también falla, ese error es el que llega, con su endpoint.
+    await ponerRecurso(endpoint, original)
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PUT alteró campos además de status (${alterados.join(', ')}); se revirtió al objeto original`,
+    )
+  }
+  if (despues !== status) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PUT respondió sin error pero status sigue en ${despues ?? 'null'} (se pidió ${status})`,
+    )
+  }
+
+  invalidarCache('startrack:ajax/vehicles.php')
+  invalidarCache(`startrack:${endpoint}`)
+
+  return { antes, despues, endpoint, metodo: 'PUT', hora: new Date().toISOString() }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Escritura — estado de una tarea (coherencia R2, expediente).
+// ─────────────────────────────────────────────────────────────────────────────
+//
+// Mismas tres reglas que `actualizarEstadoVehiculo`: el PUT espeja el objeto
+// que devolvió `GET api/job/{id}` (70 campos, verificado el 13-sep-2026; OPTIONS
+// anuncia GET y PUT) con solo `status` reemplazado; un GET posterior verifica;
+// si cambió algo más que el estado, se revierte. `contact_name`,
+// `contact_email` y `phone_number` viajan dentro del cuerpo porque el PUT
+// espeja el objeto, pero no se registran ni salen de esta función.
+
+/** `0` Pendiente · `2` Cancelada (`GET api/job/status`). Una tarea ya
+ * cancelada no se puede modificar: el PUT responde 403 "no puede modificar una
+ * Tarea cancelada" (verificado el 13-sep-2026), así que `2` es definitivo. */
+export type EstadoTareaEscribible = '0' | '2'
+
+/** Campos del mismo objeto tarea que registran el propio cambio de estado. Se
+ * nombran por lo que son, no por lo observado en un PUT: si el primer PUT real
+ * altera otro campo, la verificación lo revierte y lo reporta. */
+const CAMPOS_BITACORA_DE_ESTADO_TAREA = ['changed_date', 'last_status_change_date', 'closed_date', 'status_changes']
+
+async function leerTareaCompleta(tareaId: string): Promise<{ endpoint: string; datos: Record<string, unknown> }> {
+  const endpoint = `api/job/${tareaId}`
+  const cuerpo = await peticionApiJson(endpoint)
+  const datos = cuerpo.data
+  if (typeof datos !== 'object' || datos === null || Array.isArray(datos)) {
+    throw new ErrorEscritura(PLATAFORMA, endpoint, 'GET sin `data`: no se escribe un cuerpo que no salió de la API')
+  }
+  return { endpoint, datos: datos as Record<string, unknown> }
+}
+
+export type RastroEstadoTarea = {
+  tareaId: string
+  antes: string | null
+  despues: string | null
+  endpoint: string
+  metodo: 'PUT'
+  hora: string
+}
+
+/** Cambia `status` de una tarea. Solo la llama `lib/propagacion/coherencia.ts`,
+ * después de la restricción de recurso propio. */
+export async function actualizarEstadoTarea(tareaId: string, status: EstadoTareaEscribible): Promise<RastroEstadoTarea> {
+  const { endpoint, datos: original } = await leerTareaCompleta(tareaId)
+  const antes = original.status == null ? null : String(original.status)
+
+  await ponerRecurso(endpoint, { ...original, status })
+
+  const { datos: verificado } = await leerTareaCompleta(tareaId)
+  const despues = verificado.status == null ? null : String(verificado.status)
+
+  const alterados = camposQueDifieren(original, verificado).filter(
+    (campo) => campo !== 'status' && !CAMPOS_BITACORA_DE_ESTADO_TAREA.includes(campo),
+  )
+  if (alterados.length > 0) {
+    await ponerRecurso(endpoint, original)
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PUT alteró campos además de status (${alterados.join(', ')}); se revirtió al objeto original`,
+    )
+  }
+  if (despues !== status) {
+    throw new ErrorEscritura(
+      PLATAFORMA,
+      endpoint,
+      `el PUT respondió sin error pero status sigue en ${despues ?? 'null'} (se pidió ${status})`,
+    )
+  }
+
+  invalidarCache('startrack:api/job')
+
+  return { tareaId, antes, despues, endpoint, metodo: 'PUT', hora: new Date().toISOString() }
 }

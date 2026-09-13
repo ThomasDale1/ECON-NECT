@@ -8,6 +8,7 @@ import {
   BarChart2,
   Bot,
   CalendarRange,
+  ClipboardList,
   LayoutDashboard,
   List,
   PanelLeftClose,
@@ -34,6 +35,7 @@ type Navegacion = { etiqueta: string; icono: LucideIcon; href: string }
 // ella desde la flota. Un ítem de nav que lleva a un 404 es peor que no tenerlo.
 const NAVEGACION: Navegacion[] = [
   { etiqueta: 'Centro de comando', icono: LayoutDashboard, href: '/command-center' },
+  { etiqueta: 'Expediente vivo', icono: ClipboardList, href: '/expediente' },
   { etiqueta: 'Flota', icono: List, href: '/flota' },
   { etiqueta: 'Indicadores', icono: BarChart2, href: '/indicadores' },
   { etiqueta: 'Planeación', icono: CalendarRange, href: '/planeacion' },

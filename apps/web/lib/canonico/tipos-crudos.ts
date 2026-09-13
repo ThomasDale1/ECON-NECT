@@ -79,6 +79,11 @@ export type OperadorPrismaCrudo = {
 export type DetalleEquipoPrismaCrudo = {
   id: number | string
   effective_precio_x_hora: number | null
+  // Agregados S-A11 Paso 3b — existen en 17/17, vacios en 17/17 (13 de
+  // septiembre de 2026). NECT los escribe en P4 (PATCH /api/maquinaria/equipos/{id}).
+  mantenimiento_fecha_inicio?: string | null
+  mantenimiento_fecha_fin?: string | null
+  mantenimiento_notas?: string | null
   associated_operators:
     | { id: number | string; nombre: string | null; cod_trabajador: string | null; is_active: boolean | null }[]
     | null
@@ -106,6 +111,25 @@ export type GeocercaStartrackCruda = {
   x: number | null
   y: number | null
   group_id: number | string | null
+}
+
+/**
+ * La misma geocerca leída por `GET /api/pois`, que sí trae geometría
+ * (13 de septiembre de 2026). `radius` e `is_round` llegan como **texto** en la
+ * respuesta real, igual que `x`/`y`: se parsean en la capa canónica, no acá.
+ *
+ * `is_round` vale 1 en las circulares —donde `radius` es el radio— y 0 en las
+ * poligonales, donde `radius` describe el círculo que las contiene. La unidad
+ * no viene declarada; los valores observados van de 15 a 1003, coherente con
+ * metros.
+ */
+export type GeocercaConGeometriaCruda = {
+  id: number | string
+  name: string | null
+  x: number | string | null
+  y: number | string | null
+  radius: number | string | null
+  is_round: number | string | null
 }
 
 export type TareaStartrackCruda = {
@@ -149,6 +173,15 @@ export type EstadoVehiculoStartrackCrudo = {
   date_time: string | null
   placename: string | null
   reason: string | null
+  // Agregados S-A11 Paso 2d — observados el 13 de septiembre de 2026 en
+  // `GET api/vehicle/{id}/status`, también como texto. `ign_on_time` coincide
+  // con `curOperatingHours` del reporte 22 en 14/14 (horas acumuladas del
+  // GPS); `stat_ign_on_time` es el acumulado del día `stat_date`, en horas.
+  // Solo se tipan: ninguna función de lib/canonico los interpreta.
+  odometer?: string | null
+  ign_on_time?: string | null
+  stat_date?: string | null
+  stat_ign_on_time?: string | null
 }
 
 /** Proyección de un conductor de `ajax/drivers.php?cmd=list` (S-A10 Paso 2).
@@ -165,8 +198,11 @@ export type CodigoConductorStartrack = {
  * conector: trae `driver.name` (AGENTS.md §1.2). */
 export type ReporteConductoresStartrack = {
   scores: { driver_id: string; safety_score: number | null }[]
-  /** Una fila por conductor y día. `ignOnTime` en minutos, unidad inferida
-   * (todos los valores observados ≤ 1440). */
+  /** Una fila por conductor y día con actividad. ⚠ `ignOnTime` es el
+   * contador acumulado de horas con motor encendido del vehículo (igual al
+   * `ign_on_time` de `api/vehicle/{id}/status` en 6/6 comparados el 13 de
+   * septiembre de 2026), no la actividad del día: se toma el máximo, nunca
+   * la suma. La inferencia previa "minutos, ≤ 1440" era falsa. */
   detail: { driver_id: string; date: string | null; ignOnTime: number | null }[]
 }
 

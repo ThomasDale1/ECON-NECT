@@ -36,7 +36,7 @@ export const CATALOGO_KPI: Kpi[] = [
     porQueNingunaPlataformaLoVeSola:
       'Prisma tiene la tarifa y el mínimo contratado; Startrack tiene las horas reales de uso del equipo en el terreno. Ninguna de las dos cruza ambas cosas hoy.',
     datoFaltante:
-      'Horas reales de uso: no expuestas por ningún endpoint del sandbox (404 verificado en las rutas de uso/bitácora probadas: .../uso, .../usage, .../eventos, .../events, .../historial, y las de nivel de módulo). Además, `precio_x_hora` y `minimum_usage_hours` vienen poblados solo en 1 de los 15 equipos observados. La fórmula queda declarada arriba; el valor se muestra como "No disponible — falta el timestamp/horas reales", nunca un número inventado.',
+      'Tarifa y mínimo contratado: `precio_x_hora` y `minimum_usage_hours` vienen poblados solo en 2 de los 17 equipos observados (13 de septiembre de 2026). Las horas reales de uso SÍ existen en el sandbox — corrección de S-A11: Startrack expone el horómetro GPS acumulado (`curOperatingHours`, reporte 22) y la serie diaria de motor encendido en segundos (`ignOnTime`, reporte 3) para 13 de 14 vehículos con horas > 0; la afirmación previa de que no había horas de uso (404 en las rutas de Prisma probadas) era cierta solo para Prisma. El KPI sigue sin ser calculable, pero por la tarifa y el mínimo, no por las horas. El valor se muestra como "No disponible — faltan tarifa y mínimo contratado", nunca un número inventado.',
   },
   {
     id: 'latencia-solicitud-traslado',
@@ -102,7 +102,7 @@ export const CATALOGO_KPI: Kpi[] = [
     id: 'ahorro-por-objetivo-optimizador',
     nombre: 'Ahorro del plan frente a la peor opción válida',
     queMide:
-      'Por cada solicitud que el plan cubre, cuánto mejor es la máquina y el operador elegidos que la peor opción que también cumplía todas las restricciones duras de esa solicitud, en tarifa efectiva (USD/h), distancia al proyecto (km), rating del operador (pts, Startrack) y horas trabajadas del operador (h con motor encendido, últimos 30 días).',
+      'Por cada solicitud que el plan cubre, cuánto mejor es la máquina y el operador elegidos que la peor opción que también cumplía todas las restricciones duras de esa solicitud, en tarifa efectiva (USD/h), distancia al proyecto (km), rating del operador (pts, Startrack) y horas de motor acumuladas del vehículo que conduce el operador (h, contador de Startrack).',
     porQueImporta:
       'Muestra el costo de asignar sin criterio dentro de lo que es válido: la diferencia entre la mejor y la peor decisión posible con la flota y la gente disponibles hoy. Es el argumento de costo por hora, traslado, seguridad y reparto de carga, con su cobertura a la vista.',
     formula:
@@ -130,6 +130,43 @@ export const CATALOGO_KPI: Kpi[] = [
       'Por cada no cubierta, según su motivo: rentar (0 máquinas de la clase), reprogramar (máquinas ocupadas en la ventana) o reasignar operador.',
     porQueNingunaPlataformaLoVeSola:
       'Prisma tiene la demanda y la ocupación, pero no evalúa si toda la demanda cabe a la vez respetando la disponibilidad real, que ni siquiera es un campo (01 E.2), ni propone un reemplazo cuando una máquina confirmada deja de operar. Startrack no ve la demanda.',
+    datoFaltante: null,
+  },
+
+  // ── Mantenimiento preventivo por horómetro (S-A11 Paso 10b) ──────────────
+  {
+    id: 'avance-intervalo-mantenimiento',
+    nombre: 'Avance al intervalo de mantenimiento',
+    queMide:
+      'Horas de motor medidas por el GPS de Startrack desde la última salida de taller del equipo, divididas por el intervalo de servicio vigente (aceite de motor y filtros). Se muestra como porcentaje y como horas de M.',
+    porQueImporta:
+      'El horómetro humano de Prisma (`hour_meter` del reporte de falla) solo se teclea cuando la máquina ya está en el taller; el GPS lo mide todos los días. Con esto Mantenimiento ve venir el servicio en vez de enterarse por una falla.',
+    formula:
+      'Σ ignOnTime (segundos, reporte diario 3 de Startrack) de los días posteriores al ancla ÷ 3600 ÷ intervalo vigente. Ancla = la más reciente entre mantenimiento_fecha_fin del equipo (Prisma, si ≤ hoy) y updated_at del último reporte FINALIZADO; sin ninguna, el primer día con datos del GPS (y se dice). Intervalo, en orden: fijado a mano en el navegador → mediana de Δhour_meter entre reportes FINALIZADO consecutivos del equipo → catálogo OEM por marca y modelo (estándar o severo) → sin dato.',
+    referencia:
+      'Aviso al 80 %, urgente al 90 %, vencido al 100 % del intervalo (editables por navegador, con esos valores por defecto); o contra el intervalo aprendido del propio equipo cuando hay historial. Verificado el 13 de septiembre de 2026: Σ de la serie diaria ÷ 3600 coincide con el contador del vehículo en 14 de 14; los dos horómetros (GPS y humano) nunca se comparan entre sí.',
+    accionQueDispara:
+      'Abrir la orden de taller preventiva antes del 100 % (P4 en Prisma + P3 en Startrack, con confirmación humana), y sacar la máquina de la demanda del optimizador para esas fechas.',
+    porQueNingunaPlataformaLoVeSola:
+      'Startrack tiene las horas de motor pero no sabe cuándo salió del taller ni cuál es el intervalo; Prisma tiene el taller (ventana de mantenimiento, reportes de falla) y el intervalo aprendido, pero ningún horómetro que se actualice solo. Ninguna cruza las dos cosas.',
+    datoFaltante:
+      'Intervalo: hoy sale del catálogo OEM (parámetro declarado con fuente externa, por marca y modelo) porque el sandbox no tiene reportes FINALIZADO con horómetro (0 reportes el 13 de septiembre de 2026). Sensores de temperatura y combustible: no existen (`sensor_readings` vacío y `fuelmeter` = 0 en 14 de 14). Los 3 equipos sin contraparte en Startrack quedan sin horómetro, y se dice.',
+  },
+  {
+    id: 'equipos-en-alerta-preventiva',
+    nombre: 'Equipos en alerta preventiva (N de M)',
+    queMide:
+      'Cuántos equipos con horómetro GPS e intervalo vigente están en aviso, urgente o vencido, sobre M = equipos con horómetro e intervalo. Se desglosa por nivel.',
+    porQueImporta:
+      'Es la cola de trabajo de Mantenimiento en un número: cuántas máquinas van a parar si nadie abre la orden, ordenadas por urgencia real y no por la fecha en que alguien se acordó.',
+    formula:
+      'N = equipos con nivelAlerta ≠ null (vencido > urgente > aviso); M = equipos con horasDesdeAncla e intervalo.horas no nulos. Un equipo en taller o parado por falla no cuenta como alerta mientras dure.',
+    referencia:
+      'Contra 0 de M: ninguna máquina llega al 100 % sin orden abierta. La cobertura M se muestra siempre al lado: hoy 14 de 17 equipos tienen horómetro y 15 de 17 tienen intervalo (13 de septiembre de 2026).',
+    accionQueDispara:
+      'Priorizar la orden de taller de los equipos en vencido y urgente, y sacar esas máquinas de la demanda del optimizador para la ventana de taller.',
+    porQueNingunaPlataformaLoVeSola:
+      'Prisma no tiene horas de motor que cambien solas; Startrack no tiene intervalo ni salida de taller. El conteo existe solo al cruzarlas.',
     datoFaltante: null,
   },
 ]

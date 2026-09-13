@@ -359,13 +359,13 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
   {
     modulo: 'Conductores',
     campoPrisma: null,
-    campoStartrack: 'Horas con motor encendido por conductor y día — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)',
+    campoStartrack: 'Horas de motor acumuladas del vehículo del conductor — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)',
     tipoRelacion: 'solo en Startrack',
     transformacion:
-      'Unidad minutos, inferida. Para las horas trabajadas de un operador se suman las filas de su conductor en los últimos 30 días y se dividen entre 60.',
+      'Unidad horas, contador acumulado desde la instalación del GPS. Para las horas de motor de un operador se toma la lectura más alta de su conductor en la ventana de 30 días; nunca la suma ni una división entre 60.',
     evidencia:
-      'Verificado contra la API real el 13 de septiembre de 2026: `detail[]` trae una fila por conductor y día (`driver_id`, `vehicle_id`, `date`, `ignOnTime`, `movingTime`, `distance`…), con actividad para 10 conductores. La unidad no está declarada: se infiere minutos porque todos los valores observados son ≤ 1440 y la web de Startrack los muestra en horas y minutos.',
-    confianza: 'media',
+      'Verificado contra la API real el 13 de septiembre de 2026 (corregido esa misma madrugada): `detail[]` trae una fila por conductor y día con actividad (`driver_id`, `vehicle_id`, `date`, `ignOnTime`, `movingTime`, `distance`…). `ignOnTime` coincide al cuarto decimal con `ign_on_time` de `api/vehicle/{id}/status` (acumulado) en 6 de 6 vehículos comparados y no con `stat_ign_on_time` (del día); la suma de la serie diaria del reporte 3 (`ignOnTime` en segundos) ÷ 3600 reproduce ese acumulado en 14 de 14. La inferencia anterior ("minutos, ≤ 1440") solo era compatible con seis días de GPS instalado.',
+    confianza: 'alta',
     critico: false,
   },
   {
@@ -414,6 +414,70 @@ const MATRIZ_MAPEO_BASE: FilaMapeoBase[] = [
       'Corrección verificada el 12 de septiembre contra `GET /api/job`, campo `remote_id`: ECON no lo llena en su operación; los valores presentes en el sandbox son escrituras de prueba de los equipos del hackathon — aparece poblado en parte de las tareas del pool compartido, incluida una nuestra que enlaza una solicitud por `remote_id`. La recomendación de arquitectura se mantiene y se refuerza: el mecanismo persiste, falta que Prisma lo llene sistemáticamente. No aparece como fila propia en el diccionario compartido.',
     confianza: 'alta',
     critico: true,
+  },
+
+  // Mantenimiento preventivo por horómetro (S-A11)
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: 'mantenimiento_fecha_inicio, mantenimiento_fecha_fin, mantenimiento_notas (GET/PATCH /api/maquinaria/equipos/{id})',
+    campoStartrack: 'status = 1 (PUT api/vehicle/{id})',
+    tipoRelacion: 'con transformación',
+    transformacion:
+      'La orden de taller de ECON NECT escribe una ventana de mantenimiento en Prisma y marca el vehículo como Mantenimiento en Startrack. No fusiona estados: Prisma guarda la ventana del recurso; Startrack guarda el estado publicado por el vehículo. Siempre requiere confirmación humana y recurso propio.',
+    evidencia:
+      'Verificado en planeación S-A11 el 13 de septiembre de 2026: el detalle de equipo de Prisma expone `mantenimiento_fecha_inicio`, `mantenimiento_fecha_fin` y `mantenimiento_notas`; Startrack acepta el estado 1 como Mantenimiento en `api/vehicle/{id}`. No se usa tarea de Startrack: no hay tipo Mantenimiento ni geocerca de taller en el sandbox autorizado.',
+    confianza: 'alta',
+    critico: true,
+  },
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: null,
+    campoStartrack: 'curOperatingHours (ajax/report.php?id=22, reporte Estado de flota)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion:
+      'Horas de motor acumuladas del GPS, en horas. Sirve como contador vivo y como linaje del horómetro. No se compara contra `hour_meter` de Prisma porque son fuentes y escalas operativas distintas.',
+    evidencia:
+      'Verificado contra el sandbox el 13 de septiembre de 2026: el reporte 22 expone `curOperatingHours` y coincide con `ign_on_time` del status del vehículo en la muestra observada. La afirmación se guarda como hecho estructural, sin transcribir valores de registro.',
+    confianza: 'alta',
+    critico: true,
+  },
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: null,
+    campoStartrack: 'detail[].ignOnTime (ajax/report.php?id=3, Resumen Diario)',
+    tipoRelacion: 'solo en Startrack',
+    transformacion:
+      'Segundos por vehículo y día. ECON NECT suma las filas del vehículo posteriores al ancla y divide entre 3600 para obtener horas desde la última salida de taller.',
+    evidencia:
+      'Verificado contra el sandbox el 13 de septiembre de 2026: `ignOnTime` del reporte diario está en segundos y la suma por vehículo reproduce el horómetro vivo. El campo `driver` de ese reporte es nombre de persona y se descarta en el conector.',
+    confianza: 'alta',
+    critico: true,
+  },
+  {
+    modulo: 'Mantenimiento preventivo',
+    campoPrisma: 'hour_meter (GET /api/maquinaria/fallas)',
+    campoStartrack: null,
+    tipoRelacion: 'solo en Prisma',
+    transformacion:
+      'Solo se usa para aprender un intervalo interno mediante la mediana de diferencias entre reportes FINALIZADO consecutivos del mismo equipo. Nunca se compara con el horómetro GPS vivo.',
+    evidencia:
+      'Planeación S-A11: Prisma guarda el horómetro humano dentro de reportes de falla; el usuario lo teclea cuando el equipo ya está en taller. Por honestidad de datos, se usa solo como serie interna de Prisma y no como equivalencia de Startrack.',
+    confianza: 'alta',
+    critico: false,
+  },
+
+  // Coherencia de estado — resolver R2 desde el expediente
+  {
+    modulo: 'Coherencia de estado (R2)',
+    campoPrisma: 'estado del equipo (PATCH /api/maquinaria/equipos/{id}/estado)',
+    campoStartrack: 'status de la tarea de Traslado (PUT api/job/{id})',
+    tipoRelacion: 'con transformación',
+    transformacion:
+      'No son el mismo objeto: Prisma describe el recurso y Startrack la tarea. La equivalencia solo existe para apagar R2 cuando una persona elige qué lado manda. Mantener Prisma (OBSOLETA) → la tarea de Traslado pasa a 2 = Cancelada. Mantener Startrack (traslado Pendiente) → el equipo pasa a DISPONIBLE. Si el equipo no opera por falla o paro, no hay equivalencia por estado y no se escribe. Siempre con confirmación humana y recurso propio.',
+    evidencia:
+      'Verificado en vivo el 13 de septiembre de 2026: `GET api/job/status` devuelve cuatro estados (0 Pendiente, 1 Completada, 2 Cancelada, 3 Parcial) y ninguno equivale a "Suspendida"; `GET /api/job` devuelve `status_name` en inglés (Pending, Canceled, Partial observados); OPTIONS de `api/job/{id}` anuncia GET y PUT, y OPTIONS de `/api/maquinaria/equipos/{id}/estado` anuncia PATCH. Un PUT sobre una tarea propia ya cancelada respondió 403 "no puede modificar una Tarea cancelada": Cancelada es definitiva. Confianza media: ni el PUT sobre una tarea Pendiente ni el cuerpo `{ estado }` del PATCH se han ejercido con una escritura exitosa.',
+    confianza: 'media',
+    critico: false,
   },
 
   {
@@ -513,9 +577,26 @@ const METADATOS_PRISMA: Record<string, MetadatosCampo> = {
     tipoDato: 'Fecha AAAA-MM-DD (sin hora)',
     ejemplo: 'Fecha de creación de la solicitud (forma del valor)',
   },
+  'estado del equipo (PATCH /api/maquinaria/equipos/{id}/estado)': {
+    tipoDato: 'Catálogo',
+    ejemplo: 'DISPONIBLE (valor de catálogo)',
+  },
+  'mantenimiento_fecha_inicio, mantenimiento_fecha_fin, mantenimiento_notas (GET/PATCH /api/maquinaria/equipos/{id})':
+    {
+      tipoDato: 'Dos fechas AAAA-MM-DD y un texto libre',
+      ejemplo: 'Ventana de mantenimiento y su nota (forma del valor)',
+    },
+  'hour_meter (GET /api/maquinaria/fallas)': {
+    tipoDato: 'Numérico — horómetro al momento de la falla',
+    ejemplo: 'Horas acumuladas del equipo (forma del valor)',
+  },
 }
 
 const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
+  'status de la tarea de Traslado (PUT api/job/{id})': {
+    tipoDato: 'Catálogo (código en texto)',
+    ejemplo: '2 = Cancelada (valor de catálogo)',
+  },
   'Grupo, Etiquetas (módulo Vehículos)': {
     tipoDato: 'Grupo + lista de etiquetas',
     ejemplo: '«grupo» + «etiqueta de equipo» (forma del valor)',
@@ -607,6 +688,23 @@ const METADATOS_STARTRACK: Record<string, MetadatosCampo> = {
       tipoDato: 'Numérico en minutos (unidad inferida, no declarada)',
       ejemplo: 'Minutos con motor encendido en el día (forma del valor)',
     },
+  'Horas de motor acumuladas del vehículo del conductor — detail[].ignOnTime (ajax/report.php?id=32, reporte de conductores)':
+    {
+      tipoDato: 'Numérico en horas acumuladas (verificado contra ign_on_time)',
+      ejemplo: 'Horas de motor acumuladas del vehículo (forma del valor)',
+    },
+  'status = 1 (PUT api/vehicle/{id})': {
+    tipoDato: 'Entero del catálogo de estado del conductor (1 = Mantenimiento)',
+    ejemplo: 'Valor de catálogo, escrito por la propagación',
+  },
+  'curOperatingHours (ajax/report.php?id=22, reporte Estado de flota)': {
+    tipoDato: 'Numérico — horas de operación acumuladas',
+    ejemplo: 'Horómetro vivo del vehículo (forma del valor)',
+  },
+  'detail[].ignOnTime (ajax/report.php?id=3, Resumen Diario)': {
+    tipoDato: 'Numérico en segundos (verificado el 13 de septiembre de 2026)',
+    ejemplo: 'Segundos con motor encendido en el día (forma del valor)',
+  },
 }
 
 /**

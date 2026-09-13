@@ -519,13 +519,20 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     calificacionesPorConductorId.set(fila.driver_id, lista)
   }
 
-  const minutosPorConductorId = new Map<string, (number | null)[]>()
+  // ⚠ Corregido el 13 de septiembre de 2026 (S-A11, planeación): `ignOnTime`
+  // del reporte de conductores NO son minutos del día. Es el contador
+  // acumulado de horas con motor encendido del vehículo (igual, al 4.º
+  // decimal, al `ign_on_time` de `GET api/vehicle/{id}/status` en 6 de 6
+  // vehículos comparados; Σ de la serie diaria del reporte 3 ÷ 3600 lo
+  // reproduce en 14 de 14). Cada fila trae la foto del contador, así que
+  // sumarlas cuenta el mismo contador varias veces.
+  const horasAcumuladasPorConductorId = new Map<string, (number | null)[]>()
   for (const fila of reporteConductores.datos.detail) {
     const fecha = fila.date?.slice(0, 10)
     if (!fecha || fecha < ventanaHoras.desde || fecha > ventanaHoras.hasta) continue
-    const lista = minutosPorConductorId.get(fila.driver_id) ?? []
+    const lista = horasAcumuladasPorConductorId.get(fila.driver_id) ?? []
     lista.push(fila.ignOnTime)
-    minutosPorConductorId.set(fila.driver_id, lista)
+    horasAcumuladasPorConductorId.set(fila.driver_id, lista)
   }
 
   function codigoCoincideConAlgunConductor(op: OperadorPrismaCrudo): boolean {
@@ -582,26 +589,29 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     const conductorId = conductorPorOperadorId.get(String(op.id))
     if (conductorId === undefined) return { valor: null, motivo: motivoSinConductor(op), linaje: [] }
 
-    const minutos = minutosPorConductorId.get(conductorId) ?? []
-    const linaje = [crearLinaje(procReporte, 'detail[].ignOnTime', minutos), linajeUnion(conductorId)]
-    if (minutos.length === 0) {
-      // Unido y sin filas en la ventana: 0 h reales, no peor caso.
+    const lecturas = horasAcumuladasPorConductorId.get(conductorId) ?? []
+    const linaje = [crearLinaje(procReporte, 'detail[].ignOnTime', lecturas), linajeUnion(conductorId)]
+    if (lecturas.length === 0) {
+      // Unido y sin filas en la ventana: 0 h, no peor caso (decisión de S-A10
+      // que no se renegocia acá). Se dice tal cual: el reporte no trae fila
+      // para el conductor, así que no hay contador que leer.
       return {
         valor: 0,
-        motivo: `sin actividad registrada en Startrack en los últimos ${DIAS_VENTANA_HORAS} días`,
+        motivo: `sin actividad registrada en Startrack en los últimos ${DIAS_VENTANA_HORAS} días: se cuentan 0 h de motor`,
         linaje,
       }
     }
 
-    const conDato = minutos.filter((m): m is number => m !== null)
-    filasSinIgnOnTime += minutos.length - conDato.length
+    const conDato = lecturas.filter((m): m is number => m !== null)
+    filasSinIgnOnTime += lecturas.length - conDato.length
     if (conDato.length === 0) {
       // Tiene actividad, pero ninguna fila trae ignOnTime: un null no se
       // convierte en 0.
       return { valor: null, motivo: 'las filas de actividad del conductor en la ventana vienen sin ignOnTime', linaje }
     }
-    // ignOnTime en minutos (unidad inferida: todos los valores observados ≤ 1440).
-    return { valor: conDato.reduce((suma, m) => suma + m, 0) / 60, motivo: null, linaje }
+    // Contador acumulado en horas: se toma la lectura más alta (la más
+    // reciente), nunca la suma ni una división entre 60.
+    return { valor: Math.max(...conDato), motivo: null, linaje }
   }
 
   const ratingCrudoPorOperadorId = new Map<string, ObjetivoCrudo>()
@@ -727,6 +737,7 @@ export function adaptar(insumos: InsumosOptimizador, peticion: PeticionOptimizar
     return {
       operadorId,
       ratingDecimas: Math.round(objetivos.ratingOperador.valor! * 10),
+      // Horas acumuladas → minutos enteros: el solver trabaja con enteros.
       minutosMotor: Math.round(objetivos.horasOperador.valor! * 60),
     }
   })

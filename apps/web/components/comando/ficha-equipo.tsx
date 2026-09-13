@@ -1,8 +1,11 @@
+import { cookies } from 'next/headers'
 import { Box, ExternalLink, MapPin } from 'lucide-react'
+import { TarjetaMantenimiento } from '@/components/mantenimiento/tarjeta-mantenimiento'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { PasosVerificacion } from '@/components/nect/pasos-verificacion'
 import { VerOrigen } from '@/components/nect/ver-origen'
+import { NOMBRE_COOKIE, puedeProgramarTaller, verificarCookie } from '@/lib/acceso/verificar'
 import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilidades'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen, PersonaAsignada } from '@/lib/tipos/canonico'
@@ -54,7 +57,7 @@ const NIVEL_IDENTIDAD: Record<1 | 2 | 3, string> = {
   3: 'enlace por clave',
 }
 
-export function FichaEquipo({
+export async function FichaEquipo({
   equipo,
   urlStartrack,
   urlPrisma,
@@ -70,6 +73,9 @@ export function FichaEquipo({
   const pasoProceso = decisiva ? (PASO_DE_REGLA[decisiva.regla] ?? null) : null
   const estadoConductor = estadoDelConductor(equipo.asignacion, equipo.vehiculo)
   const faltantes = [...new Set(equipo.reglas.flatMap((r) => r.camposFaltantes))]
+  const sesion = await verificarCookie((await cookies()).get(NOMBRE_COOKIE)?.value)
+  const puedeProgramar = sesion ? puedeProgramarTaller(sesion.rol) : false
+  const equipoObsoleto = (equipo.equipo?.valor ?? '').toUpperCase() === 'OBSOLETA'
 
   const dimensiones: Dimension[] = [
     {
@@ -212,6 +218,12 @@ export function FichaEquipo({
               </table>
             </div>
           </section>
+
+          <TarjetaMantenimiento
+            equipoId={equipo.id}
+            puedeProgramar={puedeProgramar}
+            equipoObsoleto={equipoObsoleto}
+          />
 
           {/* 3. Interpretación del motor */}
           <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-7 shadow-card">

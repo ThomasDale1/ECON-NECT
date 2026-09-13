@@ -1,7 +1,14 @@
+'use client'
+
 import Image from 'next/image'
+import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { DialogoAccion } from '@/components/nect/dialogo-accion'
+import { useMantenimiento } from '@/components/mantenimiento/proveedor-mantenimiento'
 import { PropagarTraslado } from '@/components/nect/propagar-traslado'
+import type { PronosticoMantenimiento } from '@/lib/mantenimiento/tipos'
+import type { RolSesion } from '@/lib/acceso/verificar'
 import type { EquipoUnificado, EstadoOrigen, Plataforma, Rol } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
 
@@ -43,10 +50,32 @@ const PRIORIDAD: Record<EquipoUnificado['veredicto'], number> = {
   COHERENTE: 3,
 }
 
-export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
+const PRIORIDAD_MANTENIMIENTO: Record<NonNullable<PronosticoMantenimiento['nivelAlerta']>, number> = {
+  vencido: 0,
+  urgente: 1,
+  aviso: 2,
+}
+
+export function TablaExcepciones({
+  equipos,
+  rolActual = null,
+}: {
+  equipos: EquipoUnificado[]
+  rolActual?: RolSesion | null
+}) {
   const filas = [...equipos].sort(
     (a, b) => PRIORIDAD[a.veredicto] - PRIORIDAD[b.veredicto] || a.confianza - b.confianza,
   )
+  const { resultado } = useMantenimiento()
+  const alertasMantenimiento =
+    rolActual === 'MANTENIMIENTO' || rolActual === 'ADMIN'
+      ? [...(resultado?.alertas ?? [])].sort(
+          (a, b) =>
+            PRIORIDAD_MANTENIMIENTO[a.nivelAlerta as NonNullable<PronosticoMantenimiento['nivelAlerta']>] -
+              PRIORIDAD_MANTENIMIENTO[b.nivelAlerta as NonNullable<PronosticoMantenimiento['nivelAlerta']>] ||
+            (b.avance ?? 0) - (a.avance ?? 0),
+        )
+      : []
 
   return (
     <section className="flex flex-col gap-5 rounded-xl bg-card p-7 shadow-card">
@@ -69,7 +98,7 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
         dentro o fuera.
       </p>
 
-      {filas.length === 0 ? (
+      {filas.length === 0 && alertasMantenimiento.length === 0 ? (
         <p className="py-8 text-center font-label text-sm tracking-normal text-muted-foreground">
           No hay incoherencias detectadas con la evidencia disponible.
         </p>
@@ -175,12 +204,113 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
                   </tr>
                 )
               })}
+              {alertasMantenimiento.length > 0 ? (
+                <>
+                  <tr className="border-y border-border bg-muted/50">
+                    <th
+                      scope="rowgroup"
+                      colSpan={7}
+                      className="px-4 py-2 text-left font-label text-[11px] font-bold uppercase tracking-wide text-muted-foreground"
+                    >
+                      Mantenimiento preventivo por horómetro
+                    </th>
+                  </tr>
+                  {alertasMantenimiento.map((alerta) => (
+                    <FilaMantenimiento key={alerta.equipoId} alerta={alerta} />
+                  ))}
+                </>
+              ) : null}
             </tbody>
           </table>
         </div>
       )}
     </section>
   )
+}
+
+function FilaMantenimiento({ alerta }: { alerta: PronosticoMantenimiento }) {
+  const nivel = alerta.nivelAlerta ?? 'aviso'
+  const etiqueta = nivel === 'vencido' ? 'Vencido' : nivel === 'urgente' ? 'Urgente' : 'Aviso'
+  const avance = alerta.avance === null ? 'Sin avance' : `${Math.round(alerta.avance * 100)} %`
+  const lectura =
+    alerta.intervalo.horas === null
+      ? 'Sin intervalo vigente'
+      : `${horas(alerta.horasDesdeAncla)} de ${alerta.intervalo.horas} h (${avance})`
+  const paso =
+    nivel === 'vencido'
+      ? 'Abrir orden de taller ahora'
+      : nivel === 'urgente'
+        ? 'Programar taller antes de vencer'
+        : 'Preparar ventana de taller'
+
+  return (
+    <tr className="border-b border-muted transition-colors last:border-0 hover:bg-muted/60">
+      <td className="py-3.5 pl-4 pr-3 align-middle">
+        <Badge variant="outline" className={cn('font-label text-[10px] font-bold uppercase', colorMantenimiento(nivel))}>
+          {etiqueta}
+        </Badge>
+      </td>
+      <td className="py-3.5 pr-3 align-middle">
+        <span className="block font-heading text-[13px] font-bold tracking-tight">
+          {alerta.codigoActivo ?? 'Sin código'}
+        </span>
+        <span className="block text-[11px] text-muted-foreground">
+          {alerta.clase ?? alerta.marcaModelo ?? 'Sin clase'}
+        </span>
+      </td>
+      <td className="py-3.5 pr-3 align-middle">
+        <div className="flex flex-col gap-1 text-[12px]">
+          <span>
+            <strong className="font-bold text-origen-prisma">Prisma:</strong>{' '}
+            {alerta.ancla ? `${nombreAncla(alerta.ancla.tipo)} · ${alerta.ancla.fecha}` : 'sin ancla'}
+          </span>
+          <span>
+            <strong className="font-bold text-origen-startrack">Startrack:</strong>{' '}
+            {alerta.vehiculoId ? 'horómetro GPS y serie diaria' : 'sin vehículo unido'}
+          </span>
+        </div>
+      </td>
+      <td className="py-3.5 pr-3 align-middle">
+        <span className="block text-[13px] leading-snug font-bold text-foreground">
+          {lectura}
+        </span>
+        <span className="block text-[11px] text-muted-foreground">
+          {alerta.intervalo.origen}
+        </span>
+      </td>
+      <td className="py-3.5 pr-3 align-middle text-[12px] leading-snug">
+        {alerta.fechaEstimadaVencido
+          ? `Vence estimado: ${alerta.fechaEstimadaVencido}`
+          : alerta.faltantes[0] ?? 'Sin fecha estimada'}
+      </td>
+      <td className="py-3.5 pr-3 align-middle text-[13px]">
+        Mantenimiento
+      </td>
+      <td className="py-3.5 pr-4 align-middle">
+        <Link
+          href={`/equipo/${encodeURIComponent(alerta.equipoId)}`}
+          className="inline-flex rounded-lg border border-border px-3 py-2 text-[12px] font-bold transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+        >
+          {paso}
+        </Link>
+      </td>
+    </tr>
+  )
+}
+
+function horas(valor: number | null): string {
+  return valor === null ? 'Sin dato' : `${valor.toFixed(1)} h`
+}
+
+function nombreAncla(tipo: NonNullable<PronosticoMantenimiento['ancla']>['tipo']): string {
+  if (tipo === 'mantenimiento_fecha_fin') return 'salida de taller'
+  if (tipo === 'reporte_finalizado') return 'reporte FINALIZADO'
+  return 'inicio de serie GPS'
+}
+
+function colorMantenimiento(nivel: NonNullable<PronosticoMantenimiento['nivelAlerta']>): string {
+  if (nivel === 'aviso') return 'text-veredicto-atencion'
+  return 'text-veredicto-riesgo'
 }
 
 const NOMBRE_PLATAFORMA: Record<Plataforma, string> = {

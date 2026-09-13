@@ -467,8 +467,20 @@ Detalle completo en [01 Parte E](docs/01-DEFINICION-DE-NEGOCIO.md).
   no es una lista `{success, data}`: devuelve `timezone`, `detail[]` (por
   conductor y día: `ignOnTime`, `movingTime`, `distance`…), `detailAlerts[]` y
   `scores[]` (`safety_score` 0–100). Su `driver_id` es el `i` de
-  `ajax/drivers.php`. `ignOnTime` va en **minutos, inferido** (todos ≤ 1440;
-  la web lo muestra en horas y minutos). Verificado 13 sep. 2026.
+  `ajax/drivers.php`. ⚠ **Corregido el 13 de septiembre de 2026 (planeación
+  de S-A11):** `ignOnTime` **no** son minutos del día — es el **contador
+  acumulado de horas de motor del vehículo** (coincide al 4.º decimal con
+  `ign_on_time` de `GET api/vehicle/{id}/status` en 6/6 comparados; la suma de
+  la serie diaria del reporte 3 ÷ 3600 lo reproduce en 14/14). Se toma el
+  máximo por conductor, nunca la suma ni ÷ 60. La inferencia "≤ 1440 → minutos"
+  solo era compatible con seis días de GPS instalado.
+- **Startrack sí expone horómetro GPS y serie diaria** (verificado 13 sep.
+  2026): `ajax/report.php?id=22` → `curOperatingHours` (horas, 14/14, = `ign_on_time`
+  del status) y `id=3` (Resumen Diario) → `detail[].ignOnTime` en **segundos**
+  por vehículo y día; su columna `driver` es un **nombre** y se descarta en el
+  conector. Los reportes `id=45` (21 mil logins con teléfonos y correos) e
+  `id=37` (comentarios, fotos, coordenadas) **no se llaman nunca**. Detalle en
+  [S-A11](prompts/S-A11-mantenimiento-preventivo.md).
 - **Operador de Prisma ↔ conductor de Startrack se une por código:** el texto
   de `fn` antes de `" - "` es idéntico al `cod_trabajador` en 15 de 16
   operadores, 1:1. Nunca por nombre.
@@ -672,9 +684,11 @@ constraint). Solo entran las que salen de campos reales:
 - **operador con mejor rating**: `safety_score` (0–100) del reporte de
   conductores de Startrack, unido al operador de Prisma por código (sin dato =
   peor caso declarado);
-- **operador con menos horas trabajadas**: minutos con motor encendido
-  (`ignOnTime`) de los últimos 30 días. Un conductor unido pero sin actividad
-  registrada cuenta como 0 h; sin conductor unido, peor caso declarado.
+- **operador con menos horas de motor**: contador acumulado de horas con
+  motor encendido (`ignOnTime`, en horas — corregido el 13 de septiembre de
+  2026: no son minutos del día) leído en la ventana de 30 días; se toma la
+  lectura más alta. Un conductor unido pero sin actividad registrada cuenta
+  como 0 h; sin conductor unido, peor caso declarado.
 
 La holgura antes del inicio y la continuidad de operador **salieron** el 13 de
 septiembre de 2026.

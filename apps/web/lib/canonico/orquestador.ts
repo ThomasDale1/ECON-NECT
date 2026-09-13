@@ -20,6 +20,7 @@ import type {
   DatosCrudos,
   EquipoPrismaCrudo,
   FuenteCruda,
+  GeocercaConGeometriaCruda,
   GeocercaStartrackCruda,
   SolicitudPrismaCruda,
   TareaStartrackCruda,
@@ -97,17 +98,31 @@ async function leerTodo(): Promise<LecturaUnificada> {
   const prismaDesdeCache = estaVigente('prisma:equipos')
   const startrackDesdeCache = estaVigente('startrack:ajax/vehicles.php?cmd=list')
 
-  const [equipos_, solicitudes_, vehiculos_, geocercas_, tareas_, tipos_, flota_, conductores_] =
-    await Promise.all([
-      medir(prisma.leerEquipos),
-      medir(prisma.leerSolicitudes),
-      medir(startrack.leerVehiculos),
-      medir(startrack.leerGeocercas),
-      medir(startrack.leerTareas),
-      medir(startrack.leerTiposTarea),
-      medir(startrack.leerEstadoFlota),
-      medir(startrack.leerConductores),
-    ])
+  const [
+    equipos_,
+    solicitudes_,
+    vehiculos_,
+    geocercas_,
+    tareas_,
+    tipos_,
+    flota_,
+    conductores_,
+    geometria_,
+  ] = await Promise.all([
+    medir(prisma.leerEquipos),
+    medir(prisma.leerSolicitudes),
+    medir(startrack.leerVehiculos),
+    medir(startrack.leerGeocercas),
+    medir(startrack.leerTareas),
+    medir(startrack.leerTiposTarea),
+    medir(startrack.leerEstadoFlota),
+    medir(startrack.leerConductores),
+    // La geometría va aparte del listado de geocercas a propósito: `cmd=list`
+    // resuelve el nombre y el centro (que es lo que usa la cascada de
+    // ubicación) y `/api/pois` agrega el radio. Si esta falla, la ubicación
+    // sigue funcionando y solo se pierde el "dentro/fuera".
+    medir(startrack.leerGeocercasConGeometria),
+  ])
 
   const vacia = (
     plataforma: 'prisma' | 'startrack',
@@ -121,6 +136,12 @@ async function leerTodo(): Promise<LecturaUnificada> {
   // degrada a dato no disponible, nunca rompe la pantalla (principio 7.1).
   const ok = <T,>(r: PromiseSettledResult<T>, respaldo: T): T =>
     r.status === 'fulfilled' ? r.value : respaldo
+
+  // Índice de geometría por nombre: la cascada de ubicación resuelve la
+  // geocerca por su nombre, y `/api/pois` es la única fuente del radio.
+  const radioPorNombre = indiceDeRadios(
+    ok(geometria_.res, vacia('startrack', 'api/pois')).datos as GeocercaConGeometriaCruda[],
+  )
 
   const prismaOk = equipos_.res.status === 'fulfilled'
   const startrackOk = vehiculos_.res.status === 'fulfilled'
@@ -214,7 +235,9 @@ async function leerTodo(): Promise<LecturaUnificada> {
       interpretacionDesfase,
       asignacion,
       ubicacion: enVivo,
-      geocercaProyecto: eq.ubicacion ? geocercaConDistancia(eq.ubicacion, enVivo) : null,
+      geocercaProyecto: eq.ubicacion
+        ? geocercaConDistancia(eq.ubicacion, enVivo, radioPorNombre)
+        : null,
     }
   })
 
@@ -280,14 +303,56 @@ function ubicacionEnVivo(vehiculo: Registro | null, leidoEn: string): Ubicacion 
   }
 }
 
+/** Radio y forma de cada geocerca, por nombre normalizado. */
+type Radio = { metros: number; precision: 'exacta' | 'circulo-contenedor' }
+
+function clave(nombre: string | null | undefined): string {
+  return String(nombre ?? '').trim().toLowerCase()
+}
+
+function numero(v: unknown): number | null {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isFinite(n) ? n : null
+}
+
 /**
- * La geocerca que resolvió el motor, más la distancia hasta la posición en vivo.
+ * Índice nombre → radio, desde `GET /api/pois`.
  *
- * `radioMetros` va en `null` porque `ajax/namedPlaces.php` publica el centro y
- * el nombre, no el radio: se puede decir a qué distancia está el equipo, no si
- * está dentro o fuera.
+ * `radius` e `is_round` llegan como texto. Un radio de 0 o negativo no describe
+ * ningún área, así que no entra: mejor no poder concluir que concluir con un
+ * radio que no existe.
  */
-function geocercaConDistancia(geocerca: Ubicacion, posicion: Ubicacion): Geocerca | null {
+function indiceDeRadios(pois: GeocercaConGeometriaCruda[]): Map<string, Radio> {
+  const indice = new Map<string, Radio>()
+  for (const poi of pois) {
+    const metros = numero(poi.radius)
+    if (metros === null || metros <= 0) continue
+    const k = clave(poi.name)
+    if (!k) continue
+    indice.set(k, {
+      metros,
+      // `is_round = 1`: el radio ES la geocerca. `0`: es el círculo que la
+      // contiene, así que solo un "fuera" es firme.
+      precision: numero(poi.is_round) === 1 ? 'exacta' : 'circulo-contenedor',
+    })
+  }
+  return indice
+}
+
+/**
+ * La geocerca que resolvió el motor, la distancia hasta la posición en vivo y,
+ * desde el 13 de septiembre de 2026, si el equipo está dentro.
+ *
+ * El radio sale de `/api/pois` (ver `leerGeocercasConGeometria`). Cuando no hay
+ * radio o no hay posición, `dentro` va en `null`: no poder concluir no es lo
+ * mismo que estar fuera.
+ */
+function geocercaConDistancia(
+  geocerca: Ubicacion,
+  posicion: Ubicacion,
+  radios: Map<string, Radio>,
+): Geocerca | null {
   const latG = geocerca.lat.valor
   const lonG = geocerca.lon.valor
   if (latG === null || lonG === null) return null
@@ -295,12 +360,18 @@ function geocercaConDistancia(geocerca: Ubicacion, posicion: Ubicacion): Geocerc
   const latP = posicion.lat.valor
   const lonP = posicion.lon.valor
 
+  const distanciaMetros =
+    latP !== null && lonP !== null ? distanciaEnMetros(latP, lonP, latG, lonG) : null
+
+  const radio = radios.get(clave(geocerca.descripcion.valor)) ?? null
+
   return {
     nombre: geocerca.descripcion,
     lat: geocerca.lat,
     lon: geocerca.lon,
-    distanciaMetros:
-      latP !== null && lonP !== null ? distanciaEnMetros(latP, lonP, latG, lonG) : null,
-    radioMetros: null,
+    distanciaMetros,
+    radioMetros: radio?.metros ?? null,
+    dentro: radio && distanciaMetros !== null ? distanciaMetros <= radio.metros : null,
+    precisionRadio: radio?.precision ?? null,
   }
 }
