@@ -70,6 +70,11 @@ Las afirmaciones de evidencia se escriben como **hechos estructurales**
 **Antes de cada commit:** revisar que no entren secretos, volcados ni capturas.
 `git status` antes de `git add .`, siempre.
 
+**Regla de git para el agente:** **no hacés `git commit`, `git push` ni merge
+por tu cuenta. Nunca.** El usuario decide cuándo se commitea y cuándo se mergea;
+si no te lo pide explícitamente, no pasa. Al terminar una implementación,
+reportás `git status` y dejás los archivos sin versionar.
+
 ### 1.3 Solo el dataset autorizado
 
 Únicamente el sandbox provisto. Nada de los sistemas productivos de Prisma o
@@ -92,6 +97,9 @@ No se construye una zona gris: no sirve renombrar campos, partir el contenido en
 varios prompts, convertirlo a captura o resumen, ni pedirle a un modelo que lo
 transforme primero. Lo que sí se puede compartir: **código propio, contratos
 genéricos, nombres de campo y estructura** — lo mismo del punto 1.2.
+
+Esto aplica igual al copiloto S-A6 si llega a construirse: lo que se manda al
+proveedor de LLM se revisa contra esta regla antes de escribir la primera línea.
 
 Ante duda, se aplica la interpretación más restrictiva. La ausencia de respuesta
 no equivale a autorización.
@@ -235,9 +243,19 @@ docs/entregables/       D   Diagrama, decisiones, deck, README
 prompts/                —   Prompts de implementación (sesión 1)
 ```
 
-**Archivos compartidos, con dueño único:** `package.json`, `tsconfig.json`,
-`next.config.ts`, `middleware.ts` y `app/layout.tsx` **son de A**. Agregar una
-dependencia se pide; no se instala por cuenta propia.
+**Archivos compartidos, con dueño único:** `package.json` (el de `apps/web` y el
+mínimo de la raíz que solo delega), `tsconfig.json`, `next.config.ts`,
+`proxy.ts` y `app/layout.tsx` **son de A**. Agregar una dependencia se pide; no
+se instala por cuenta propia.
+
+> **`proxy.ts`, no `middleware.ts`.** Next 16 deprecó `middleware.ts` a favor de
+> `proxy.ts` (exporta `proxy`). Donde 02-ROADMAP diga "middleware.ts" se refiere a
+> este archivo. Misma regla: A lo escribe una vez y solo delega en
+> `lib/acceso/verificar.ts` (de C).
+
+**Los comandos se corren desde la raíz del repositorio:** `npm run dev`,
+`typecheck`, `lint`, `test`, `build` y `leer` delegan a `apps/web`. En Vercel,
+Root Directory = `apps/web`.
 
 ### 4.3 Reglas de capa
 
@@ -269,34 +287,43 @@ Fuera de esas horas nadie mergea. Antes de mergear:
 
 Usar solo estas. No inventar skills nuevas.
 
-| Skill | Para qué |
-|---|---|
-| `nextjs` | Todo código en `apps/web`: Route Handlers, Server Actions, variables de entorno, streaming |
-| `shadcn-ui` | Cualquier componente de UI nuevo, junto con el sistema de diseño existente |
-| `maplibre-deckgl` | El mapa de geocercas y equipos (S-B3) |
-| `dataviz` | El panel de indicadores y cualquier gráfica o tile (S-B2) |
-| `claude-api` | Solo si se construye el copiloto de consulta (S-A6). Leerla antes de escribir una línea |
-| `recover` | Diagnóstico antes de seguir parchando — §3.3 |
-| `imprint` | Registro de consistencia visual (`ui-registry.md`) tras construir componentes |
-| `code-review` / `simplify` | Revisión de diffs dentro de la sesión de implementación |
-| `security-review` | Antes de dar por buena la capa de acceso por rol y la propagación a Startrack |
-| `run` | Levantar y probar la app en vivo antes de reportar algo como terminado |
+Las skills del proyecto viven en **`.claude/skills/` y se versionan**, para que
+los cuatro carriles trabajen con las mismas. Las instala S-A0 como paso 0; si una
+externa no existe con calidad razonable, se reporta el hueco y se trabaja con
+documentación oficial.
+
+| Skill | Origen | Para qué |
+|---|---|---|
+| *(nextjs — nombre real lo fija S-A0)* | externa, `npx skills find nextjs` | Todo código en `apps/web`: Route Handlers, Server Actions, variables de entorno, streaming |
+| *(shadcn — nombre real lo fija S-A0)* | externa, `npx skills find shadcn` | Cualquier componente de UI nuevo, junto con el sistema de diseño existente |
+| *(maplibre — nombre real lo fija S-A0)* | externa, `npx skills find maplibre` | El mapa de geocercas y equipos (S-B3) |
+| `dataviz` | built-in | El panel de indicadores y cualquier gráfica o tile (S-B2) |
+| `recover` | propia, `.claude/skills/recover` | Diagnóstico antes de seguir parchando — §3.3 |
+| `imprint` | propia, `.claude/skills/imprint` | Registro de consistencia visual (`ui-registry.md`) tras construir componentes |
+| `code-review` / `simplify` | built-in | Revisión de diffs dentro de la sesión de implementación |
+| `security-review` | built-in | Antes de dar por buena la capa de acceso por rol y la propagación a Startrack |
+| `run` | built-in | Levantar y probar la app en vivo antes de reportar algo como terminado |
+
+*(Cuando S-A0 termine, reemplazar las filas en cursiva por el nombre exacto que
+quedó instalado.)*
 
 **Retiradas del proyecto** (no las invoques): `supabase`, `whatsapp`, `or-tools`,
-`speech-to-text`, `n8n`, `mcp-sdk`.
+`speech-to-text`, `n8n`, `mcp-sdk`, `claude-api`.
 
 ---
 
 # 6. Stack
 
-**Usar:** Next.js 16 · TypeScript · Tailwind · shadcn/ui · Zod · MapLibre GL +
-deck.gl · Recharts · Vitest · Claude API (`claude-opus-5`) solo si se construye
-S-A6 · Vercel.
+**Usar:** Next.js 16 · TypeScript · Tailwind · shadcn/ui · Zod · MapLibre GL
+(sin deck.gl; se pide si S-B3 lo necesita) · Recharts · Vitest · **OpenAI API,
+solo si se construye S-A6** (el SDK `openai` no se instala hasta entonces) ·
+Vercel.
 
 **No usar:**
 - Ninguna base de datos, ni Supabase ni otra, para datos de ECON.
-- Otro proveedor de LLM que no sea Claude.
-- Twilio, WhatsApp, OpenAI, OR-Tools, Python, puppeteer, qrcode.
+- Otro proveedor de LLM que no sea OpenAI. **Ningún SDK de LLM entra al
+  `package.json` antes de que S-A6 arranque.**
+- Twilio, WhatsApp, OR-Tools, Python, puppeteer, qrcode.
 - Lógica de reconciliación dentro de una ruta de API o de un componente.
 - **Machine learning.** La confianza es una heurística determinística y
   documentada. Venderla como IA nos hunde en el criterio de honestidad que
@@ -356,7 +383,7 @@ en `.env.local`, que está en `.gitignore`.
 | `NECT_CLAVE_COSTOS` | Clave de acceso, Control de Costos |
 | `NECT_CLAVE_DIRECCION` | Clave de acceso, Dirección de Operaciones |
 | `NECT_EQUIPO_PROPIO` · `NECT_PROYECTO_PROPIO` | Recursos sobre los que se permite propagar (S-A4) |
-| `ANTHROPIC_API_KEY` | Solo si se construye el copiloto (S-A6) |
+| `OPENAI_API_KEY` | Solo si se construye el copiloto (S-A6) |
 
 *(Agregar aquí y en `.env.example` cada variable nueva.)*
 
@@ -383,9 +410,11 @@ haberla corrido.**
 
 # 10. Comandos
 
+Todos se corren **desde la raíz del repositorio**; delegan a `apps/web`.
+
 ```
 npm run typecheck     # tsc --noEmit
-npm run lint          # ESLint
+npm run lint          # eslint . (next lint ya no existe en Next 16)
 npm run test          # Vitest
 npm run build         # build de producción
 npm run dev           # servidor de desarrollo
