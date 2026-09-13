@@ -28,7 +28,8 @@ mediante Ollama y vivir, junto con los módulos determinísticos futuros, en un
 
 ## Fuera de alcance
 
-- Fine-tuning, QLoRA, RAG, Twilio/O.D.I.N. Campo y CP-SAT.
+- Fine-tuning, QLoRA, RAG y CP-SAT. (Twilio/O.D.I.N. Campo ya no existen:
+  retirados del producto el 13 de septiembre de 2026.)
 - Una base de datos nueva para información de ECON.
 - Predicciones entrenadas sin auditoría de etiqueta, volumen y fechas.
 - Cualquier aprobación, mutación o sincronización de Prisma o Startrack.

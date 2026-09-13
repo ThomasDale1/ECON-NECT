@@ -5,24 +5,36 @@
 > de Claude/OpenAI como copiloto, de dos LLM separados, de `services/solver/`, de
 > un O.D.I.N. que escribe datos o de entrenar antes de auditar el dataset, esa
 > referencia queda reemplazada por este documento.
+>
+> **Actualizado el 13 de septiembre de 2026:** Twilio, WhatsApp y el perfil
+> O.D.I.N. Campo **salieron del producto** por decisión del usuario. Queda un
+> único perfil: el chatbot web. Donde este documento decía "dos perfiles",
+> ahora dice uno.
 
-**O.D.I.N. significa Operador de Datos e Inteligencia de Negocios.** En textos y
-pantallas se usa la marca `O.D.I.N.`; en rutas, carpetas, variables y otros
-identificadores técnicos se usa `odin`/`ODIN`, sin puntos.
+**O.D.I.N. significa Operador de Datos e Inteligencia de Negocios** (es el
+asistente que antes se llamaba *Betinho*). En textos y pantallas se usa la
+marca `O.D.I.N.`; en rutas, carpetas, variables y otros identificadores
+técnicos se usa `odin`/`ODIN`, sin puntos.
+
+**Qué es:** un **chatbot de IA local**. La persona escribe una pregunta en
+lenguaje natural en la consola de `/odin`; O.D.I.N. la interpreta, consulta los
+datos en vivo mediante herramientas de solo lectura y la resuelve con
+conclusión, evidencia, fuente, hora de lectura y datos faltantes.
 
 ## 1. Decisión en una frase
 
-ECON NECT tendrá **un único runtime local de Qwen**, consumido por dos perfiles
-de agente separados —O.D.I.N. Web y, después, O.D.I.N. Campo—, más módulos
-determinísticos de riesgo y optimización dentro de **un solo servicio Python
-FastAPI**. Ningún agente modifica Prisma ni Startrack.
+ECON NECT tendrá **un único runtime local de Qwen**, consumido por **un solo
+perfil de agente —O.D.I.N., el chatbot web—**, más módulos determinísticos de
+riesgo y optimización dentro de **un solo servicio Python FastAPI**. Ningún
+agente modifica Prisma ni Startrack.
 
 ## 2. Qué sí vamos a construir
 
-### 2.1 O.D.I.N. Web — primer incremento de IA
+### 2.1 O.D.I.N. — el chatbot, primer incremento de IA
 
-Es el asistente administrativo de la aplicación web. Su MVP es de solo lectura y
-atiende tres intenciones:
+Es el chatbot de la aplicación web: la persona escribe una pregunta en lenguaje
+natural y O.D.I.N. la resuelve consultando los datos en vivo. Su MVP es de solo
+lectura y atiende tres intenciones:
 
 1. `QUERY_ASSET_STATUS`: consultar el estado operativo de un equipo.
 2. `EXPLAIN_INCONSISTENCY`: explicar una incoherencia ya detectada por las reglas.
@@ -44,17 +56,12 @@ estructurados de código controlado y los explica. Cada respuesta debe indicar:
 - nivel de confianza o limitación;
 - acción sugerida para aprobación humana.
 
-### 2.2 O.D.I.N. Campo — segundo perfil, después del MVP
+### 2.2 ~~O.D.I.N. Campo~~ — retirado el 13 de septiembre de 2026
 
-Usará el **mismo runtime Qwen**, pero con prompt, permisos y herramientas más
-restringidos. Recibirá reportes desde el sandbox de WhatsApp/Twilio, los
-clasificará y preparará un borrador de escalamiento. No actualizará ninguna
-plataforma, aun después de una confirmación en el chat. Cualquier escritura
-permitida seguirá siendo un flujo separado de la UI de ECON NECT, con validación
-del servidor y confirmación humana explícita.
-
-No son dos modelos entrenados ni dos procesos con pesos duplicados: son dos
-perfiles de agente sobre una sola instancia local.
+El segundo perfil (reportes de campo por el sandbox de WhatsApp/Twilio) salió
+del producto por decisión del usuario. No se construye, no se instala Twilio y
+no hay variables `TWILIO_*`. O.D.I.N. tiene un único perfil: el chatbot web de
+§2.1.
 
 ### 2.3 Riesgo de mantenimiento
 
@@ -79,7 +86,7 @@ tiempo riesgo, duración de indisponibilidad y demanda.
 
 La asignación de equipo, operador y transporte es optimización con restricciones,
 no un LLM ni un modelo que deba entrenarse. OR-Tools CP-SAT es opcional y entra
-solo después del núcleo y del MVP de O.D.I.N. Web.
+solo después del núcleo y del MVP del chatbot O.D.I.N.
 
 Las restricciones duras nunca se violan. Las preferencias financieras son
 configurables y visibles. El resultado siempre es una propuesta o `infactible`
@@ -95,7 +102,7 @@ Next.js: conectores → mapeo en vivo → reglas/KPI
         │ resultados estructurados, sin credenciales
         ▼
 services/intelligence/ (FastAPI)
-  ├── odin/      perfiles Web y Campo + herramientas permitidas
+  ├── odin/      el chatbot O.D.I.N. + herramientas permitidas
   ├── forecast/  auditoría, índice y eventual baseline entrenado
   ├── optimizer/ restricciones y eventual CP-SAT
   └── shared/    contratos, trazabilidad y políticas
@@ -146,8 +153,8 @@ de herramientas viven en Python.
 - ECON autorizó al equipo a entrenar un modelo propio y a mantener el código en
   un GitHub privado. Esto permite usar localmente el dataset entregado y
   autorizado para ese fin, conservándolo fuera de git. No autoriza datos
-  productivos ni el procesamiento por Twilio, hosting, Hugging Face u otros
-  terceros; esas integraciones requieren autorización independiente.
+  productivos ni el procesamiento por hosting, Hugging Face u otros terceros;
+  esas integraciones requieren autorización independiente.
 - Si Qwen no está disponible, la aplicación conserva las consultas y
   explicaciones determinísticas y muestra `ODIN_UNAVAILABLE`. Nunca usa un
   LLM de nube como fallback silencioso.
@@ -161,7 +168,6 @@ La frontera es absoluta:
 - El flujo P1 existente permanece separado: nace en un botón de la UI, exige
   confirmación humana y autorización del servidor, y solo opera sobre recursos
   permitidos del sandbox.
-- Un mensaje de WhatsApp nunca se convierte directamente en una mutación.
 - La evidencia de una respuesta de O.D.I.N. no puede depender de la memoria del
   LLM cuando existe una fuente estructurada.
 
@@ -174,30 +180,31 @@ Dentro del trabajo de IA, el orden es:
 
 1. Contratos y esqueleto de `services/intelligence/`.
 2. Qwen local y prueba de hardware/latencia.
-3. O.D.I.N. Web con las tres intenciones y tres herramientas del MVP.
+3. El chatbot O.D.I.N. con las tres intenciones y tres herramientas del MVP.
 4. Auditoría de datos y `MaintenanceRiskIndex` determinístico.
 5. Evaluación de O.D.I.N. con preguntas y respuestas esperadas.
 6. Optimizador CP-SAT, si el núcleo y el MVP ya están estables.
 7. Entrenamiento predictivo, solo si supera las cuatro puertas de datos.
-8. O.D.I.N. Campo + Twilio de prueba.
-9. RAG y QLoRA, solo si una evaluación demuestra que hacen falta.
+8. RAG y QLoRA, solo si una evaluación demuestra que hacen falta.
+
+*(El paso "O.D.I.N. Campo + Twilio de prueba" se retiró el 13 de septiembre de
+2026.)*
 
 Orden de recorte, de primero a último en salir:
 
 1. QLoRA/fine-tuning y RAG avanzado.
-2. Twilio y O.D.I.N. Campo.
-3. Modelo predictivo entrenado.
-4. Optimizador CP-SAT.
-5. Índice de mantenimiento.
-6. O.D.I.N. Web.
+2. Modelo predictivo entrenado.
+3. Optimizador CP-SAT.
+4. Índice de mantenimiento.
+5. El chatbot O.D.I.N.
 
 Nada de esta lista desplaza la línea roja del producto.
 
 ## 7. Criterios de aceptación
 
-### O.D.I.N. Web MVP
+### O.D.I.N. MVP (chatbot)
 
-- Responde las tres intenciones previstas y rechaza con claridad las demás.
+- Responde en lenguaje natural a las tres intenciones previstas y rechaza con claridad las demás.
 - Ningún número aparece sin una herramienta y una fuente.
 - Declara datos faltantes en vez de completar huecos.
 - Una instrucción maliciosa en datos o documentos no cambia sus permisos.
@@ -214,12 +221,6 @@ Nada de esta lista desplaza la línea roja del producto.
 - Un modelo entrenado, si llega a existir, conserva un conjunto futuro de prueba
   y documenta etiqueta, corte temporal, métricas y limitaciones.
 
-### O.D.I.N. Campo
-
-- Solo usa el número/sandbox de prueba de Twilio.
-- El mensaje se minimiza y no se persiste ni aparece en logs.
-- La salida es un borrador; no hay ruta desde el agente hacia una mutación.
-
 ## 8. Fuera del alcance inicial
 
 - Dos LLM distintos o dos copias de pesos.
@@ -235,7 +236,8 @@ Nada de esta lista desplaza la línea roja del producto.
 | Antes aparecía | Decisión vigente |
 |---|---|
 | S-A6 como copiloto Claude/OpenAI | S-A6 es O.D.I.N. Web con Qwen local |
-| O.D.I.N. Web y WhatsApp como dos IA/modelos | Son dos perfiles sobre el mismo runtime Qwen |
+| O.D.I.N. Web y WhatsApp como dos IA/modelos, o dos perfiles | Un solo perfil: el chatbot web. Twilio/WhatsApp retirados el 13 sep. 2026 |
+| El asistente se llamaba Betinho | Se llama O.D.I.N.; es un chatbot que resuelve preguntas escritas en lenguaje natural |
 | `services/solver/` y lógica de O.D.I.N. en TypeScript | Un solo `services/intelligence/` FastAPI; Next.js solo adapta y muestra |
 | El agente podía actualizar tras confirmación | O.D.I.N. nunca escribe; P1 es un flujo de UI independiente |
 | “Forecast” antes de comprobar los datos | Auditoría → índice determinístico → entrenamiento solo si supera las puertas |
@@ -245,10 +247,10 @@ Nada de esta lista desplaza la línea roja del producto.
 
 ## 10. Mensaje común para el equipo
 
-> ECON NECT conserva un núcleo determinístico y auditable. O.D.I.N. es un agente
-> local de solo lectura que usa Qwen para consultar y explicar resultados ya
-> calculados. Tendrá primero un perfil Web y después, si hay tiempo, un perfil de
-> Campo por WhatsApp, ambos sobre el mismo modelo. El riesgo de mantenimiento
+> ECON NECT conserva un núcleo determinístico y auditable. O.D.I.N. es un
+> chatbot local de solo lectura: se le escribe una pregunta en lenguaje natural
+> y usa Qwen para consultar y explicar resultados ya calculados, con su fuente y
+> sus datos faltantes. Tiene un único perfil, el web. El riesgo de mantenimiento
 > empieza como índice explicable y solo se entrena si los datos lo permiten. La
 > asignación se resuelve con optimización por restricciones, no con el LLM. Toda
 > decisión o escritura sigue perteneciendo a una persona y a un flujo separado.
@@ -276,5 +278,6 @@ Pendiente antes de usar datos reales:
 - Auditar el dataset autorizado y mapear señales históricas de mantenimiento.
 - Medir el golden set con usuarios del equipo y registrar latencia/calidad.
 
-Entrenamiento, CP-SAT, RAG, QLoRA y Twilio permanecen fuera de este MVP hasta
-superar las puertas y prioridades descritas en este documento.
+Entrenamiento, CP-SAT, RAG y QLoRA permanecen fuera de este MVP hasta superar
+las puertas y prioridades descritas en este documento. Twilio no está pendiente:
+salió del producto.

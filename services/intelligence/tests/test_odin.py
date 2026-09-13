@@ -133,5 +133,19 @@ async def test_missing_maintenance_signals_are_declared(chat_request_factory) ->
     )
 
     assert response.missing_data == ["maintenance_signals"]
+    assert response.confidence is None
     assert "No se puede concluir" in response.answer
+
+
+@pytest.mark.asyncio
+async def test_maintenance_risk_score_is_not_reported_as_confidence(
+    chat_request_factory,
+) -> None:
+    response = await OdinAgent(model=UnavailableModel()).chat(
+        chat_request_factory("Explica el riesgo de mantenimiento")
+    )
+
+    assert response.tool_result is not None
+    assert response.tool_result["risk_score"] == 100
+    assert response.confidence is None
 

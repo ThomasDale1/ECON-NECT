@@ -1,4 +1,4 @@
-# S-C1 / S-C2 — Matriz de mapeo, RACI y catálogo de KPIs
+# S-C1 / S-C2 — Matriz de mapeo, responsabilidades y catálogo de KPIs
 
 **Carril C · arranca YA, sin esperar al repositorio**
 
@@ -10,7 +10,7 @@
 
 ## Por qué arrancás primero
 
-El **Checkpoint 1 evalúa exactamente esto**: mapeo de campos y RACI. No necesitás
+El **Checkpoint 1 evalúa exactamente esto**: mapeo de campos y responsabilidades. No necesitás
 el repositorio: tu insumo es el diccionario de datos, el diagrama TO-BE y los
 hallazgos de la Parte E. Escribí primero en una tabla (papel, hoja de cálculo, lo
 que sea) y trasladá a código en S-C2, cuando el andamio exista.
@@ -81,7 +81,7 @@ existen en ninguna plataforma. Como mínimo: `veredicto`, `confianza`, `linaje`,
 
 Cada uno con su definición en una línea y por qué existe.
 
-## 4. La matriz RACI — `lib/gobernanza/raci.ts`
+## 4. La matriz de responsabilidades — `lib/gobernanza/responsabilidades.ts`
 
 Filas por paso del proceso, columnas por los **seis agentes del diagrama TO-BE**:
 Licitaciones · Gerencia de Proyecto · Gerencia de Logística y Equipo · Operadores
@@ -97,7 +97,7 @@ mentores de proceso de ECON: **son la fuente.** Llevá las preguntas de
 [02 §3](../docs/02-ROADMAP.md) escritas y anotá las respuestas textuales.
 
 **El enlace que la vuelve utilizable:** cada regla del carril A nombra un rol
-responsable, y ese rol **se lee de acá**. Una RACI que no está conectada a la
+responsable, y ese rol **se lee de acá**. Una matriz que no está conectada a la
 interfaz es decorativa; una que dice quién resuelve cada incoherencia concreta,
 no.
 
@@ -151,11 +151,11 @@ toques.** Vos solo implementás `verificarAcceso`.
 - ❌ No pegues valores del sandbox en la matriz. La evidencia se escribe como
   hecho estructural: *"coincide en 14 de 15 registros observados"*, no con el
   dato ([AGENTS.md §1.2](../AGENTS.md)).
-- ❌ No presentes la RACI como definitiva sin haberla validado con un mentor.
+- ❌ No presentes las responsabilidades como definitivas sin haberlas validado con un mentor.
 - ❌ No toques `lib/conectores/`, `lib/reglas/`, `components/` ni `middleware.ts`.
 
 ## Terminado cuando
 
 La matriz se ve en el navegador, se puede **filtrar por "sin equivalencia
-directa"**, y exportarse. La RACI se renderiza y cada incoherencia de la bandeja
+directa"**, y exportarse. La matriz de responsabilidades se renderiza y cada incoherencia de la bandeja
 sabe quién la resuelve porque lo lee de ella.

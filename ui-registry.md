@@ -210,8 +210,9 @@ Startrack (observado) │ Confianza │ Acción sugerida │ Responsable
 - **Confianza**: barra + número (§1.3).
 - **Acción sugerida**: texto llano, en imperativo, en lenguaje de negocio.
   No `regla R02 disparada`, sino *"Validar disponibilidad antes de movilizar"*.
-- **Responsable**: sale de la RACI (`lib/gobernanza/raci.ts`), no se escribe a
-  mano. Es lo que vuelve la RACI utilizable y no decorativa.
+- **Responsable**: sale de la matriz de responsabilidades
+  (`lib/gobernanza/responsabilidades.ts`), no se escribe a mano. Eso vuelve la
+  atribución utilizable y no decorativa.
 
 Cada fila es clicable y lleva a la ficha unificada del equipo.
 

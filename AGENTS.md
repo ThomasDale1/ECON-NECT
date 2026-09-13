@@ -11,6 +11,13 @@
 > producto, la pila del optimizador pasa a distancia · tarifa · rating de
 > operador · horas de operador, y el plan se rehace solo ante una máquina que
 > deja de operar. Ver §6, §7.1, §9 y §12.1.
+>
+> **Actualizado el 13 de septiembre de 2026** (decisión del usuario): **Twilio
+> sale del producto** — no hay perfil O.D.I.N. Campo, canal de incidentes por
+> SMS/WhatsApp ni sprint S-A9. **El asistente que antes se llamaba Betinho se
+> llama O.D.I.N.** y es un **chatbot de IA local**: recibe preguntas escritas en
+> lenguaje natural, consulta los datos en vivo mediante herramientas de solo
+> lectura y las resuelve con evidencia. Ver §5, §6, §8, §9 y §12.
 
 Sos un **ingeniero principal full-stack y agente de implementación** trabajando en
 **ECON NECT**: el **middleware visual** de la operación de maquinaria de Grupo
@@ -116,7 +123,7 @@ no autoriza datos productivos, fuentes externas ni envíos a terceros.
 
 Datasets, pesos, adaptadores, checkpoints y evaluaciones con registros reales se
 tratan como confidenciales: viven fuera de git y nunca se publican. Claude,
-OpenAI, Hugging Face alojado, Twilio u otro servicio externo requieren una
+OpenAI, Hugging Face alojado u otro servicio externo requieren una
 autorización independiente antes de recibir datos operativos. La ausencia de
 respuesta no equivale a autorización.
 
@@ -143,7 +150,7 @@ Detalle completo en [01, Parte C](docs/01-DEFINICION-DE-NEGOCIO.md). Resumen ope
 4. **Todo dato muestra su origen.** Plataforma, endpoint, campo, valor crudo,
    hora de lectura. Auditable en un clic.
 5. **El prototipo y la documentación son el mismo objeto.** La matriz de mapeo,
-   la RACI y el catálogo de KPIs son estructuras tipadas que se renderizan y se
+   la matriz de responsabilidades y el catálogo de KPIs son estructuras tipadas que se renderizan y se
    exportan. No pueden contradecirse porque son la misma fuente.
 6. **Un KPI que no dispara una acción es adorno.** Ninguno entra sin sus seis
    campos ([01 D.7](docs/01-DEFINICION-DE-NEGOCIO.md)).
@@ -243,7 +250,7 @@ Cuatro personas, un repositorio, cero conflictos de merge. Detalle en
 |---|---|---|
 | **A · Núcleo** | Backend & Integración | Conectores, mapeo de datos en vivo, reglas, rutas de API, propagación |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa |
-| **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol |
+| **C · Semántica** | Data Architect | Matriz de mapeo, matriz de responsabilidades, catálogo de KPIs, acceso por rol |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch |
 
 > **Nota de nombre:** esta capa de A (`lib/canonico/` + `lib/reglas/`) no se
@@ -277,7 +284,7 @@ apps/web/
   app/(nect)/planeacion/   B   Fase extendida (§12). Ruta de la vista de
                                 planeación
   lib/mapeo/               C   Matriz de mapeo tipada
-  lib/gobernanza/          C   Matriz RACI tipada
+  lib/gobernanza/          C   Matriz de responsabilidades tipada
   lib/kpi/                 C   Catálogo de indicadores
   lib/acceso/              C   Verificación de clave por rol
 docs/entregables/          D   Diagrama, decisiones, deck, README
@@ -360,10 +367,10 @@ quedó instalado.)*
 | Skill | Origen | Para qué |
 |---|---|---|
 | `or-tools` | externa, `npx skills find or-tools` | Único uso: `services/intelligence/app/optimizer/` (S-A7) — CP-SAT, hard/soft constraints |
-| `whatsapp` | externa, `npx skills find whatsapp` | Único uso: perfil O.D.I.N. Campo de S-A9; si no arranca, no se instala |
 
 **Retiradas del proyecto** (no las invoques): `supabase`, `speech-to-text`, `n8n`,
-`mcp-sdk`, `claude-api`.
+`mcp-sdk`, `claude-api`, `whatsapp` (retirada el 13 de septiembre de 2026 junto
+con Twilio: no hay canal de campo).
 
 ---
 
@@ -375,10 +382,9 @@ quedó instalado.)*
 **Usar, solo para la arquitectura de IA de [docs/03](docs/03-ARQUITECTURA-IA-ODIN.md):**
 - **Python 3 + FastAPI**, únicamente en `services/intelligence/`.
 - **Qwen3 4B Instruct servido localmente con Ollama (`qwen3:4b-instruct`)**, como único runtime
-  LLM para los perfiles Web y Campo.
+  LLM del chatbot O.D.I.N.
 - **OR-Tools (CP-SAT)**, únicamente en `services/intelligence/app/optimizer/`
   y solo cuando se implemente S-A7.
-- **Twilio**, únicamente para el perfil Campo de S-A9 y con su sandbox de prueba.
 **Usar, solo para las fases extendidas de §12, y solo en los directorios que
 esa sección nombra — nunca dentro de `apps/web`:**
 - **Python 3 + FastAPI + OR-Tools (CP-SAT)**, únicamente en `services/solver/`
@@ -390,10 +396,12 @@ esa sección nombra — nunca dentro de `apps/web`:**
 - **@dnd-kit** (`core`, `sortable`, `utilities`), únicamente en
   `components/calendario/` (S-B4), para la pila de prioridades reordenable. La
   instala A en S-A7.
-- **Twilio** (SDK de Node), únicamente en `lib/conectores/twilio.ts` (S-A9) —
-  sigue siendo `server-only`, como todo `lib/conectores/`.
+- ~~Twilio~~ — **retirado el 13 de septiembre de 2026**: no hay canal de campo
+  ni mensajería. No se instala el SDK, no existe `lib/conectores/twilio.ts` y
+  no se piden credenciales.
 - **Un cliente HTTP a un modelo open-source autoalojado** (p. ej. servido con
-  Ollama u otro runtime local/propio), únicamente en `services/intelligence/` (S-A8).
+  Ollama u otro runtime local/propio), únicamente en `services/intelligence/`
+  (S-A6 y S-A8).
   **No es** "otro proveedor de LLM" en el sentido de la regla de abajo: corre
   fuera de la nube de un tercero, que es justamente lo que evita el problema
   de NDA de la §1.5.
@@ -402,9 +410,9 @@ esa sección nombra — nunca dentro de `apps/web`:**
 - Ninguna base de datos, ni Supabase ni otra, para datos de ECON.
 - Claude, OpenAI u otro proveedor de LLM en la nube para O.D.I.N. Ningún SDK de
   LLM en la nube entra al proyecto.
-- Twilio, WhatsApp, OR-Tools, Python, puppeteer, qrcode — **excepto** donde
-  §12 y la excepción de arriba lo autorizan explícitamente para una fase
-  extendida concreta.
+- Twilio ni WhatsApp, en ningún alcance (retirados el 13 de septiembre de 2026).
+- OR-Tools, Python, puppeteer, qrcode — **excepto** donde §12 y la excepción de
+  arriba lo autorizan explícitamente para una fase extendida concreta.
 - Lógica de reconciliación dentro de una ruta de API o de un componente.
 - **Machine learning dentro del motor de veredicto/reconciliación**
   (`lib/canonico/`, `lib/reglas/`). Esa capa sigue siendo una heurística
@@ -487,8 +495,10 @@ en `.env.local`, que está en `.gitignore`.
 | `NECT_CLAVE_DIRECCION` | Clave de acceso, Dirección de Operaciones |
 | `NECT_EQUIPO_PROPIO` · `NECT_PROYECTO_PROPIO` | Recursos sobre los que se permite propagar (S-A4) |
 | `INTELLIGENCE_BASE_URL` | URL del servicio FastAPI único de `services/intelligence/` |
-| `TWILIO_ACCOUNT_SID` · `TWILIO_AUTH_TOKEN` · `TWILIO_FROM_NUMBER` | Solo si se construye el canal de incidentes (S-A9). El número es el de prueba de Twilio, nunca uno real de un trabajador |
-| `ODIN_MODEL_BASE_URL` · `ODIN_MODEL_NAME` · `ODIN_MODEL_TIMEOUT_SECONDS` | Endpoint local de Ollama, nombre del único modelo Qwen de O.D.I.N. y timeout antes del fallback |
+| `ODIN_MODEL_BASE_URL` · `ODIN_MODEL_NAME` · `ODIN_MODEL_TIMEOUT_SECONDS` | Endpoint local de Ollama, nombre del único modelo Qwen del chatbot O.D.I.N. y timeout antes del fallback |
+
+*(Las variables `TWILIO_*` se retiraron el 13 de septiembre de 2026 junto con
+el canal de campo. Si aparecen en un `.env.local` viejo, se ignoran.)*
 
 *(Agregar aquí y en `.env.example` cada variable nueva.)*
 
@@ -510,23 +520,19 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 
 **Si se construyen las fases extendidas de §12, además:**
 
-6. **El optimizador nunca viola una hard constraint.** Un caso sin solución
-   factible (p. ej. ningún operador disponible en el horario pedido) devuelve
-   **infactible con la razón**, nunca una asignación forzada que la incumpla.
-7. **Twilio y O.D.I.N. son estrictamente de solo lectura respecto a Prisma y
-   Startrack.** No existe herramienta de escritura registrada; una sugerencia o
-   confirmación en el chat nunca cambia ningún estado. P1 es un flujo de UI
-   separado y conserva sus propias pruebas de autorización.
 6. **El optimizador nunca viola una hard constraint.** Una solicitud sin opción
    devuelve **"sin asignación posible" con la razón** (e `infactible` global si
    no se asigna ninguna), nunca una asignación forzada que la incumpla. Estas
    pruebas corren **en vivo** (`npm run test:vivo`) contra el sandbox y el
    solver local, **sin datos inventados**: el caso infactible se arma filtrando
    insumos reales, y no se usan snapshots, que serían volcados (§1.2).
-7. **Twilio y O.D.I.N. nunca ejecutan una acción por su cuenta.** Mismo
-   principio C.3 que P1: O.D.I.N. sugiere y reenvía; el jefe confirma; recién
-   ahí se actualiza un dato. Prueba de que una sugerencia sin confirmar no
-   cambia ningún estado.
+7. **O.D.I.N. es estrictamente de solo lectura respecto a Prisma y Startrack.**
+   No existe herramienta de escritura registrada; una pregunta que pida
+   aprobar, crear, actualizar o propagar se rechaza en el chat y no cambia
+   ningún estado. P1 es un flujo de UI separado y conserva sus propias pruebas
+   de autorización. Además, **ninguna cifra sale del chatbot sin una
+   herramienta y una fuente**: si la pregunta no se puede resolver con los
+   datos que hay, la respuesta dice qué dato falta.
 8. **El replan ante una máquina caída solo propone** (S-A10). Hay que probar,
    en vivo y transformando insumos reales, tres cosas: que una APROBADA cuya
    máquina deja de operar recibe un reemplazo **sin usar esa máquina**; que
@@ -584,26 +590,34 @@ y los criterios de aceptación están en
 [docs/03-ARQUITECTURA-IA-ODIN.md](docs/03-ARQUITECTURA-IA-ODIN.md). Esta
 sección solo fija las reglas que cualquier agente debe recordar al trabajar:
 
-1. Hay **un solo runtime local Qwen** y dos perfiles: O.D.I.N. Web primero;
-   O.D.I.N. Campo/WhatsApp después. No hay un copiloto Claude/OpenAI separado.
+1. Hay **un solo runtime local Qwen** y **un solo perfil: O.D.I.N.**, el
+   chatbot de la aplicación web (antes llamado Betinho). No hay un copiloto
+   Claude/OpenAI separado, ni un perfil de campo, ni canal de mensajería.
 2. Todo vive en un único `services/intelligence/` FastAPI con módulos
    `odin/`, `forecast/` y `optimizer/`. Next.js conserva los conectores y
    envía únicamente resultados mínimos y estructurados.
-3. O.D.I.N. consulta, explica, recomienda y redacta. **Nunca escribe** en Prisma
-   ni Startrack y no dispone de herramientas de mutación. P1 sigue siendo un
-   flujo separado de UI con autorización de servidor y confirmación humana.
+3. **O.D.I.N. es un chatbot:** la persona escribe una pregunta en lenguaje
+   natural (*"¿está disponible la CF-01?"*, *"¿por qué hay una incoherencia en
+   este equipo?"*), O.D.I.N. la interpreta, consulta los datos en vivo mediante
+   herramientas de solo lectura y responde con conclusión, evidencia, fuente,
+   hora de lectura y datos faltantes. Consulta, explica, recomienda y redacta.
+   **Nunca escribe** en Prisma ni Startrack y no dispone de herramientas de
+   mutación. P1 sigue siendo un flujo separado de UI con autorización de
+   servidor y confirmación humana.
 4. El riesgo empieza como índice determinístico con
    `is_trained_probability: false`. Solo se entrena si una auditoría demuestra
    etiqueta, volumen, fechas y utilidad operativa suficientes.
 5. La asignación usa OR-Tools/CP-SAT, no el LLM. Es opcional, explicable y nunca
    ejecuta la propuesta.
-6. RAG, QLoRA, Twilio y el predictor entrenado están fuera del MVP. El canal de
-   campo usa el mismo Qwen y únicamente el sandbox de Twilio.
+6. RAG, QLoRA y el predictor entrenado están fuera del MVP. **Twilio, WhatsApp
+   y el perfil O.D.I.N. Campo salieron del producto** el 13 de septiembre de
+   2026: no se construyen, no se instalan y no se mencionan en el pitch como
+   pendientes.
 7. Toda la IA está debajo de la línea roja. Dentro de IA, el primer valor a
-   entregar es O.D.I.N. Web; el orden de construcción y recorte exacto está en
-   [docs/03 §6](docs/03-ARQUITECTURA-IA-ODIN.md).
+   entregar es el chatbot O.D.I.N.; el orden de construcción y recorte exacto
+   está en [docs/03 §6](docs/03-ARQUITECTURA-IA-ODIN.md).
 **Por qué existe esta sección y no contradice a H.3 de 01:** el 01 (Parte H.3)
-dice hoy "no corre un solver", "no tiene canal de WhatsApp", "no usa ML" — eso
+dice hoy "no sincroniza en automático", "no usa ML" — eso
 sigue siendo cierto **para el motor de veredicto/reconciliación** (línea roja,
 `lib/canonico/` + `lib/reglas/`), que no se toca. Lo que agrega esta sección es
 una **capa nueva y separada**, explícitamente marcada como propuesta que se
@@ -706,43 +720,56 @@ solver no reasigna nada por su cuenta. **En S-A7/S-B4 solo propone**, y la UI lo
 dice. Cuando exista P1, otro prompt conecta la confirmación humana a la
 propagación, bajo el mismo principio C.3.
 
-### 12.2 O.D.I.N. (S-A8) — agente local, modelo open-source
+### 12.2 O.D.I.N. (S-A6) — chatbot de IA local, modelo open-source
 
-Un agente que corre con un **modelo open-source autoalojado** (nunca un
-proveedor de IA en la nube — así se evita el problema de NDA de §1.5, no se
-sortea).
+**O.D.I.N.** (Operador de Datos e Inteligencia de Negocios; antes *Betinho*)
+es el **chatbot** de ECON NECT: una consola de chat en la ruta `/odin`
+(enlazada desde la barra lateral), donde la persona **escribe una pregunta en
+lenguaje natural** y O.D.I.N. la resuelve consultando los datos en vivo. Corre con un **modelo open-source autoalojado** (Qwen3 4B Instruct
+vía Ollama; nunca un proveedor de IA en la nube — así se evita el problema de
+NDA de §1.5, no se sortea).
 
-- **Forecast de mantenimiento preventivo**, a partir de kilometraje, horas de
-  motor encendido, temperatura y las demás señales que el sandbox exponga
-  realmente. **Si el sandbox no expone una señal, el forecast lo dice — no se
-  inventa un sensor que no existe** (mismo principio que C.1: honestidad sobre
-  completitud). Es un modelo estadístico/ML explícitamente etiquetado como
-  predicción, nunca mezclado con el veredicto determinístico de `lib/reglas/`.
-- Puede leer las sugerencias del optimizador (§12.1) y redactarlas en lenguaje
-  llano para quien decide.
+**Cómo resuelve una pregunta.** El navegador manda solo el texto de la
+pregunta y el identificador del equipo elegido; la ruta `app/api/odin/chat`
+arma el contexto con el orquestador canónico en vivo y lo pasa a
+`services/intelligence/app/odin/`, que detecta la intención, llama **solo a
+herramientas de lectura** (`get_operational_snapshot`,
+`get_inconsistency_explanation`, `get_maintenance_risk`) y redacta la
+respuesta. Toda respuesta trae conclusión, evidencia, fuente y hora de
+lectura, datos faltantes, nivel de confianza y, si aplica, la acción que
+tocaría aprobar a una persona. **Ninguna cifra sale del chatbot sin una
+herramienta detrás** (C.1): un filtro descarta números no sustentados, y si
+la pregunta no se puede resolver con lo que el sandbox expone, la respuesta
+dice qué dato falta en vez de completar el hueco.
 
-**Prioridad más baja de la escalera extendida** — es lo primero que se corta
-si el reloj aprieta.
+**Qué resuelve hoy (MVP):** el estado operativo de un equipo, la explicación
+de una incoherencia ya detectada por `lib/reglas/`, y la explicación del
+índice de riesgo de mantenimiento con sus señales. Una pregunta fuera de ese
+alcance o que pida escribir (aprobar, crear, actualizar, propagar) se
+**rechaza con claridad** en el chat. Si Ollama no responde, la consola muestra
+`ODIN_UNAVAILABLE` y degrada a la explicación determinística; nunca cambia de
+proveedor en silencio.
 
-### 12.3 Canal de incidentes de campo (S-A9) — Twilio + O.D.I.N.
+**Lo que O.D.I.N. no hace:** no calcula estados, reglas, KPIs ni
+probabilidades (los recibe ya calculados); no escribe en Prisma ni Startrack;
+no tiene perfil de campo ni canal de mensajería (Twilio/WhatsApp retirados el
+13 de septiembre de 2026).
 
-Un trabajador en campo reporta un incidente por Twilio (SMS/WhatsApp de
-prueba). O.D.I.N. lo analiza y **redacta un reenvío** al jefe correspondiente
-según el tipo de incidente — nunca decide ni ejecuta nada por su cuenta.
-**El jefe confirma** (o pide otra sugerencia) y **entonces** se actualiza el
-dato correspondiente en Prisma/Startrack, con el mismo mecanismo de
-confirmación explícita y rastro que ya rige toda propagación (C.3, D.6 de 01).
+**Riesgo de mantenimiento (S-A8), la señal que O.D.I.N. explica.** Empieza
+como `MaintenanceRiskIndex` determinístico a partir de las señales que el
+sandbox exponga realmente (kilometraje, horas de motor encendido, fallas
+activas…). **Si el sandbox no expone una señal, el índice lo dice — no se
+inventa un sensor que no existe** (mismo principio que C.1). Un modelo
+entrenado solo entra si supera la auditoría de [docs/03 §2.3](docs/03-ARQUITECTURA-IA-ODIN.md);
+siempre se etiqueta como predicción y nunca se mezcla con el veredicto
+determinístico de `lib/reglas/`. O.D.I.N. también puede leer las sugerencias
+del optimizador (§12.1) y redactarlas en lenguaje llano para quien decide.
 
-**Reglas de datos, iguales a las de §1.2:** ningún número de teléfono real de
-un trabajador de ECON entra al repositorio, a un log, ni a una captura del
-entregable. La demo usa el número de prueba de Twilio. El texto del incidente
-vive solo en el caché volátil en memoria — igual que cualquier otro dato de
-ECON (C.2) — nunca se persiste.
-
-**Prioridad más baja de la escalera extendida**, junto con O.D.I.N. — es de lo
+**Escalera:** el chatbot O.D.I.N. (S-A6) es el **primer incremento de IA** y
+el **último de la IA en cortarse**; el predictor entrenado de S-A8 es lo
 primero que se corta si el reloj aprieta.
 
-### 12.4 Dónde entran en la escalera de recorte, y cuándo se construyen
+### 12.3 Dónde entran en la escalera de recorte, y cuándo se construyen
 
 Ver la escalera actualizada en [02-ROADMAP.md §0.5](02-ROADMAP.md). En breve:
 el optimizador y sus KPIs de ahorro (§12.1) se insertan **justo debajo de la
@@ -752,6 +779,9 @@ compiten por la misma hora de Carril A, P1 va primero, siempre). Eso es
 prioridad de **corte**; la prioridad de **construcción** es distinta y más
 alta: S-A7/S-B4/S-C4 arrancan **apenas cierra S-C2**, antes que S-A3, S-C3,
 S-A4 y S-B2 en el orden del documento (ver [02-ROADMAP.md §1](02-ROADMAP.md)).
-O.D.I.N. (§12.2) y el canal de incidentes (§12.3) no cambiaron: van **al fondo
-de toda la escalera**, tanto en corte como en construcción — son lo primero
-que se corta y lo último que se intenta.
+El chatbot O.D.I.N. (§12.2, S-A6) **ya está construido** y es el primer
+incremento de IA: dentro de la IA es lo último que se corta. El predictor
+entrenado (S-A8) va **al fondo de toda la escalera**, tanto en corte como en
+construcción — es lo primero que se corta y lo último que se intenta. El
+canal de incidentes de campo (S-A9) **dejó de existir** el 13 de septiembre de
+2026: no está en la escalera porque no se construye.

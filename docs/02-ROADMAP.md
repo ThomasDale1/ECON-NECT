@@ -22,7 +22,7 @@ propiedad disjunta, los conflictos de merge casi desaparecen.
 |---|---|---|---|
 | **A · Núcleo** | Backend & Integración | Conectores → mapeo de datos en vivo → reglas → rutas de API → propagación | `lib/conectores/` · `lib/canonico/` · `lib/reglas/` · `lib/tipos/` · `app/api/` |
 | **B · Interfaz** | Frontend & UX | Flota, ficha unificada, bandeja, indicadores, mapa | `components/` · `app/(nect)/` · `app/globals.css` |
-| **C · Semántica** | Data Architect | Matriz de mapeo, RACI, catálogo de KPIs, acceso por rol | `lib/mapeo/` · `lib/gobernanza/` · `lib/kpi/` · `lib/acceso/` |
+| **C · Semántica** | Data Architect | Matriz de mapeo, matriz de responsabilidades, catálogo de KPIs, acceso por rol | `lib/mapeo/` · `lib/gobernanza/` · `lib/kpi/` · `lib/acceso/` |
 | **D · Negocio** | Proceso, Producto & Pitch | Los 7 entregables, mentorías, QA contra rúbrica, pitch | `docs/entregables/` — **ningún archivo de código** |
 
 ### 0.2 Los archivos compartidos, y la regla que los protege
@@ -95,7 +95,7 @@ la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
 ```
   se corta primero  ↓
  11.  RAG avanzado y QLoRA                           (futuro; fuera del sprint)
- 10.  O.D.I.N. Campo + Twilio                        (S-A9 — mismo Qwen local)
+ 10.  ~~O.D.I.N. Campo + Twilio~~ — retirado 13 sep. 2026, ya no existe S-A9
   9.  Predictor entrenado                            (S-A8 — solo si pasa auditoría)
   8.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4)
   7.  Índice de riesgo de mantenimiento              (S-A8 — determinístico)
@@ -105,14 +105,14 @@ la mañana. **Si vamos tarde, se corta en orden 11 → 0, sin discutirlo:**
   3.  Mapa de geocercas                             (S-B3)
   2.  Panel de indicadores                          (S-B3 → degrada a documentado)
   1.  Vistas por rol                                (S-C3 → degrada a clave única)
-  0.  O.D.I.N. Web de solo lectura                   (S-A6 — primer incremento IA)
+  0.  O.D.I.N. — chatbot local de solo lectura       (S-A6 — primer incremento IA)
   ── LÍNEA ROJA: nada de aquí para abajo se corta ──
   0.  Optimizador CP-SAT + KPIs de ahorro           (S-A7 + S-B4 + S-C4, replaneado
                                                       en S-A10 — fase extendida,
                                                       ver AGENTS.md §12)
   ── LÍNEA ROJA: nada de aquí para arriba se corta ──
       Conectores · mapeo de datos en vivo · reglas · ficha unificada ·
-      bandeja de incoherencias · matriz de mapeo · RACI ·
+      bandeja de incoherencias · matriz de mapeo · responsabilidades ·
       propagación P1 · los 7 entregables
 ```
 
@@ -121,9 +121,11 @@ pitch y ya está verificado contra la API. P2 y P3 están debajo porque son la
 misma idea repetida: si no dan tiempo, se explican en el diagrama y se muestran
 como propuesta.
 
-**Toda la IA está debajo de la línea roja.** Dentro de ella, O.D.I.N. Web es el
-primer incremento útil; el optimizador, el entrenamiento, WhatsApp, RAG y QLoRA
-se recortan antes. El orden completo de construcción y recorte está en
+**Toda la IA está debajo de la línea roja.** Dentro de ella, el chatbot O.D.I.N.
+es el primer incremento útil; el optimizador, el entrenamiento, RAG y QLoRA se
+recortan antes. **Twilio, WhatsApp y el perfil O.D.I.N. Campo salieron del
+producto el 13 de septiembre de 2026** — no están en la escalera porque no se
+construyen. El orden completo de construcción y recorte está en
 [03 §6](03-ARQUITECTURA-IA-ODIN.md). P1 nunca es una herramienta de O.D.I.N. y
 mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
@@ -131,7 +133,7 @@ mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
 | Franja | Qué pasa | ¿Se programa? |
 |---|---|---|
-| 15:30 – 17:00 | **Checkpoint 1 + mentorías** | **No.** Es nota (power skills) y es la fuente para validar la RACI |
+| 15:30 – 17:00 | **Checkpoint 1 + mentorías** | **No.** Es nota (power skills) y es la fuente para validar responsabilidades |
 | 17:00 – 20:00 | Trabajo | Sí — la mejor ventana del día |
 | 20:00 – 21:00 | Cena | Parcial |
 | 21:00 – 22:00 | **Checkpoint 2 + mentorías** | **No.** Es nota |
@@ -145,10 +147,10 @@ mantiene prioridad absoluta cuando compite por tiempo de Carril A.
 
 | | Hora | Foco declarado por ECON | Qué enseñamos |
 |---|---|---|---|
-| **CP1** | 15:30 | Mapeo de campos y RACI | La matriz de mapeo v1 en papel o pantalla, con filas "sin equivalencia" ya marcadas, y los hallazgos E.2/E.4 |
+| **CP1** | 15:30 | Mapeo de campos y responsabilidades | La matriz de mapeo en papel o pantalla, con filas "sin equivalencia" ya marcadas, y los hallazgos E.2/E.4 |
 | **CP2** | 21:00 | Avance contra requisitos, foco en prototipo | Prototipo navegable que responde una consulta unificada en vivo |
 
-En ambos hay **mentores de proceso de ECON: son la fuente para cerrar la RACI.**
+En ambos hay **mentores de proceso de ECON: son la fuente para cerrar la matriz de responsabilidades.**
 Llevar preguntas escritas (§3).
 
 ---
@@ -218,7 +220,7 @@ directa".
 **Objetivo:** que ningún entregable nazca a las 6 de la mañana.
 
 - **En el CP1 (ahora):** llevar escritas las preguntas para los mentores de
-  proceso (§3). Anotar las respuestas textuales — son la fuente de la RACI.
+  proceso (§3). Anotar las respuestas textuales — son la fuente de las responsabilidades.
 - Esqueleto del **documento de decisiones técnicas** (máx. 2 páginas), con los
   títulos ya puestos: por qué se descartó el mapeo por nombre · por qué
   `remote_id` es la respuesta a los conflictos en producción · por qué la
@@ -344,13 +346,13 @@ que lo produjo en cada caso.
 
 ---
 
-### 🟩 S-C2 — Matriz tipada, RACI y KPIs · 17:45–01:00 · Carril C
+### 🟩 S-C2 — Matriz tipada, responsabilidades y KPIs · 17:45–01:00 · Carril C
 
 **Objetivo:** que la documentación y el prototipo sean el mismo objeto (C.5).
 
 - `lib/mapeo/matriz.ts` — la matriz de S-C1 como estructura tipada + la página
   que la renderiza con filtro por tipo de relación.
-- `lib/gobernanza/raci.ts` — la RACI tipada, construida desde el diagrama TO-BE,
+- `lib/gobernanza/responsabilidades.ts` — la matriz tipada, construida desde el diagrama TO-BE,
   los organigramas y **lo que digan los mentores en los checkpoints**. Filas por
   paso del proceso, columnas por los seis agentes del TO-BE.
   **Enlazarla con las reglas de A:** cada incoherencia sabe quién la resuelve
@@ -360,16 +362,16 @@ que lo produjo en cada caso.
   ([01 D.7](01-DEFINICION-DE-NEGOCIO.md)): qué mide, por qué importa, fórmula,
   referencia, **acción que dispara**, y por qué ninguna plataforma lo ve sola.
   Si no es calculable con lo que hay, se declara y se dice qué dato falta.
-- Exportación a CSV de la matriz y de la RACI desde la pantalla.
+- Exportación a CSV de la matriz de mapeo y la matriz de responsabilidades desde la pantalla.
 
 ---
 
 > **Decisión vigente:** S-A7/S-B4/S-C4 siguen siendo fase extendida, pero no se
-> construyen antes del núcleo ni antes de O.D.I.N. Web. P1 mantiene prioridad
+> construyen antes del núcleo ni antes del chatbot O.D.I.N. P1 mantiene prioridad
 > absoluta. La ubicación de estos sprints en el documento no implica orden de
 > ejecución; manda [03 §6](03-ARQUITECTURA-IA-ODIN.md).
 
-### 🟦 S-A7 — Optimizador · *fase extendida, después de O.D.I.N. Web* · Carril A
+### 🟦 S-A7 — Optimizador · *fase extendida, después del chatbot O.D.I.N.* · Carril A
 
 **Objetivo:** para cada solicitud de maquinaria real de Prisma, proponer qué
 máquina y qué operador asignar en las fechas que pidió el solicitante,
@@ -640,7 +642,7 @@ el endpoint identificado. **Eso también suma; prometerlas sin hacerlas, no.**
   aprendizaje.
 - **README de entrega** — cómo revisar el prototipo y las matrices, **con las
   claves por rol escritas ahí** para que el jurado entre.
-- Exportaciones de matriz y RACI generadas desde el prototipo.
+- Exportaciones de mapeo y responsabilidades generadas desde el prototipo.
 
 ---
 
@@ -664,13 +666,31 @@ cómo se comunique, no de una función más.
 
 ---
 
-### 🟦 S-A6 — O.D.I.N. Web MVP · *primer incremento de IA* · Carril A
+### 🟦 S-A6 — O.D.I.N., chatbot de IA local · *primer incremento de IA* · Carril A
 
-Agente local de solo lectura con Qwen3 4B Instruct (`qwen3:4b-instruct`) servido por Ollama.
-Atiende únicamente `QUERY_ASSET_STATUS`, `EXPLAIN_INCONSISTENCY` y
-`EXPLAIN_MAINTENANCE_RISK`, mediante las tres herramientas controladas definidas
-en [03 §2.1](03-ARQUITECTURA-IA-ODIN.md). Toda cifra viene de una herramienta
-y muestra fuente, fecha y datos faltantes. No existe herramienta de escritura.
+**O.D.I.N.** (antes *Betinho*) es el chatbot de ECON NECT: una consola de chat
+en `/odin` donde la persona **escribe una pregunta en lenguaje natural** y
+O.D.I.N. la resuelve consultando los datos en vivo. Corre con Qwen3 4B Instruct
+(`qwen3:4b-instruct`) servido localmente por Ollama, a través del único
+servicio `services/intelligence/`; nunca un LLM de nube.
+
+- **Flujo de una pregunta:** el navegador manda solo el texto y el equipo
+  elegido → `app/api/odin/chat` arma el contexto con el orquestador canónico en
+  vivo → `services/intelligence/app/odin/` detecta la intención, llama a las
+  tres herramientas de solo lectura de [03 §2.1](03-ARQUITECTURA-IA-ODIN.md)
+  (`get_operational_snapshot`, `get_inconsistency_explanation`,
+  `get_maintenance_risk`) y redacta la respuesta.
+- **Qué resuelve hoy:** estado operativo de un equipo, explicación de una
+  incoherencia detectada por las reglas, y explicación del índice de riesgo de
+  mantenimiento (`QUERY_ASSET_STATUS`, `EXPLAIN_INCONSISTENCY`,
+  `EXPLAIN_MAINTENANCE_RISK`). Fuera de eso, rechaza con claridad.
+- **Cada respuesta trae** conclusión, evidencia, fuente y hora de lectura, datos
+  faltantes y nivel de confianza. Toda cifra viene de una herramienta; un filtro
+  descarta números no sustentados. Si falta un dato, lo dice.
+- **No existe herramienta de escritura.** Una pregunta que pida aprobar, crear,
+  actualizar o propagar se rechaza en el chat y no cambia ningún estado.
+- Si Ollama no responde: `ODIN_UNAVAILABLE` y degradación a la explicación
+  determinística; nunca cambia de proveedor.
 
 **Termina cuando:** pasa al menos 15 preguntas de evaluación, rechaza intenciones
 fuera de alcance y funciona localmente sin enviar información a un LLM de nube.
@@ -699,23 +719,12 @@ entrenado, también documenta etiqueta, corte, métricas y limitaciones.
 
 ---
 
-### 🟦 S-A9 — O.D.I.N. Campo + Twilio · *fase extendida, se corta primero* · Carril A (+ panel de B)
+### ~~S-A9 — O.D.I.N. Campo + Twilio~~ · *retirado el 13 de septiembre de 2026*
 
-- Usa el mismo Qwen local que O.D.I.N. Web, con prompt y herramientas propios.
-- `services/intelligence/app/odin/` recibe el webhook validado del sandbox de
-  Twilio, clasifica el incidente y redacta un borrador de escalamiento.
-- `components/incidentes/` muestra el borrador para revisión humana.
-- **Restricción dura:** no existe una ruta desde O.D.I.N. Campo hacia una
-  mutación de Prisma o Startrack. P1 es un flujo separado de la UI.
-- **Dato del incidente:** vive solo en el caché volátil en memoria, igual que
-  cualquier otro dato de ECON (C.2). Ningún número de teléfono real de un
-  trabajador entra al repositorio, a un log, ni a una captura del entregable —
-  la demo usa el número de prueba de Twilio (mismo cuidado que ya exige
-  §1.2/H.2 con las tareas y conductores de Startrack).
-
-**Termina cuando:** un mensaje de prueba produce un borrador visible con su
-clasificación y evidencia, y las pruebas demuestran que no puede escribir en las
-plataformas.
+Por decisión del usuario, Twilio y WhatsApp salieron del producto. No hay
+perfil de campo, canal de incidentes, webhook ni `components/incidentes/`.
+O.D.I.N. tiene un único perfil: el chatbot web de S-A6. Este sprint no se
+planea, no se construye y no se menciona en el pitch como pendiente.
 
 ---
 
@@ -737,9 +746,11 @@ No hay tiempo para cobertura amplia. Se prueba donde un error nos cuesta la demo
 
 6. **El optimizador nunca viola una hard constraint** — un caso sin solución
    factible devuelve infactible con la razón, nunca una asignación forzada.
-7. **Twilio/O.D.I.N. no tienen capacidad de escritura** — no existe herramienta
-   o ruta del agente hacia una mutación de Prisma/Startrack. P1 se prueba como
-   un flujo independiente de UI y servidor.
+7. **O.D.I.N. no tiene capacidad de escritura** — no existe herramienta o ruta
+   del chatbot hacia una mutación de Prisma/Startrack; una pregunta que pida
+   aprobar, crear o propagar se rechaza y no cambia ningún estado. P1 se prueba
+   como un flujo independiente de UI y servidor. Además, ninguna cifra sale
+   del chat sin herramienta y fuente: si falta el dato, la respuesta lo dice.
 
 **Reportar siempre el resultado real. Nunca afirmar que una prueba pasó sin
 haberla corrido.**
@@ -750,7 +761,7 @@ haberla corrido.**
 
 Son de carril D, pero cualquiera que hable con un mentor las lleva.
 
-**Para cerrar la RACI:**
+**Para cerrar la matriz de responsabilidades:**
 1. ¿Quién aprueba realmente una solicitud de maquinaria, y quién la origina?
 2. ¿Quién decide que un equipo sale de operación: Mantenimiento o Logística?
 3. ¿Quién debe enterarse primero de que un equipo no va a llegar, y por qué canal
@@ -788,9 +799,8 @@ nuestro indicador en dinero durante el pitch.
 | Otro equipo modifica datos compartidos del sandbox | Media | La demo se apoya en nuestros recursos; los ajenos solo se leen |
 | Los entregables se dejan para el final | **Alta** | Carril D arranca a las 15:30 y cierra a las 06:30, no a las 09:59 |
 | Dormirse y perder el pitch | Real | Alarma redundante. El pitch vale 15 pts |
-| Las fases de IA le roban horas a la línea roja | Alta | Nadie empieza S-A6/S-A7/S-A8/S-A9/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
+| Las fases de IA le roban horas a la línea roja | Alta | Nadie empieza S-A6/S-A7/S-A8/S-B4/S-C4 sin haber cerrado primero lo que su carril debe a la línea roja |
 | `services/intelligence/` no despliega o no responde desde la app | Media | O.D.I.N. se prueba primero en local; los módulos opcionales se explican como propuesta si no conectan a tiempo |
-| Verificación de Twilio tarda o el webhook no es alcanzable | Media | Se usa exclusivamente el sandbox de prueba; S-A9 se corta antes que el MVP Web |
 | Qwen es lento o no cabe en el hardware disponible | Media | Medir hardware y latencia antes de integrar; probar cuantización o recortar O.D.I.N. sin sustituirlo por un LLM de nube |
 | Se presenta un índice de reglas como predicción entrenada | Alta | El contrato exige `is_trained_probability: false`; entrenar solo después de superar la auditoría de datos de 03 §2.3 |
 

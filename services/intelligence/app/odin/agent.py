@@ -137,9 +137,10 @@ def _response_metadata(
         return missing, request.context.snapshot.confidence, action
 
     missing = result.get("missing_features", [])
-    score = result.get("risk_score")
-    confidence = float(score) if isinstance(score, int | float) else None
-    return missing, confidence, result.get("recommended_action")
+    # El índice de riesgo no es una medida de confianza ni una probabilidad
+    # entrenada. Se conserva dentro de tool_result y de la explicación, pero no
+    # se reutiliza bajo el nombre semánticamente distinto `confidence`.
+    return missing, None, result.get("recommended_action")
 
 
 class OdinAgent:
