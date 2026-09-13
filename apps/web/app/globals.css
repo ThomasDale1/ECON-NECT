@@ -7,9 +7,10 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-sans: var(--font-lato), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-roboto-condensed), ui-monospace, monospace;
+  --font-heading: var(--font-exo), ui-sans-serif, system-ui, sans-serif;
+  --font-label: var(--font-lato), ui-sans-serif, system-ui, sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -48,24 +49,64 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Tokens de ECON NECT — ui-registry.md §1
+
+   El color significa una sola cosa: severidad del veredicto. Ningun otro
+   elemento compite por ese canal.
+
+   SIN_EVIDENCIA es violeta y nunca rojo: EN_RIESGO significa "hay evidencia de
+   riesgo", SIN_EVIDENCIA significa "no hay evidencia suficiente para decidir".
+   Pintar la incertidumbre de rojo convierte "no se" en "alarma".
+   ───────────────────────────────────────────────────────────────────────────── */
+@theme {
+  --color-veredicto-coherente: #059669;
+  --color-veredicto-coherente-fondo: #ecfdf5;
+  --color-veredicto-atencion: #d97706;
+  --color-veredicto-atencion-fondo: #fffbeb;
+  --color-veredicto-riesgo: #dc2626;
+  --color-veredicto-riesgo-fondo: #fef2f2;
+  --color-veredicto-sin-evidencia: #7c3aed;
+  --color-veredicto-sin-evidencia-fondo: #f5f3ff;
+
+  /* Identidad de plataforma: solo el punto del badge de contorno (§1.2).
+     Naranja y no rojo, para no robarle el canal a la severidad. */
+  --color-origen-prisma: #2563eb;
+  --color-origen-startrack: #ea580c;
+
+  /* Azules de marca del Command Center. */
+  --color-marina: #0b1e30;
+  --color-marina-honda: #0d1f2f;
+  --color-marina-clara: #132c44;
+  --color-marina-borde: #1e4060;
+  --color-marina-texto: #7a9ec0;
+  --color-marina-tenue: #3a5470;
+  --color-marina-media: #4a7fa5;
+  --color-marca: #144f81;
+  --color-marca-clara: #2ea3f2;
+
+  --shadow-card: 0 2px 8px rgba(31, 58, 85, 0.06);
+  --shadow-header: 0 1px 2px rgba(15, 30, 61, 0.04);
+}
+
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --background: #f1f5f9;
+  --foreground: #1a1a1a;
+  --card: #ffffff;
+  --card-foreground: #1a1a1a;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
+  --primary: #144f81;
+  --primary-foreground: #ffffff;
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
+  --muted: #f1f5f9;
+  --muted-foreground: #94a3b8;
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --destructive: #dc2626;
+  --border: #e2e8f0;
+  --input: #e2e8f0;
   --ring: oklch(0.708 0 0);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
