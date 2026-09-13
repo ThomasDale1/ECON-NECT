@@ -9,7 +9,8 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "leer": "tsx --conditions=react-server scripts/leer.ts"
+    "leer": "tsx --conditions=react-server scripts/leer.ts",
+    "reconciliar": "tsx --conditions=react-server scripts/reconciliar.ts"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",

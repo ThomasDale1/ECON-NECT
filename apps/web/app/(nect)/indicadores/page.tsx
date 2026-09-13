@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Marco } from '@/components/comando/marco'
 import { PanelIndicadores } from '@/components/comando/panel-indicadores'
-import { leerEquiposUnificados } from '@/lib/canonico/unificar'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 
 export const metadata: Metadata = {
   title: 'Indicadores operativos · ECON NECT',

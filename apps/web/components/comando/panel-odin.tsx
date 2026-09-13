@@ -1,34 +1,27 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { MessageCircle, PanelRightClose, TriangleAlert, Zap } from 'lucide-react'
 import type {
   AlertaEnviada,
   ConflictoDisponibilidad,
   Prediccion,
-} from '@/app/(nect)/datos-betinho'
+} from '@/app/(nect)/datos-odin'
 import { cn } from '@/lib/utils'
 
 /**
- * Drawer contextual de Betinho.
+ * Drawer contextual de O.D.I.N..
  *
  * Es un **feature**, no una pantalla: se acopla a la derecha del Command Center
  * y se puede plegar. Cerrado deja una pestaña estrecha para volver a abrirlo.
  *
- * ⚠ Todo su contenido está fabricado y así está marcado en `datos-betinho.ts`.
+ * ⚠ Todo su contenido está fabricado y así está marcado en `datos-odin.ts`.
  * No hay modelo de predicción detrás, no hay integración de mensajería y ningún
  * botón envía nada: los de acción están deshabilitados a propósito, porque un
  * botón que parece que hace algo y no lo hace es peor que uno que se ve
  * apagado.
  */
-/**
- * Icono de Betinho. El bloque de concreto con los dos huecos encendidos.
- * Vive en `public/`, no como SVG inline: es una imagen, no un glifo.
- */
-const ICONO = '/betinho.png'
-
-export function PanelBetinho({
+export function PanelOdin({
   prediccion,
   alertas,
   conflicto,
@@ -46,18 +39,14 @@ export function PanelBetinho({
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        aria-label="Abrir el panel de Betinho"
+        aria-label="Abrir el panel de O.D.I.N."
         className="sticky top-0 flex h-screen shrink-0 flex-col items-center gap-2 self-start border-l border-border bg-card px-2 pt-6 transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       >
-        <Image
-          src={ICONO}
-          alt=""
-          width={24}
-          height={24}
-          className="size-6 rounded-md border border-border object-cover"
-        />
+        <span className="flex size-7 items-center justify-center rounded-md bg-gradient-to-br from-marca-clara to-primary">
+          <Zap aria-hidden className="size-4 text-white" />
+        </span>
         <span className="font-label text-[10px] font-bold uppercase tracking-widest [writing-mode:vertical-rl]">
-          Betinho
+          O.D.I.N.
         </span>
       </button>
     )
@@ -65,7 +54,7 @@ export function PanelBetinho({
 
   return (
     <aside
-      aria-label="Panel de Betinho"
+      aria-label="Panel de O.D.I.N."
       className={cn(
         'flex h-screen w-[380px] flex-col overflow-hidden border-l border-border bg-muted',
         // Ancho completo solo cuando sobra espacio. Por debajo de xl flota sobre
@@ -77,28 +66,26 @@ export function PanelBetinho({
     >
       <header className="flex items-center gap-3 border-b border-border bg-card p-5">
         <span className="relative flex size-[42px] shrink-0">
-          <Image
-            src={ICONO}
-            alt=""
-            width={42}
-            height={42}
-            className="size-full rounded-full border border-border object-cover shadow-md"
-          />
+          <span className="flex size-full items-center justify-center rounded-full bg-gradient-to-br from-marca-clara to-primary shadow-md">
+            <Zap aria-hidden className="size-5 text-white" />
+          </span>
           <span
             aria-hidden
             className="absolute bottom-0 right-0 size-3 rounded-full border-2 border-card bg-veredicto-coherente"
           />
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="font-label text-base font-extrabold text-primary">Betinho</span>
+          <span className="font-heading text-base font-extrabold tracking-wide text-primary">
+            O.D.I.N.
+          </span>
           <span className="font-label text-[11px] text-muted-foreground">
-            Copiloto de operaciones
+            Operador de Datos e Inteligencia de Negocios
           </span>
         </span>
         <button
           type="button"
           onClick={() => setAbierto(false)}
-          aria-label="Plegar el panel de Betinho"
+          aria-label="Plegar el panel de O.D.I.N."
           className="flex size-7 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
         >
           <PanelRightClose aria-hidden className="size-4" />

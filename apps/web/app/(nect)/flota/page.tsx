@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import { Marco } from '@/components/comando/marco'
 import { TablaFlota } from '@/components/comando/tabla-flota'
-import { leerEquiposUnificados } from '@/lib/canonico/unificar'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 
 export const metadata: Metadata = {
   title: 'Inventario de flota · ECON NECT',

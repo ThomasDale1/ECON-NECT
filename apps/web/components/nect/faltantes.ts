@@ -11,7 +11,7 @@
  */
 export const FALTANTE_EN_PALABRAS: Record<string, string> = {
   'startrack.vehiculo': 'Startrack no tiene contraparte para este equipo',
-  'startrack.tarea': 'Startrack no publica la tarea de traslado',
+  'startrack.tarea': 'Startrack no tiene una tarea vinculada a esta unidad',
   'startrack.posicion.vigencia':
     'La telemetría de Startrack está desconectada y la posición puede estar vieja',
   'startrack.geocerca.radio': 'Startrack no publica el radio de la geocerca',

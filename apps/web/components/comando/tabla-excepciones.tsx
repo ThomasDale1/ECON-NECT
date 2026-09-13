@@ -57,14 +57,12 @@ export function TablaExcepciones({ equipos }: { equipos: EquipoUnificado[] }) {
         <Button size="sm">Resolver seleccionadas</Button>
       </div>
 
-      {/* Se declara una vez, no en cada fila: repetirlo 16 veces convertiría un
-          hecho del sistema en ruido de bandeja. */}
+      {/* Se declara una vez, no en cada fila: repetirlo en las 16 filas
+          convertiría una propiedad del sistema en ruido de bandeja. */}
       <p className="rounded-lg border border-dashed border-border px-3 py-2 font-label text-[11px] leading-relaxed text-muted-foreground">
-        <strong className="font-bold">Sin equivalencia directa:</strong> este sandbox de Startrack
-        no publica tareas de traslado ni el radio de sus geocercas. No es un dato que falte en esta
-        lectura: los endpoints de tareas responden 404 y el de viajes está deshabilitado para la
-        cuenta. Por eso el traslado no se verifica y la distancia a la geocerca no se traduce a
-        dentro o fuera.
+        <strong className="font-bold">Sin equivalencia directa:</strong> Startrack publica el centro
+        de sus geocercas pero no el radio, así que la distancia al proyecto no se traduce a dentro o
+        fuera.
       </p>
 
       {filas.length === 0 ? (

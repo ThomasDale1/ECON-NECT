@@ -1,7 +1,7 @@
 // ═══════════════════════════════════════════════════════════════════════════
 // DATOS FABRICADOS — no provienen del sandbox de ECON.
 //
-// Contenido del mockup de Betinho, escrito a mano. **Nada de esto lo calcula el
+// Contenido del mockup de O.D.I.N., escrito a mano. **Nada de esto lo calcula el
 // sistema**: no hay modelo de predicción, no hay integración de mensajería y no
 // hay motor de recomendación. Es la maqueta de un feature propuesto.
 //
@@ -10,7 +10,7 @@
 // 1. AGENTS.md §6 prohíbe vender heurística como IA: "La confianza es una
 //    heurística determinística y documentada. Venderla como IA nos hunde en el
 //    criterio de honestidad que usamos como diferenciador." Los rótulos
-//    "Betinho AI" y "Predicción Preventiva" van justo en contra.
+//    "O.D.I.N." y "Predicción Preventiva" van justo en contra.
 // 2. WhatsApp está retirado del proyecto (§5 y §6). Acá es solo una lista
 //    pintada: no se instaló Twilio ni ningún cliente de mensajería, y nada se
 //    envía a nadie.

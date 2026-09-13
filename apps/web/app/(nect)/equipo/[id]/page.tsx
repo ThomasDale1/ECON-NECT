@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { notFound } from 'next/navigation'
 import { Marco } from '@/components/comando/marco'
 import { FichaEquipo } from '@/components/comando/ficha-equipo'
-import { leerEquiposUnificados } from '@/lib/canonico/unificar'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 
 export const dynamic = 'force-dynamic'
 

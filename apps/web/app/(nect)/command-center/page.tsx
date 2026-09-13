@@ -2,7 +2,7 @@ import type { Metadata } from 'next'
 import { Marco } from '@/components/comando/marco'
 import { PanelEnCurso, PanelFueraDeGeocerca } from '@/components/comando/paneles-situacion'
 import { TablaExcepciones } from '@/components/comando/tabla-excepciones'
-import { leerEquiposUnificados } from '@/lib/canonico/unificar'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { ACTIVOS_EN_CURSO, VIOLACIONES_GEOCERCA } from './datos-de-ejemplo'
 
 export const metadata: Metadata = {

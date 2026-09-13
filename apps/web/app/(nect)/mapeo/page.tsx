@@ -1,6 +1,6 @@
 import type { Metadata } from 'next'
 import { Marco } from '@/components/comando/marco'
-import { leerEquiposUnificados } from '@/lib/canonico/unificar'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { ContenidoMapeo } from './contenido'
 
 export const metadata: Metadata = {
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic'
  *
  * El contenido lo escribió el carril C y se deja intacto; acá solo se le pone
  * la barra superior y el ancho del resto de la aplicación, para que no pelee
- * con la barra lateral ni con el panel de Betinho. El propio autor dejó dicho
+ * con la barra lateral ni con el panel de O.D.I.N.. El propio autor dejó dicho
  * que el carril B podía integrarla a su navegación sin pedir permiso.
  */
 export default async function MapeoPage() {

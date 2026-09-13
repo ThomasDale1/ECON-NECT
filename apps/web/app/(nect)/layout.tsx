@@ -1,9 +1,9 @@
 import { Exo, Lato, Roboto_Condensed } from 'next/font/google'
 import { BarraLateral } from '@/components/comando/barra-lateral'
-import { PanelBetinho } from '@/components/comando/panel-betinho'
-import { leerEquiposUnificados } from '@/lib/canonico/unificar'
+import { PanelOdin } from '@/components/comando/panel-odin'
+import { leerEquiposUnificados } from '@/lib/canonico/orquestador'
 import { actualizarFuente } from './acciones'
-import { ALERTAS, CONFLICTO, CONSULTAS_RAPIDAS, PREDICCION } from './datos-betinho'
+import { ALERTAS, CONFLICTO, CONSULTAS_RAPIDAS, PREDICCION } from './datos-odin'
 
 /**
  * Envoltorio de las pantallas de ECON NECT.
@@ -17,7 +17,7 @@ import { ALERTAS, CONFLICTO, CONSULTAS_RAPIDAS, PREDICCION } from './datos-betin
  * layout pida la salud y la página pida los equipos no duplica llamadas al
  * sandbox.
  *
- * Betinho también vive acá: es un asistente, así que acompaña a todas las
+ * O.D.I.N. también vive acá: es un asistente, así que acompaña a todas las
  * pantallas y conserva si está plegado al navegar.
  *
  * Las fuentes se declaran acá y no en `app/layout.tsx` porque ese archivo es del
@@ -45,7 +45,7 @@ export default async function NectLayout({ children }: { children: React.ReactNo
     >
       <BarraLateral salud={salud} onActualizar={actualizarFuente} />
       {children}
-      <PanelBetinho
+      <PanelOdin
         prediccion={PREDICCION}
         alertas={ALERTAS}
         conflicto={CONFLICTO}

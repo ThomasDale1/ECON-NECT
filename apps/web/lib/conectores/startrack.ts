@@ -204,17 +204,73 @@ export function _reiniciarParaPruebas(): void {
   cookieSesion = null
 }
 
-// TODO(tareas): sin lector de tareas. Se investigó contra el sandbox real
-// (12 sep 2026) y no se encontró la ruta:
-// - Legado `ajax/{task,tasks,workOrder,workOrders,jobs,assignments,
-//   mobileWorker}.php?cmd=list` → 404 en los siete (no existen como archivo).
-// - Moderna `/api`, `/api/tasks`, `/api/v1/tasks`, `/api/mobileworker/tasks`
-//   con autenticación básica (usuario/clave, y variantes con el número de
-//   cliente combinado) → 401 en todas: la Basic Auth no se aceptó con ningún
-//   formato probado.
-// - `/api/tasks` con la cookie de sesión legado → 404 (la ruta no existe bajo
-//   esa auth).
-// Conclusión: la ruta de lectura de tareas no está entre las variantes
-// estructurales razonables: se necesita el nombre exacto (o una credencial
-// de API distinta a STARTRACK_USER/PASSWORD) para no seguir adivinando
-// (AGENTS.md §1.1). Documentado como hueco verificado, no inventado.
+// Lector de tareas (S-A2 Paso 0) — la ruta que S-A1 no encontró. Verificada en
+// vivo el 12 de septiembre de 2026: `GET /api/job` (superficie REST moderna,
+// singular — los 404 de S-A1 fueron por probar `ajax/jobs.php` y `/api/tasks`),
+// y acepta la cookie de sesión de `login.php`: no hace falta Basic Auth.
+//
+// Esta superficie sí usa 401 para sesión vencida (a diferencia de algunos
+// endpoints legado que devuelven 200 con success:false) — por eso necesita su
+// propio helper en vez de reusar `peticionAjax`, que solo mira el cuerpo.
+async function peticionApiJson(endpoint: string): Promise<Record<string, unknown>> {
+  const { baseUrl } = config()
+  if (!cookieSesion) await iniciarSesion()
+
+  const intentar = async (): Promise<Record<string, unknown>> => {
+    const respuesta = await fetch(`${baseUrl}/${endpoint}`, {
+      headers: { Cookie: cookieSesion! },
+    })
+
+    if (respuesta.status === 401) {
+      throw new SesionExpirada(PLATAFORMA, endpoint)
+    }
+
+    let cuerpo: unknown
+    try {
+      cuerpo = await respuesta.json()
+    } catch {
+      throw new ErrorConector(PLATAFORMA, endpoint, `respuesta no-JSON (status ${respuesta.status})`)
+    }
+
+    // Cubre también el 200-con-success:false (01 E.7): desenvolverStartrack
+    // lanza SesionExpirada sin importar que el status ya haya pasado el
+    // chequeo de 401 de arriba.
+    return desenvolverStartrack<Record<string, unknown>>(cuerpo, endpoint)
+  }
+
+  try {
+    return await intentar()
+  } catch (error) {
+    if (error instanceof SesionExpirada) {
+      // Reautentica y reintenta UNA sola vez — nunca en bucle (S-A1 §3, igual
+      // que peticionAjax).
+      await iniciarSesion()
+      return await intentar()
+    }
+    throw error
+  }
+}
+
+const ENDPOINT_TAREAS = 'api/job?page_num=0&page_size=200&sort_by=start_date&sort_dir=asc'
+
+/** ~32 tareas en el sandbox compartido; con page_size=200 entran en una sola
+ * página. No hace falta el filtro de fechas del UI para leerlas todas. */
+export function leerTareas(): Promise<RespuestaConector<unknown[]>> {
+  return conCache(`startrack:${ENDPOINT_TAREAS}`, async () => {
+    const cuerpo = await peticionApiJson(ENDPOINT_TAREAS)
+    const lista = Array.isArray(cuerpo.data) ? (cuerpo.data as unknown[]) : []
+    return envolver(lista, PLATAFORMA, ENDPOINT_TAREAS)
+  })
+}
+
+const ENDPOINT_TIPOS_TAREA = 'api/job/type?include_readonly=1'
+
+/** Catálogo job_type_id → nombre (Traslado, Pedido, Visita, ENTREGA DE
+ * AGREGADOS, Nuevo). Lo usa R4 y el enlace de traslados en lib/canonico. */
+export function leerTiposTarea(): Promise<RespuestaConector<unknown[]>> {
+  return conCache(`startrack:${ENDPOINT_TIPOS_TAREA}`, async () => {
+    const cuerpo = await peticionApiJson(ENDPOINT_TIPOS_TAREA)
+    const lista = Array.isArray(cuerpo.data) ? (cuerpo.data as unknown[]) : []
+    return envolver(lista, PLATAFORMA, ENDPOINT_TIPOS_TAREA)
+  })
+}

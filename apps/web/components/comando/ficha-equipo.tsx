@@ -69,10 +69,10 @@ export function FichaEquipo({
       nombre: 'Compromiso y traslado',
       prisma: equipo.solicitud,
       startrack: equipo.tarea,
-      compatible: equipo.tarea === null ? 'sin-equivalencia' : 'si',
+      compatible: equipo.tarea === null ? 'sin-evidencia' : 'si',
       nota:
         equipo.tarea === null
-          ? 'Este sandbox de Startrack no publica tareas de traslado: los endpoints responden 404.'
+          ? 'Startrack no tiene ninguna tarea vinculada a esta unidad en esta lectura.'
           : 'La tarea describe el traslado, no el recurso.',
     },
     {
