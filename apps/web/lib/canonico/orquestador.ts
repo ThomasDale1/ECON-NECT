@@ -13,6 +13,8 @@ import type {
 } from '@/lib/tipos/canonico'
 import { distanciaEnMetros } from './identidad'
 import { interpretarDesfases, reconciliar } from './reconciliacion'
+import { paresDesdeCrudos } from '@/lib/kpi/pares'
+import type { ParLatencia } from '@/lib/kpi/calculo'
 import type {
   DatosCrudos,
   EquipoPrismaCrudo,
@@ -79,6 +81,8 @@ export type LecturaUnificada = {
   /** Host de Prisma. La ficha de un equipo es `{urlPrisma}/maquinaria/equipos/{id}`. */
   urlPrisma: string | null
   leidoEn: string
+  paresLatencia: ParLatencia[]
+  solicitudesAprobadas: number
 }
 
 export const leerEquiposUnificados = cache(leerTodo)
@@ -187,8 +191,12 @@ async function leerTodo(): Promise<LecturaUnificada> {
   const hostStartrack = process.env.STARTRACK_BASE_URL?.replace(/\/+$/, '') ?? null
   const hostPrisma = process.env.PRISMA_BASE_URL?.replace(/\/+$/, '') ?? null
 
+  const { pares, aprobadas } = paresDesdeCrudos(datos.solicitudes.datos, datos.tareas.datos)
+
   return {
     equipos,
+    paresLatencia: pares,
+    solicitudesAprobadas: aprobadas,
     salud: [
       {
         plataforma: 'prisma',

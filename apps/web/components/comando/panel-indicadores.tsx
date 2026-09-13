@@ -1,18 +1,16 @@
-import { CATALOGO_KPI } from '@/lib/kpi/catalogo'
-import type { EquipoUnificado, Veredicto } from '@/lib/tipos/canonico'
+import Link from 'next/link'
+import { ArrowRight } from 'lucide-react'
+import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
+import { TextoEnfasis } from '@/components/odin/texto-enfasis'
+import { interpretarFlota, interpretarKpis, type LecturaKpi } from '@/lib/kpi/interpretacion'
+import type { ParLatencia } from '@/lib/kpi/calculo'
+import type { EquipoUnificado, Rol, Veredicto } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
 
 /**
- * Indicadores operativos.
- *
- * Doctrina de KPI: **un indicador que no dispara una acción es adorno**, y
- * ningún número aparece sin poder señalar de qué lectura salió. Los que el
- * sandbox no permite calcular se listan con el dato que falta, en vez de
- * rellenarlos con un valor inventado.
- *
- * Paleta categórica validada con el script de la guía de visualización
- * (lightness, croma, separación para daltonismo y contraste: todo pasa en claro).
- * No reutiliza los colores de veredicto: esos están reservados para severidad.
+ * Indicadores operativos. Cada KPI se lee como O.D.I.N.: veredicto, cifra o
+ * hueco, por qué, siguiente paso. La tasa de coherencia usa identidad
+ * resuelta, no la flota total. Nada se inventa.
  */
 const CATEGORICA = ['#0891b2', '#db2777', '#65a30d', '#4f46e5', '#0d9488', '#c026d3']
 
@@ -30,19 +28,30 @@ const COLOR_VEREDICTO: Record<Veredicto, string> = {
   SIN_EVIDENCIA: 'bg-veredicto-sin-evidencia',
 }
 
-export function PanelIndicadores({ equipos }: { equipos: EquipoUnificado[] }) {
-  const total = equipos.length || 1
+const AGENTE: Record<Rol, string> = {
+  PROYECTOS: 'Gerencia de Proyecto',
+  LOGISTICA: 'Gerencia de Logística y Equipo',
+  MANTENIMIENTO: 'Gerencia de Mantenimiento',
+  COSTOS: 'Control de Costos',
+  DIRECCION: 'Dirección de Operaciones',
+}
+
+export function PanelIndicadores({
+  equipos,
+  paresLatencia,
+  solicitudesAprobadas,
+}: {
+  equipos: EquipoUnificado[]
+  paresLatencia: ParLatencia[]
+  solicitudesAprobadas: number
+}) {
+  const lecturas = interpretarKpis(equipos, paresLatencia, solicitudesAprobadas)
+  const flota = interpretarFlota(lecturas, equipos)
 
   const porVeredicto = equipos.reduce<Record<string, number>>((acc, e) => {
     acc[e.veredicto] = (acc[e.veredicto] ?? 0) + 1
     return acc
   }, {})
-
-  const coherentes = porVeredicto.COHERENTE ?? 0
-  const sinEvidencia = porVeredicto.SIN_EVIDENCIA ?? 0
-  const excepciones = equipos.length - coherentes
-  const identidadResuelta = equipos.filter((e) => e.identidadResuelta).length
-  const confianzaMedia = Math.round(equipos.reduce((s, e) => s + e.confianza, 0) / total)
 
   const porProyecto = agrupar(equipos, (e) => e.ubicacion?.descripcion.valor ?? 'Sin proyecto')
   const porRegla = agrupar(
@@ -50,44 +59,29 @@ export function PanelIndicadores({ equipos }: { equipos: EquipoUnificado[] }) {
     (e) => (e.reglas.find((r) => r.veredicto === e.veredicto) ?? e.reglas[0])?.nombre ?? 'Sin regla',
   )
 
-  const sinCalcular = CATALOGO_KPI.filter((k) => k.datoFaltante !== null)
-
   return (
     <div className="flex flex-col gap-6">
-      {/* Tiles: solo lo que sale de esta lectura */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Tile
-          etiqueta="Tasa de coherencia"
-          valor={`${Math.round((coherentes / total) * 100)}%`}
-          nota={`${coherentes} de ${equipos.length} equipos sin incoherencia`}
-        />
-        <Tile
-          etiqueta="Excepciones activas"
-          valor={String(excepciones)}
-          nota="Equipos que no salieron coherentes"
-          acento={excepciones > 0}
-        />
-        <Tile
-          etiqueta="Identidad resuelta"
-          valor={`${Math.round((identidadResuelta / total) * 100)}%`}
-          nota={`${identidadResuelta} de ${equipos.length} cruzan con Startrack`}
-        />
-        <Tile
-          etiqueta="Confianza media"
-          valor={`${confianzaMedia}%`}
-          nota={`${sinEvidencia} equipos sin evidencia suficiente`}
-        />
+      <TarjetaLectura lectura={flota} destacada href="/command-center" cta="Abrir bandeja" />
+
+      <section className="grid gap-4 xl:grid-cols-2">
+        {lecturas.map((lectura) => (
+          <TarjetaLectura
+            key={lectura.id}
+            lectura={lectura}
+            href={lectura.id === 'tasa-coherencia' || lectura.id === 'cobertura-interpretacion' ? '/command-center' : '/flota'}
+            cta={lectura.faltante ? 'Ver flota' : 'Ver excepciones'}
+          />
+        ))}
       </section>
 
       <div className="grid gap-6 xl:grid-cols-2">
-        {/* Distribución de veredictos */}
         <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-card">
           <div>
             <h2 className="font-heading text-base font-bold tracking-tight text-primary">
               Distribución de veredictos
             </h2>
             <p className="font-label text-xs text-muted-foreground">
-              Toda la flota, en la lectura actual
+              Evidencia de esta lectura, no una serie histórica
             </p>
           </div>
           <ul className="flex flex-col gap-3">
@@ -103,15 +97,13 @@ export function PanelIndicadores({ equipos }: { equipos: EquipoUnificado[] }) {
           </ul>
         </section>
 
-        {/* Equipos por proyecto */}
         <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-card">
           <div>
             <h2 className="font-heading text-base font-bold tracking-tight text-primary">
               Equipos por proyecto
             </h2>
             <p className="font-label text-xs text-muted-foreground">
-              Asignación según Prisma. Barras y no pastel: con más de cuatro categorías el pastel
-              deja de leerse.
+              Asignación según Prisma. Barras y no pastel.
             </p>
           </div>
           <ul className="flex flex-col gap-3">
@@ -136,7 +128,6 @@ export function PanelIndicadores({ equipos }: { equipos: EquipoUnificado[] }) {
         </section>
       </div>
 
-      {/* Excepciones por regla */}
       <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-card">
         <div>
           <h2 className="font-heading text-base font-bold tracking-tight text-primary">
@@ -164,41 +155,60 @@ export function PanelIndicadores({ equipos }: { equipos: EquipoUnificado[] }) {
           </ul>
         )}
       </section>
-
-      {/* Lo que hoy no se puede calcular */}
-      <section className="flex flex-col gap-4 rounded-xl border border-border bg-card p-6 shadow-card">
-        <div>
-          <h2 className="font-heading text-base font-bold tracking-tight text-primary">
-            Indicadores que hoy no se pueden calcular
-          </h2>
-          <p className="font-label text-xs text-muted-foreground">
-            Un hueco documentado vale más que un relleno. Cada uno dice qué dato falta.
-          </p>
-        </div>
-        <ul className="flex flex-col divide-y divide-border">
-          {sinCalcular.map((kpi) => (
-            <li key={kpi.id} className="flex flex-col gap-1 py-3 first:pt-0 last:pb-0">
-              <span className="font-label text-[13px] font-bold">{kpi.nombre}</span>
-              <span className="font-label text-xs text-muted-foreground">{kpi.queMide}</span>
-              <span className="font-label text-xs text-veredicto-atencion">
-                Falta: {kpi.datoFaltante}
-              </span>
-            </li>
-          ))}
-          <li className="flex flex-col gap-1 py-3 last:pb-0">
-            <span className="font-label text-[13px] font-bold">
-              Estado operativo de la flota, últimos 30 días
-            </span>
-            <span className="font-label text-xs text-muted-foreground">
-              La serie de tiempo del mockup necesita telemetría histórica.
-            </span>
-            <span className="font-label text-xs text-veredicto-atencion">
-              Falta: histórico de 30 días. Los conectores leen el estado actual, no una serie.
-            </span>
-          </li>
-        </ul>
-      </section>
     </div>
+  )
+}
+
+function TarjetaLectura({
+  lectura,
+  destacada = false,
+  href,
+  cta,
+}: {
+  lectura: LecturaKpi
+  destacada?: boolean
+  href: string
+  cta: string
+}) {
+  return (
+    <article
+      className={cn(
+        'flex flex-col gap-3 rounded-xl border bg-card p-5 shadow-card',
+        destacada ? 'border-primary/30' : 'border-border',
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-2">
+        <h2 className="font-heading text-base font-extrabold tracking-tight text-primary">
+          {lectura.nombre}
+        </h2>
+        <BadgeVeredicto veredicto={lectura.veredicto} />
+      </div>
+      <p className={cn('font-heading font-extrabold tracking-tight', destacada ? 'text-4xl' : 'text-3xl')}>
+        {lectura.valor}
+      </p>
+      <p className="text-sm font-bold leading-snug">
+        <TextoEnfasis texto={lectura.lectura} />
+      </p>
+      <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+        <p className="text-[11px] font-bold uppercase tracking-wide text-primary">Siguiente paso</p>
+        <p className="mt-1 text-sm font-bold leading-snug">{lectura.paso}</p>
+        <p className="mt-1 text-[11px] text-muted-foreground">{AGENTE[lectura.rol]}</p>
+      </div>
+      {lectura.faltante ? (
+        <p className="font-label text-xs text-veredicto-sin-evidencia">Falta: {lectura.faltante}</p>
+      ) : null}
+      {lectura.cobertura ? (
+        <p className="font-label text-[11px] text-muted-foreground">{lectura.cobertura}</p>
+      ) : null}
+      <p className="font-label text-[11px] text-muted-foreground">{lectura.queMide}</p>
+      <Link
+        href={href}
+        className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary px-3 py-2 text-[13px] font-bold text-primary-foreground"
+      >
+        {cta}
+        <ArrowRight aria-hidden className="size-3.5" />
+      </Link>
+    </article>
   )
 }
 
@@ -211,39 +221,6 @@ function agrupar(equipos: EquipoUnificado[], clave: (e: EquipoUnificado) => stri
   return [...cuentas.entries()].sort((a, b) => b[1] - a[1])
 }
 
-function Tile({
-  etiqueta,
-  valor,
-  nota,
-  acento = false,
-}: {
-  etiqueta: string
-  valor: string
-  nota: string
-  acento?: boolean
-}) {
-  return (
-    <div className="flex flex-col gap-1 rounded-xl border border-border bg-card p-5 shadow-card">
-      <span className="font-label text-[11px] uppercase tracking-wide text-muted-foreground">
-        {etiqueta}
-      </span>
-      <span
-        className={cn(
-          'font-heading text-3xl font-extrabold tracking-tight',
-          acento ? 'text-veredicto-atencion' : 'text-primary',
-        )}
-      >
-        {valor}
-      </span>
-      <span className="font-label text-[11px] text-muted-foreground">{nota}</span>
-    </div>
-  )
-}
-
-/**
- * Barra con su valor siempre escrito al lado: el número nunca depende del color
- * ni de medir la barra a ojo.
- */
 function Barra({
   etiqueta,
   valor,
