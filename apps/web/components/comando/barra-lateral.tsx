@@ -15,7 +15,7 @@ import {
   Table2,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { BotonActualizar } from '@/components/comando/boton-actualizar'
+import { BotonActualizar, BotonActualizarAmbas } from '@/components/comando/boton-actualizar'
 import type { Plataforma, SaludFuente } from '@/lib/tipos/canonico'
 import { cn } from '@/lib/utils'
 
@@ -68,10 +68,12 @@ const TEXTO_SALUD: Record<Estado, string> = {
 export function BarraLateral({
   salud,
   onActualizar,
+  onActualizarTodas,
 }: {
   salud: SaludFuente[]
   /** Server Action de relectura. Sin ella el estado se muestra sin botón. */
   onActualizar?: (plataforma: Plataforma) => Promise<void>
+  onActualizarTodas?: () => Promise<void>
 }) {
   const ruta = usePathname()
   const [contraida, setContraida] = useState(false)
@@ -88,30 +90,19 @@ export function BarraLateral({
       )}
     >
       <div className={cn('flex flex-col gap-6 pb-4 pt-7', contraida ? 'px-3' : 'px-5')}>
-        <div className={cn('flex items-center gap-2.5', contraida && 'justify-center')}>
-          {/* Logo oficial del usuario: public/econ-nect-logo.png */}
-          {contraida ? (
-            <Image
-              src="/econ-nect-logo.png"
-              alt="ECON NECT"
-              width={34}
-              height={34}
-              className="size-[34px] shrink-0 rounded-lg object-contain"
-            />
-          ) : (
-            <div className="flex min-w-0 flex-col gap-1">
-              <Image
-                src="/econ-nect-logo.png"
-                alt="ECON NECT"
-                width={160}
-                height={40}
-                className="h-9 w-auto max-w-full object-contain object-left"
-              />
-              <span className="font-label text-[9px] uppercase leading-none text-marca-clara">
-                Capa de operaciones
-              </span>
-            </div>
-          )}
+        <div className={cn('flex items-center', contraida && 'justify-center')}>
+          <Image
+            src={contraida ? '/econ-nect-mark.png' : '/econ-nect-logo-marina.png'}
+            alt="ECON NECT"
+            width={contraida ? 34 : 168}
+            height={contraida ? 34 : 40}
+            priority
+            className={
+              contraida
+                ? 'size-[34px] shrink-0 object-contain'
+                : 'h-9 w-auto max-w-full object-contain object-left'
+            }
+          />
         </div>
 
         {contraida ? (
@@ -237,6 +228,10 @@ export function BarraLateral({
             )}
           </div>
         ))}
+
+        {onActualizarTodas && (
+          <BotonActualizarAmbas onActualizar={onActualizarTodas} contraida={contraida} />
+        )}
 
         {!contraida && <p className="font-label text-[10px] text-[#2d4a60]">v2.4.1-Tactical</p>}
 
