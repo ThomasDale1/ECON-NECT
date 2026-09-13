@@ -60,7 +60,7 @@ export function asegurarEntornoCargado(): void {
     const par = parsearLinea(linea)
     if (!par) continue
     const [clave, valor] = par
-    if (process.env[clave] === undefined) {
+    if (process.env[clave] === undefined || process.env[clave] === '') {
       process.env[clave] = valor
     }
   }

@@ -259,7 +259,7 @@ export function Planeador() {
   const listo = estadoDeCarga === 'listo' && respuesta !== null
 
   return (
-    <>
+    <div className="flex min-w-0 flex-1 flex-col">
       <BarraSuperior
         titulo="Planeación de maquinaria"
         ultimaLectura={
@@ -269,7 +269,7 @@ export function Planeador() {
         usuario={{ nombre: 'Logística', iniciales: 'LG' }}
       />
 
-      <main className="flex flex-col gap-6 p-7">
+      <main className="flex min-w-0 flex-col gap-6 p-7">
         {/* 2. Aviso compacto */}
         <Alert>
           <Info aria-hidden />
@@ -413,6 +413,6 @@ export function Planeador() {
         abierto={detalleAbierto}
         onOpenChange={setDetalleAbierto}
       />
-    </>
+    </div>
   )
 }

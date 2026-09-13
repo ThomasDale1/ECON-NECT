@@ -30,10 +30,14 @@ function guardarNotificados(notificados: Set<string>): void {
 export function NotificadorMantenimiento() {
   const { resultado } = useMantenimiento()
   const router = useRouter()
-  const [permiso, setPermiso] = useState<NotificationPermission | 'no-api'>(() => {
-    if (typeof window === 'undefined' || !('Notification' in window)) return 'no-api'
-    return Notification.permission
-  })
+  const [permiso, setPermiso] = useState<NotificationPermission | 'no-api'>('no-api')
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setPermiso('Notification' in window ? Notification.permission : 'no-api')
+    }, 0)
+    return () => window.clearTimeout(id)
+  }, [])
 
   useEffect(() => {
     if (!resultado || permiso !== 'granted' || !('Notification' in window)) return

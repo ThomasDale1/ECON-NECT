@@ -5,12 +5,8 @@ import { BadgeVeredicto } from '@/components/nect/badge-veredicto'
 import { BadgeOrigen } from '@/components/nect/badge-origen'
 import { PasosVerificacion } from '@/components/nect/pasos-verificacion'
 import { VerOrigen } from '@/components/nect/ver-origen'
-<<<<<<< Updated upstream
-import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilidades'
-=======
 import { NOMBRE_COOKIE, puedeProgramarTaller, verificarCookie } from '@/lib/acceso/verificar'
-import { agenteResponsablePorRol } from '@/lib/gobernanza/raci'
->>>>>>> Stashed changes
+import { PASO_DE_REGLA, responsablePorRol } from '@/lib/gobernanza/responsabilidades'
 import { FALTANTE_EN_PALABRAS } from '@/components/nect/faltantes'
 import type { EquipoUnificado, EstadoOrigen, PersonaAsignada } from '@/lib/tipos/canonico'
 import { urlFichaPrisma } from '@/lib/nect/enlaces'

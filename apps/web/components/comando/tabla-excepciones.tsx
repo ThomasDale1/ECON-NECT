@@ -56,7 +56,13 @@ const PRIORIDAD_MANTENIMIENTO: Record<NonNullable<PronosticoMantenimiento['nivel
   aviso: 2,
 }
 
-export function TablaExcepciones({ equipos, rolActual }: { equipos: EquipoUnificado[]; rolActual: RolSesion | null }) {
+export function TablaExcepciones({
+  equipos,
+  rolActual = null,
+}: {
+  equipos: EquipoUnificado[]
+  rolActual?: RolSesion | null
+}) {
   const filas = [...equipos].sort(
     (a, b) => PRIORIDAD[a.veredicto] - PRIORIDAD[b.veredicto] || a.confianza - b.confianza,
   )
